@@ -1,14 +1,4 @@
 # Kaorios-Toolbox
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Wuang26/Kaorios-Toolbox/main/Toolbox-Screenshot/Home_Screen.jpg" alt="Kaorios Toolbox Home" width="720"/>
-</p>
-
-Kaorios-Toolbox is a powerful Android system toolkit designed for developers and advanced users.  
-It provides advanced system spoofing, Google Play integrity fixes, and per-app configuration tools — all in a simple and modern interface.
-
----
-
 ## ✨ Features
 
 - ✅ Play Integrity fix  
