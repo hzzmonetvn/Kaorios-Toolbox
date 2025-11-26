@@ -442,5 +442,13 @@
     "MODEL": "V2505A",
     "DEVICE": "V2505A",
     "PRODUCT": "V2505A"
+  },
+    "com.kurogame.wutheringwaves.global": {
+    "MANUFACTURER": "ZTE",
+    "BRAND": "nubia",
+    "MODEL": "NX789J",
+    "DEVICE": "REDMAGIC 10 Pro",
+    "PRODUCT": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/20241212.194919:user/release-keys"
   }
 }
