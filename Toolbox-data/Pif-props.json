@@ -1,14 +1,9 @@
 {
-  "TYPE": "user",
-  "TAGS": "release-keys",
-  "ID": "BP41.250916.015.A1",
-  "BRAND": "google",
-  "DEVICE": "frankel",
-  "FINGERPRINT": "google/frankel_beta/frankel:16/BP41.250916.015.A1/14394230:user/release-keys",
   "MANUFACTURER": "Google",
-  "MODEL": "Pixel 10",
-  "PRODUCT": "frankel_beta",
-  "RELEASE": "12",
-  "SECURITY_PATCH": "2025-10-05",
+  "MODEL": "Pixel 6",
+  "FINGERPRINT": "google/oriole_beta/oriole:16/BP31.250610.009/13905196:user/release-keys",
+  "PRODUCT": "oriole_beta",
+  "DEVICE": "oriole",
+  "SECURITY_PATCH": "2025-07-05",
   "DEVICE_INITIAL_SDK_INT": "21"
 }
