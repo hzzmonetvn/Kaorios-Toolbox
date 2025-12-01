@@ -37,4 +37,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: framework-patched
-          path: Toolbox-patcher/framework_patched.jar
+          path: |
+            Toolbox-patcher/framework_patched.jar
+            Toolbox-patcher/kaoriosFramework.zip

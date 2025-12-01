@@ -87,12 +87,18 @@ main() {
     # Ensure tools are available (including D8)
     ensure_tools
 
-    local patched_jar="${framework_path%.*}_patched.jar"
+    local base_name
+    base_name="$(basename "$framework_path" .jar)"
+    local patched_jar="${base_name}_patched.jar"
     if [ -f "$patched_jar" ]; then
         d8_optimize_jar "$patched_jar"
     else
         echo "❌ Error: Patched JAR not found at $patched_jar"
     fi
+
+    # Create Kaorios Module
+    source "$SCRIPT_DIR/core/module.sh"
+    create_kaorios_module
 
     # Clean up
     rm -rf "$decompile_dir"
