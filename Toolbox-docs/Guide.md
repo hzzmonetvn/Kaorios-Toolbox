@@ -508,3 +508,15 @@ engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 invoke-static {}, Lcom/android/internal/util/kaorios/ToolboxUtils;->KaoriosPropsEngineGetCertificateChain()V
 ```
+> in method find:
+```
+const/4 v4, 0x0
+
+    aput-object v2, v3, v4
+```
+> add this code below the just found:
+```
+invoke-static {v3}, Lcom/android/internal/util/kaorios/ToolboxUtils;->KaoriosKeybox([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+
+    move-result-object v3
+```

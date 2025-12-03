@@ -5,8 +5,7 @@
 # virtual methods
 .method public engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
     .registers 11
-
-    ###Kousei added
+    # Kousei added
     invoke-static {}, Lcom/android/internal/util/kaorios/ToolboxUtils;->KaoriosPropsEngineGetCertificateChain()V
 
     invoke-direct {p0, p1}, Landroid/security/keystore2/AndroidKeyStoreSpi;->getKeyMetadata(Ljava/lang/String;)Landroid/system/keystore2/KeyEntryResponse;
@@ -15,7 +14,7 @@
 
     const/4 v1, 0x0
 
-    if-eqz v0, :cond_4c
+    if-eqz v0, :cond_50
 
     iget-object v2, v0, Landroid/system/keystore2/KeyEntryResponse;->metadata:Landroid/system/keystore2/KeyMetadata;
 
@@ -23,7 +22,7 @@
 
     if-nez v2, :cond_11
 
-    goto :goto_4c
+    goto :goto_50
 
     :cond_11
     iget-object v2, v0, Landroid/system/keystore2/KeyEntryResponse;->metadata:Landroid/system/keystore2/KeyMetadata;
@@ -96,10 +95,14 @@
     const/4 v4, 0x0
 
     aput-object v2, v3, v4
+    # Kousei added
+    invoke-static {v3}, Lcom/android/internal/util/kaorios/ToolboxUtils;->KaoriosKeybox([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+
+    move-result-object v3
 
     return-object v3
 
-    :cond_4c
-    :goto_4c
+    :cond_50
+    :goto_50
     return-object v1
 .end method
