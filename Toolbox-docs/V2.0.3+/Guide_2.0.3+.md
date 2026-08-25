@@ -187,6 +187,30 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 
 ---
 
+## Production patch map (verified on HyperOS Android 17)
+
+Verified against a real patched ROM (`framework.jar` + `services.jar`, build
+`2.0.4.0`, Android 17 — disassembled with baksmali 3.0.10):
+
+| Hook | File / dex | Class · method | Notes |
+|---|---|---|---|
+| `initContext` ×2 | framework.jar `classes.dex` | `Instrumentation.newApplication` (both overloads) | inserted right before `return-object` |
+| `hasSystemFeature` | framework.jar `classes.dex` | `ApplicationPackageManager.hasSystemFeature(S,I)Z` | `.registers 7`, inserted below `.registers` |
+| `initGenerateSoftwareKeyPair` | framework.jar `classes3.dex` | `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair()` | `.registers 15→16`, result in `v14` |
+| `CertificateChainIfNeeded` | framework.jar `classes3.dex` | `AndroidKeyStoreSpi.engineGetCertificateChain(S)` | `.registers 11`, before final `return-object` |
+| `initSystemServer` | services.jar `classes.dex` | `SystemServer.startOtherServices` | one static invoke |
+
+- The Kaorios DEX itself lives at **framework.jar `classes7.dex`** (~1 MB).
+  Upgrading = replace that single entry (v2.0.5.0 DEX is drop-in compatible:
+  all 25 public methods of the old `KaoriosHook` are preserved).
+- **Hidden-app / dev-status / secure-flag / install-source hooks are NOT wired
+  in this production patch** — only the 5 hooks above are invoked. To activate
+  them, add the optional call-sites in the next section.
+- baksmali ≥ 3.x handles these Android 17 dex files directly (no version-bytes
+  hack needed).
+
+---
+
 ## Optional (v2.0.5+): caller-aware app hiding & install-source spoofing
 
 The hooks below are **optional**. The base patch above already enables Play Integrity,
