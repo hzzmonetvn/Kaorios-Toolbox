@@ -200,52 +200,52 @@ Settings value replacement). All signatures are verified against
 Lcom/android/server/pm/AppsFilterBase;
 ```
 
-**Method (AOSP 15/16):**
+**Method (HyperOS Android 17):**
 ```smali
- shouldFilterApplication(ILcom/android/server/pm/Computer;Lcom/android/server/pm/pkg/PackageStateInternal;I)Z
+ shouldFilterApplication(Lcom/android/server/pm/snapshot/PackageDataSnapshot;ILjava/lang/Object;Lcom/android/server/pm/pkg/PackageStateInternal;I)Z
 ```
+(`p2` = callingUid, `p4` = targetPkgSetting, `p5` = userId)
 
-At the very top of the method (before any visibility-cache logic), with
-`p1` = callingUid, `p3` = target PackageStateInternal, `p4` = userId:
-
-```smali
-invoke-virtual {p3}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
-move-result-object vX
-
-const/4 vC, 0x0
-invoke-static/range {vC .. vC}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
-```
-
-Because 5 registers are needed but the surrounding method may not have them,
-prefer `invoke-static/range` over consecutive empty registers:
+Insert right after the `.param p5 ...` line, **before everything else**:
 
 ```smali
-# registers: vC = ContentResolver slot (null), then uid / package / userId
-# Layout for invoke-static/range {vC .. vF}:
-#   vC = ContentResolver (null is safe: engine resolves its own)
-#   vD = callingUid   (p1)
-#   vE = target package name
-#   vF = userId       (p4)
+move/from16 v0, p2
 
-const/4 vC, 0x0
-move/from16 vD, p1
-invoke-virtual {p3}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
-move-result-object vE
-move/from16 vF, p4
+move-object/from16 v1, p4
 
-invoke-static/range {vC .. vF}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
-move-result vY
+invoke-interface {v1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
 
-if-eqz vY, :cond_kaorios_hide
-const/4 vZ, 0x1
-return vZ
+move-result-object v2
 
-:cond_kaorios_hide
+const/4 v3, 0x0
+
+move/from16 v4, p5
+
+invoke-static {v3, v0, v2, v4}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
+
+move-result v0
+
+if-eqz v0, :cond_kaorios_hide_app
+
+const/4 v0, 0x1
+
+return v0
+
+:cond_kaorios_hide_app
 ```
 
-Remember to raise `.registers`/`.locals` by at least 6 (`vC..vF` + `vY` + `vZ`)
-and shift original registers with `move/from16` when the method uses a high
-register count.
+#### Why this shape (do NOT raise `.registers`)
+
+Raising `.registers` shifts every parameter register upward and breaks all
+existing `invoke-*` sites that use them. Instead, temporarily reuse the lowest
+local registers (`v0..v4`) at the very top of the method — they are always
+written before being read by the original code. This is the same proven
+pattern as the `generateKeyPair` hook (`v14`). `move/from16` /
+`move-object/from16` is required because parameter slots sit above v15.
+
+> On other ROM versions where the method signature is
+> `(int callingUid, Computer, PackageStateInternal, int userId)`, keep the same
+> block but map: uid = 2nd param, state = 4th param, userId = last param.
 
 ### B) Spoof install source — `ComputerEngine`
 
@@ -279,8 +279,10 @@ move-result-object vResult
 ```
 
 Apply the same wrapper inside `getInstallSourceInfo` on the initiating package
-name if your ROM exposes it. Raise `.registers` by the number of new temporaries
-(`vC`, `vU`, `vUid`, `vUser`) and use `move/from16` when shifting.
+name if your ROM exposes it. On HyperOS Android 17 the real method is
+`getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;` (`.registers 8→9`,
+`callingUid` already lives in a local, single `return-object`) — wrap that one
+return site with `const/4 vNull, 0x0` in a freshly freed register.
 
 ### C) Per-caller Settings replacement — `SettingsProvider`
 
