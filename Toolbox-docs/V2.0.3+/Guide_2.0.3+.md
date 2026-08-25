@@ -245,7 +245,7 @@ return vZ
 :cond_kaorios_hide
 ```
 
-Remember to raise `.registers`/`.locals` by at least 5 (`vC..vF` + `vY` + `vZ`)
+Remember to raise `.registers`/`.locals` by at least 6 (`vC..vF` + `vY` + `vZ`)
 and shift original registers with `move/from16` when the method uses a high
 register count.
 
@@ -292,14 +292,18 @@ Lcom/android/providers/settings/SettingsProvider;
 ```
 
 Wrap every `GET_*` global/secure/system lookup result before returning it to
-the calling app (`vName` = settings key, `vValue` = real value):
+the calling app (`vNs` = namespace, `vName` = settings key, `vValue` = real
+value). Full signature:
+`(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;`
+— first slot takes `null`, the engine resolves its own ContentResolver.
 
 ```smali
-invoke-static {vNs, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+const/4 vC, 0x0
+invoke-static {vC, vNs, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 move-result-object vValue
 ```
 
-`vNs` is `"global"`, `"secure"` or `"system"`. Replacement values come from
+Raise `.registers`/`.locals` by at least 1 for `vC`. Replacement values come from
 `settingsTemplates` in `Settings.Global["kaorios_hma_config"]`; built-in
 presets `dev_options`, `accessibility`, `input_method` are also honored.
 Return-value `null` semantics are handled internally — always return whatever
