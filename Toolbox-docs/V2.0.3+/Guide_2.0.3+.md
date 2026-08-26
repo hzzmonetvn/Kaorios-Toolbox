@@ -2,6 +2,9 @@
 
 This guide explains the smali changes needed to import and use the Kaorios Toolbox hook classes.
 
+> **For v2.0.6.0 full guide** (including challenge probe, Build field patch, HMA config),
+> see [Patch_Guide_2.0.6.0.md](Patch_Guide_2.0.6.0.md).
+
 ## Framework.jar
 
 Import the KaoriosToolbox DEX classes into `Framework.jar`.
@@ -178,23 +181,3 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 ```
 
 ---
-
-## Register naming convention
-
-To keep the guide easy to read, use the same formatting for registers that refer to the same value.
-
-For example:
-
-- `v0` = returned Boolean in `hasSystemFeature`
-- `vD` = return value in `engineGetCertificateChain`
-- `vX` = temporary result register in `generateKeyPair`
-
-This makes it easier to track which register is used as input, output, or temporary storage.
-
-## Summary
-
-- `Framework.jar`: hook `Instrumentation`, `ApplicationPackageManager`, and `AndroidKeyStoreKeyPairGeneratorSpi`
-- `Services.jar`: hook `SystemServer`
-- Adjust register counts carefully when adding new instructions
-- Keep register usage consistent inside each method
-- Make sure the value props (Fake Locked) = green

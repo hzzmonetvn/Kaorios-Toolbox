@@ -13,26 +13,30 @@
 ## 🖼️ Screenshots
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/Wuang26/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Home.png">
-    <img src="https://raw.githubusercontent.com/Wuang26/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Home.png" alt="Home Screen" width="45%" style="max-width:320px; border-radius:8px;"/>
+  <a href="https://raw.githubusercontent.com/hzzmonetvn/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Home.png">
+    <img src="https://raw.githubusercontent.com/hzzmonetvn/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Home.png" alt="Home Screen" width="45%" style="max-width:320px; border-radius:8px;"/>
   </a>
-  <a href="https://raw.githubusercontent.com/Wuang26/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Tools.png">
-    <img src="https://raw.githubusercontent.com/Wuang26/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Tools.png" alt="Tools Screen" width="45%" style="max-width:320px; border-radius:8px;"/>
+  <a href="https://raw.githubusercontent.com/hzzmonetvn/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Tools.png">
+    <img src="https://raw.githubusercontent.com/hzzmonetvn/Kaorios-Toolbox/refs/heads/main/Toolbox-screenshots/Tools.png" alt="Tools Screen" width="45%" style="max-width:320px; border-radius:8px;"/>
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Wuang26/Kaorios-Toolbox/tree/main/Toolbox-screenshots">🔍 See more screenshots →</a>
+  <a href="https://github.com/hzzmonetvn/Kaorios-Toolbox/tree/main/Toolbox-screenshots">🔍 See more screenshots →</a>
 </p>
 
 ---
 
 ## 🚀 How to use
 
-Follow the detailed usage guide here:  
-👉 [Kaorios-Toolbox Guide](https://github.com/Wuang26/Kaorios-Toolbox/tree/main/Toolbox-docs)
+## 📦 Latest release: v2.0.6.0
 
-Or use [Kaorios Patcher](https://github.com/Wuang26/Kaorios-Toolbox/releases)
+> **ROM builders**: see [Patch Guide v2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) for integration instructions.
+
+Follow the detailed usage guide here:  
+👉 [Kaorios-Toolbox Guide](https://github.com/hzzmonetvn/Kaorios-Toolbox/tree/main/Toolbox-docs)
+
+All releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases)
 
 ---
 
@@ -40,7 +44,7 @@ Or use [Kaorios Patcher](https://github.com/Wuang26/Kaorios-Toolbox/releases)
 
 Help us translate Kaorios-Toolbox into your language! 🌐
 
-- Translation files live here: **[Toolbox-languages](https://github.com/Wuang26/Kaorios-Toolbox/tree/main/Toolbox-languages)**
+- Translation files live here: **[Toolbox-languages](https://github.com/hzzmonetvn/Kaorios-Toolbox/tree/main/Toolbox-languages)**
 - Base file to translate: `values/strings.xml`
 
 ---
