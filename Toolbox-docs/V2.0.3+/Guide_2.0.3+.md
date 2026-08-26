@@ -247,6 +247,41 @@ pattern as the `generateKeyPair` hook (`v14`). `move/from16` /
 > `(int callingUid, Computer, PackageStateInternal, int userId)`, keep the same
 > block but map: uid = 2nd param, state = 4th param, userId = last param.
 
+### A2) BẮT BUỘC trên Android 17+ — gỡ cờ `final` của Build
+
+Android 17 (libcore sync OpenJDK mới) **chặn mọi cách ghi static-final qua
+Java**: `Field.set` lẫn `sun.misc.Unsafe.putObject` đều bị khoá (đã xác minh
+bằng logcat). Vì vậy framework không thể spoof Build fields trừ khi ROM patch
+gỡ cờ `final` trước.
+
+**File:** `framework.jar` → dex chứa `Landroid/os/Build;` và
+`Landroid/os/Build$VERSION;` (trên HyperOS A17: cả hai nằm ở `classes3.dex`)
+
+**Sửa:** với mỗi field dưới đây, xoá token `final` khỏi dòng `.field`:
+
+```text
+Build.smali        : FINGERPRINT  BRAND  DEVICE  MANUFACTURER  MODEL  PRODUCT
+                     ID  TIME  TAGS  TYPE  HARDWARE  USER
+Build$VERSION.smali: RELEASE  SECURITY_PATCH  DEVICE_INITIAL_SDK_INT
+```
+
+Ví dụ:
+```smali
+# Trước
+.field public static final whitelist FINGERPRINT:Ljava/lang/String;
+# Sau
+.field public static whitelist FINGERPRINT:Ljava/lang/String;
+```
+
+Sau khi gỡ cờ, kỹ thuật ghi qua reflection hoạt động trở lại như Android ≤16,
+không cần Unsafe. Giá trị mặc định không đổi — chỉ process có cấu hình trong
+PIF JSON / GPhotos toggle mới bị ghi đè.
+
+> Assemble lại dex bằng smali ≥3.x với `--api 29` trở lên để nhận các modifier
+> `whitelist/blacklist` (hidden API) mà baksmali xuất ra.
+
+---
+
 ### B) Spoof install source — `ComputerEngine`
 
 **Class:**
