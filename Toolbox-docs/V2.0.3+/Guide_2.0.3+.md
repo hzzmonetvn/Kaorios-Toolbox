@@ -2,11 +2,14 @@
 
 This guide explains the smali changes needed to import and use the Kaorios Toolbox hook classes.
 
-> **Compatibility (v2.0.5.0, SDK 37 build)**
+> **Compatibility (v2.0.6.0, SDK 37 build)**
 > - DEX is compiled against **Android 17 (API 37)**; hooks work on ROMs Android 12–17 (API 31–37).
 > - All call-site signatures below are unchanged from v2.0.3+ — existing patched ROMs do not need re-patching.
 > - Internals were renamed (`TrickyStoreService` → `OmkService`, aliases `OmkTeeCheck` / `omk_attestation_key`); this does not affect any call site in this guide.
 > - App-list hiding is now powered by an HMA-OSS style caller-aware policy engine (config: `Settings.Global["kaorios_hma_config"]`).
+
+> **For v2.0.6.0 full guide** (including challenge probe, Build field patch, HMA config),
+> see [Patch_Guide_2.0.6.0.md](Patch_Guide_2.0.6.0.md).
 
 ## Framework.jar
 
