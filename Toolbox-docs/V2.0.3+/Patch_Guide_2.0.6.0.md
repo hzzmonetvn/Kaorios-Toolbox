@@ -1,19 +1,31 @@
 # Kaorios Toolbox Patch Guide — v2.0.6.0
 
-This guide covers all smali changes needed to integrate Kaorios Toolbox
-framework hooks into a custom ROM.
+This guide covers the full DEX placement, smali patch, rebuild, runtime
+configuration, verification, and rollback flow for Kaorios Toolbox 2.0.6.0.
+The examples are verified on HyperOS Android 17; locate classes and descriptors
+on the target ROM instead of assuming the same DEX number or line number.
 
 **Build info**
 - Compiled against **Android 17 (API 37)** merged boot jar
 - Hooks work on **Android 12–17 (API 31–37)**
 - `minSdk=31`, `compileSdk=37`, `targetSdk=37`
 - `KaoriosHook` methods are all `public static` — no instance needed
-- Verified framework source commit: `1f0c768033653838a0c91756abd547e2f711c80b`
+- Verified framework source commit: `2d1bf73a60d044a755977c6a0bafa0413dc88dd7`
 
 > Hook names and descriptors are case-sensitive. Copy the complete descriptor,
 > not only the method name. The files under
 > [`Template/Template_V2060`](../Template/Template_V2060) are the tested
 > HyperOS Android 17 references; adapt registers and labels for other ROMs.
+
+### Stop conditions
+
+- Back up `framework.jar`, `services.jar`, their VDEX/ODEX files, and a bootable image.
+- Android 17 DEX 040 requires smali/baksmali 3.x. Header-downgrade tricks are inspection-only.
+- Do not leave old and new `android/security/kaorios/*` or
+  `com/kousei/framework/*` classes together on the boot classpath.
+- Do not increase `.registers` blindly when the original method refers to
+  parameters through `vN`; use `pN`, a proven-free local, or adjust `.locals`.
+- Patch and boot-test one feature group at a time.
 
 ---
 
@@ -34,10 +46,27 @@ The `Build APK and DEX` workflow in the framework repository publishes one
 artifact with `KaoriosToolbox-release.apk`, `KaoriosFramework-release.apk`,
 `classes.dex`, and `SHA256SUMS`. Verify the checksums before integration.
 
-Import the artifact's `classes.dex` as a **new DEX entry** in `framework.jar`.
-Its final name (`classes4.dex`, `classes5.dex`, etc.) depends on the target ROM;
-do not overwrite an existing DEX. The smali patches below remain in the DEX
-that originally owns each Android class.
+Import the artifact's `classes.dex` into `framework.jar`. Its final name depends
+on the target ROM. On a clean ROM, use the next unused DEX name. On a ROM that
+already contains Kaorios, first locate both package trees:
+
+```bash
+rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw*
+rg -l 'Lcom/kousei/framework/KaoriosFramework;' work/fw*
+```
+
+If the old DEX is dedicated to Kaorios, replace that entry. If it also contains
+system classes, remove both old package trees from that DEX, rebuild it, then
+append the new artifact using the next unused DEX name. Never append a duplicate
+copy. Smali call-site patches stay in the DEX that originally owns each Android
+class.
+
+Before editing, disassemble every candidate DEX with the target API, for example:
+
+```bash
+java -jar baksmali-3.0.9-fat-release.jar disassemble \
+  classes3.dex --api 37 --output fw3
+```
 
 ---
 
@@ -81,7 +110,8 @@ invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid
 hasSystemFeature(Ljava/lang/String;I)Z
 ```
 
-Below `.registers X`, add (do NOT raise registers):
+At method entry, use a proven-free object local. The tested template uses `v0`
+without changing `.registers`; another ROM may require a different local:
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
 move-result-object v0
@@ -105,13 +135,14 @@ return v0
 generateKeyPair()Ljava/security/KeyPair;
 ```
 
-Below `.registers X`, add (raise registers by 1):
+At method entry, before the stock code calls `getSecurityLevel()`, use a
+proven-free object local. The tested `.registers 16` method uses `v14`:
 ```smali
 invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-move-result-object vX          # vX = registers − 2
+move-result-object v14
 
-if-eqz vX, :cond_kaorios
-return-object vX
+if-eqz v14, :cond_kaorios
+return-object v14
 
 :cond_kaorios
 ```
@@ -120,7 +151,8 @@ return-object vX
 > via `AttestationUtils.getMaxChallengeBytes()`. Oversized challenges
 > (e.g. 256 B) are deferred to real TEE which rejects them — matching
 > expected hardware behaviour. No extra smali needed; the logic is
-> compiled into `lastclasses.dex`.
+> compiled into the workflow artifact `classes.dex` (rename only when importing
+> it into the target `framework.jar`).
 
 ---
 
@@ -162,13 +194,14 @@ branches. Identify the register containing
 `Landroid/system/keystore2/KeyDescriptor;` in the target method; call it
 `vDescriptor` below.
 
-Below `.registers X` (raise by 1), add:
+Use a proven-free object local named `vResult` below. Do not derive a register
+from a generic `.registers - 2` formula:
 ```smali
 invoke-static {vDescriptor}, Landroid/security/kaorios/KaoriosHook;->OnGetKeyEntry(Landroid/system/keystore2/KeyDescriptor;)Landroid/system/keystore2/KeyEntryResponse;
-move-result-object vX          # vX = registers − 2
+move-result-object vResult
 
-if-eqz vX, :cond_kaorios
-return-object vX
+if-eqz vResult, :cond_kaorios
+return-object vResult
 
 :cond_kaorios
 ```
@@ -243,10 +276,12 @@ shouldFilterApplication(Lcom/android/server/pm/snapshot/PackageDataSnapshot;ILja
 ```
 (`p2` = callingUid, `p4` = targetPkgSetting, `p5` = userId)
 
-The tested v2.0.6.0 template uses the compatibility hook below. Insert it after
-the parameter declarations and guard a nullable `targetPkgSetting`:
+Insert this caller-aware v2.0.6.0 hook after the parameter declarations and
+guard a nullable `targetPkgSetting`:
 
 ```smali
+move/from16 v0, p2
+
 move-object/from16 v1, p4
 
 if-eqz v1, :cond_kaorios_original
@@ -257,7 +292,9 @@ move-result-object v2
 
 const/4 v3, 0x0
 
-invoke-static {v3, v2}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppList(Landroid/content/ContentResolver;Ljava/lang/String;)Z
+move/from16 v4, p5
+
+invoke-static {v0, v3, v2, v4}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
 
 move-result v0
 
@@ -273,6 +310,10 @@ return v0
 Wrap this block in the target method's existing `Throwable` guard or add an
 equivalent guard. The complete tested placement is in
 [`AppsFilterBase.smali`](../Template/Template_V2060/AppsFilterBase.smali).
+
+The argument order is `callingUid, resolver, targetPackage, userId`. The old
+guide's `resolver, uid, targetPackage, userId` order does not match the method
+descriptor and must not be used.
 
 ---
 
@@ -337,11 +378,19 @@ fields to be writable. **Strip `final` from the following fields:**
 **File:** `framework.jar` → dex containing `Landroid/os/Build;` and
 `Landroid/os/Build$VERSION;` (on HyperOS A17: `classes3.dex`)
 
+Minimum set for built-in Photos and common PIF profiles:
+
 ```text
-Build.smali        : FINGERPRINT  BRAND  DEVICE  MANUFACTURER  MODEL  PRODUCT
-                     ID  TIME  TAGS  TYPE  HARDWARE  USER
-Build$VERSION.smali: RELEASE  SECURITY_PATCH  DEVICE_INITIAL_SDK_INT
+Build.smali        : BRAND DEVICE FINGERPRINT HARDWARE ID MANUFACTURER MODEL
+                     PRODUCT TAGS TIME TYPE USER
+Build$VERSION.smali: RELEASE RELEASE_OR_CODENAME RELEASE_OR_PREVIEW_DISPLAY
+                     SECURITY_PATCH DEVICE_INITIAL_SDK_INT
 ```
+
+If a PIF/game profile writes another field such as `DISPLAY`, `HOST`,
+`INCREMENTAL`, `SDK`, or a `*_FOR_ATTESTATION` field, remove `final` from that
+specific field too. Avoid changing `SDK_INT` unless the profile truly requires
+it; changing the runtime API value can break application and framework branches.
 
 **Before:**
 ```smali
@@ -360,7 +409,7 @@ Re-assemble with smali ≥ 3.0 and `--api 29` to preserve
 
 ## JSON config formats
 
-### `kaorios_hide_devlist` — simple per-app flags
+### `kaorios_hide_devlist` — simple per-caller flags
 
 ```json
 {
@@ -378,6 +427,9 @@ Re-assemble with smali ≥ 3.0 and `--api 29` to preserve
 - `hidedev=true` → app is hidden from Developer Options list
 - `hideapp=true` → app is "blind" (can't see other apps, but opens fine)
 - Legacy fallback: `"com.a,com.b"` → both flags = true
+
+`kaorios_hide_dev_work` and `kaorios_hide_app_work` are sticky diagnostic flags
+written by the hooks when their call sites execute. They are not enable switches.
 
 ### `kaorios_hma_config` — HMA-OSS policy engine
 
@@ -412,16 +464,82 @@ Re-assemble with smali ≥ 3.0 and `--api 29` to preserve
 }
 ```
 
----
+## Runtime quick start
 
+Use `1`/`0` for booleans. After direct Settings writes, bump `kaorios_time` or
+restart the affected process so framework caches observe the change.
 
----
+```bash
+# Keybox GEN for every app
+adb shell settings put global kaorios_keybox_enabled 1
+adb shell settings put global kaorios_keybox_apply_all 1
+adb shell settings put global kaorios_keybox_apply_all_mode gen
+
+# Photos
+adb shell settings put global kaorios_spoof_photos 1
+adb shell am force-stop com.google.android.apps.photos
+
+# BIDV is the caller being restricted; it still sees itself
+adb shell settings put global kaorios_hide_devlist '{"vn.com.bidv.mobilebanking":{"hidedev":true,"hideapp":true}}'
+adb shell settings put global kaorios_time "$(date +%s)000"
+adb shell am force-stop vn.com.bidv.mobilebanking
+```
+
+## Rebuild and verification
+
+```bash
+java -jar smali-3.0.9-fat-release.jar assemble fw3 \
+  --api 37 --output classes3.dex
+java -jar baksmali-3.0.9-fat-release.jar list classes classes3.dex >/dev/null
+rg -n 'KaoriosHook;->' fw3 sv1
+```
+
+Update only the modified DEX entries in copies of the original JARs. System
+JARs do not need zipalign. Prefer rebuilding the ROM image so the build system
+regenerates VDEX/ODEX. When testing an overlay, keep a recovery-restorable copy
+and never delete broad dalvik-cache paths with an unverified glob.
+
+After boot:
+
+```bash
+adb shell getprop sys.boot_completed
+adb shell settings get global kaorios_hide_dev_work
+adb shell settings get global kaorios_hide_app_work
+adb shell settings get global kaorios_secure_flag_work
+adb logcat -v threadtime -s KaoriosHook KaoriosOmkService OmkRootOfTrust KaoriosCertificateGenerator KaoriosCertificateHacker
+```
+
+Test `gen`, `leaf`, and `auto` separately. Test hide-app only after
+`sys.boot_completed=1`. A configured caller must still see itself while other
+targets are filtered.
+
+## Failure table
+
+| Symptom | Likely cause | First check |
+|---|---|---|
+| Bootloop | Bad register/descriptor or invalid rebuilt DEX | Restore services first; disassemble rebuilt DEX and inspect verifier log |
+| Toolbox cannot see framework | DEX missing, duplicate old class, stale oat | Search final JAR for both API classes and rebuild matching VDEX/ODEX |
+| GEN never runs | Hook is after `getSecurityLevel`, keybox is off/empty | Inspect method entry, Settings, and OMK log |
+| LEAF chain is unchanged | Wrong array register or an unwrapped return path | Trace the final `Certificate[]` before each return |
+| PIF/Photos logs but Build is unchanged | Target field is still `final` | Compare rebuilt `Build.smali`/`Build$VERSION.smali` |
+| Hide-dev returns stock value | Wrong overload, `Boolean`/`Z` mismatch | Target returns `String`; hook returns primitive `Z` |
+| Hide-app filters the caller itself | Legacy hook or wrong argument order | Use descriptor starting with `I` and uid,resolver,target,user order |
+| `*_work` stays `0` | Call site has not executed | Trigger the target app/action, then read the flag again |
+
+## Recommended patch order
+
+1. Import DEX and remove duplicates; boot-test.
+2. Patch `SystemServer`; boot-test.
+3. Patch `Instrumentation`, Build fields, and `hasSystemFeature`; test PIF/Photos.
+4. Patch both Keystore SPI sites; test `gen/leaf/auto`.
+5. Patch hide-dev/hide-app with a disposable test app.
+6. Patch installer/settings/secure-flag last because they vary most by ROM.
 
 ## Register naming convention
 
 | Register | Meaning |
 |----------|---------|
-| `vX` | Return value, where `X = .registers − 2` |
+| `vResult` | A verified-free local holding a hook/original return value |
 | `v0` | Temporary / Boolean |
 | `vC` | ContentResolver slot (null) |
 | `vResult` | Original return value being wrapped |

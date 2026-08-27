@@ -23,11 +23,18 @@ fixed number.
 
 Remove `final` only from these declarations:
 
+Minimum set used by built-in Photos and common PIF profiles:
+
 ```text
-Build.smali        : FINGERPRINT  BRAND  DEVICE  MANUFACTURER  MODEL  PRODUCT
-                     ID  TIME  TAGS  TYPE  HARDWARE  USER
-Build$VERSION.smali: RELEASE  SECURITY_PATCH  DEVICE_INITIAL_SDK_INT
+Build.smali        : BRAND DEVICE FINGERPRINT HARDWARE ID MANUFACTURER MODEL
+                     PRODUCT TAGS TIME TYPE USER
+Build$VERSION.smali: RELEASE RELEASE_OR_CODENAME RELEASE_OR_PREVIEW_DISPLAY
+                     SECURITY_PATCH DEVICE_INITIAL_SDK_INT
 ```
+
+Also remove `final` from any additional Build field explicitly present in the
+selected PIF/game profile, including `DISPLAY`, `HOST`, `INCREMENTAL`, `SDK`, or
+`*_FOR_ATTESTATION` when used. Do not change `SDK_INT` casually.
 
 Keep the field name, type, visibility, and hidden-API modifier (`whitelist`,
 `greylist`, etc.) unchanged.
@@ -80,9 +87,9 @@ the original class initializer. The `Build$VERSION` comparison confirms that a
 valid patched field may also have no explicit initializer. Do not manually add
 or remove `= null`; removing `final` is the required part.
 
-Do **not** modify nearby fields that are not in the list, such as
-`BRAND_FOR_ATTESTATION`, `DEVICE_FOR_ATTESTATION`, `CPU_ABI`, `CPU_ABI2`,
-`DISPLAY`, or `HOST`.
+Do not modify unrelated nearby fields merely because they are visible in the
+comparator. A field outside the minimum list should change only when the active
+profile writes that exact field.
 
 ## Rebuild and verification
 
