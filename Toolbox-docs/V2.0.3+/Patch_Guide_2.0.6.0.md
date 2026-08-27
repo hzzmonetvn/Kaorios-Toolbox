@@ -9,7 +9,7 @@ This document describes the process of integrating the 2.0.6.0 framework DEX int
 ## 1. Mandatory Warnings
 
 - Back up a bootable `framework.jar`, `services.jar`, VDEX/ODEX files, and boot image.
-- Android 17 uses DEX 040: use smali/baksmali 3.x only. Do not change the `040` header to `039` for the flashable build.
+- **Android 17 DEX format**: Android 17 supports both DEX `039` and `040` (production ROMs such as HyperOS Android 17 use `039`). Always use smali/baksmali 3.x+ with `--api 37` because Android 17 system classes contain extended `HiddenApiRestrictions` flags that crash baksmali 2.5.2.
 - Names and descriptors are case-sensitive. `OnGetKeyEntry` has an uppercase `O`; `CertificateChainIfNeeded` is not `getCertificateChain`.
 - Do not assume classes reside in `classes3.dex`/`classes7.dex`; always search the target ROM.
 - Do not leave two copies of `Landroid/security/kaorios/*` or `Lcom/kousei/framework/*` in the boot classpath.
@@ -23,10 +23,8 @@ mkdir -p work/framework work/services
 unzip -q framework.jar -d work/framework
 unzip -q services.jar -d work/services
 
-java -jar baksmali-3.0.9-fat-release.jar disassemble \
-  work/framework/classes3.dex --api 37 --output work/fw3
-java -jar baksmali-3.0.9-fat-release.jar disassemble \
-  work/services/classes.dex --api 37 --output work/sv1
+java -jar baksmali-3.0.8.jar d work/framework/classes3.dex --api 37 -o work/fw3
+java -jar baksmali-3.0.8.jar d work/services/classes.dex --api 37 -o work/sv1
 ```
 
 Repeat for all `classes*.dex`, then find the classes:
@@ -41,7 +39,7 @@ rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
 
 ## 3. Importing DEX Without Duplicate Classes
 
-Rename the artifact's `classes.dex` to the next unused DEX number (e.g. `classes8.dex`), then add it into `framework.jar`.
+Rename the framework artifact's `classes.dex` to the next unused sequential DEX number (e.g. on ROMs with 6 stock DEX files like HyperOS A17, rename to `classes7.dex`), then add it into `framework.jar`. Keep all stock DEX files `classes.dex` through `classes6.dex` intact.
 
 ## 4. Standard 2.0.6.0 Descriptors
 
@@ -139,20 +137,37 @@ Do not call the hook with `{p0,p1}`. If there are multiple `return-object` state
 
 ### 5.5 Remove `final` from Build fields on Android 17
 
-See: https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17.md
+See: [notes-a17.md](notes-a17.md) (or Vietnamese version: [notes-a17_VI.md](notes-a17_VI.md)).
 
 ## 6. Core Patches in services.jar
 
 ### 6.1 `SystemServer.initSystemServer`
 
-In the boot services method, insert immediately before calling `startOtherServices(...)`:
+Initializes the OMK subsystem and probes/caches real TEE `RootOfTrust`. Two placement options depending on platform:
 
+**Pattern 1: AOSP / Qualcomm / HyperOS Android 17 (Recommended)**
+Insert at the beginning of `run()V`:
 ```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+.method private run()V
+    .registers 20
+
+    .line 975
+    # [Kaorios Hook] Initialize OmkService & RootOfTrust
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+
+    move-object/from16 v1, p0
+    const-string/jumbo v0, "persist.sys.language"
 ```
 
-Registers for `startOtherServices` depend on the ROM; only the relative position is fixed. The hook initializes OMK and probes TEE challenge limits.
+**Pattern 2: MediaTek (Before `startOtherServices`)**
+Insert immediately before calling `startOtherServices(...)`:
+```smali
+    # [Kaorios Hook] Initialize OmkService & RootOfTrust
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+    invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+```
+
+Registers for `startOtherServices` depend on the ROM; only the relative position is fixed. Reference template: [`Template/Template_V2060/SystemServer.smali`](../Template/Template_V2060/SystemServer.smali).
 
 ## 7. Optional Feature Patches
 
@@ -250,18 +265,20 @@ The correct type is `android/system/keystore2`, not `android/security/keystore2`
 
 ### 7.6 Remove FLAG_SECURE
 
-Call `isSecureFlag()Z`. If true: `DevicePolicyCacheImpl.isScreenCaptureAllowed(I)Z` returns `1`; `WindowState[Animator].isSecureLocked()Z` returns `0`; `setSecureLocked(Z)V` can return early. Do not invert the return values of the first two methods.
+Call `isSecureFlag()Z`. If true: `DevicePolicyCacheImpl.isScreenCaptureAllowed(I)Z` returns `1`; `WindowState[Animator].isSecureLocked()Z` returns `0`; `setSecureLocked(Z)V` can return early.
+
+See dedicated guide: [Disable_Secure_Flag.md](Disable_Secure_Flag.md) and reference template: [`Template/Template_V2060/WindowState.smali`](../Template/Template_V2060/WindowState.smali).
+
+> **Note**: Do not invert the return values of the first two methods.
 
 ## 8. Assemble and Repack JAR
 
 ```bash
-java -jar smali-3.0.9-fat-release.jar assemble work/fw3 \
-  --api 37 --output work/framework/classes3.dex
-java -jar smali-3.0.9-fat-release.jar assemble work/sv1 \
-  --api 37 --output work/services/classes.dex
+java -jar smali-3.0.8.jar a -a 37 work/fw3 -o work/framework/classes3.dex
+java -jar smali-3.0.8.jar a -a 37 work/sv1 -o work/services/classes.dex
 
-java -jar baksmali-3.0.9-fat-release.jar list classes work/framework/classes3.dex >/dev/null
-java -jar baksmali-3.0.9-fat-release.jar list classes work/services/classes.dex >/dev/null
+java -jar baksmali-3.0.8.jar list classes work/framework/classes3.dex >/dev/null
+java -jar baksmali-3.0.8.jar list classes work/services/classes.dex >/dev/null
 rg -n 'KaoriosHook;->' work/fw3 work/sv1
 ```
 

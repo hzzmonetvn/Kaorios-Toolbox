@@ -1,108 +1,106 @@
-# Android 17 note — make selected `Build` fields writable
+﻿# Android 17 Notes & Patch Guide
 
-This patch is **required on Android 17+** and has been tested on HyperOS 4
-Beta. Android 17 blocks Java writes to `static final` fields through both
-`Field.set()` and `sun.misc.Unsafe.putObject()`. Kaorios therefore cannot spoof
-the selected `Build` properties until the ROM removes their `final` access
-flag.
+**English** | [Tiếng Việt](notes-a17_VI.md)
 
-## Location
+This document covers essential technical requirements, DEX format considerations, and smali patch steps specific to **Android 17 (SDK 37 / Baklava)**, tested and verified on real devices (e.g. Xiaomi 13 Pro HyperOS Android 17).
 
-Patch the DEX inside `framework.jar` that contains:
+---
 
+## 1. Make Selected `Build` Fields Writable (Un-finaling)
+
+This patch is **mandatory on Android 17+**. Android 17 strictly enforces JVM constraints, blocking reflection writes to `static final` fields via both `Field.set()` and `sun.misc.Unsafe.putObject()`. Kaorios therefore cannot spoof the selected `Build` properties until the ROM removes their `final` access flags.
+
+### Location
+Search the DEX inside `framework.jar` containing:
 ```smali
 Landroid/os/Build;
 Landroid/os/Build$VERSION;
 ```
+*(On HyperOS Android 17 both classes are typically in `classes3.dex`, but DEX numbering can vary by ROM).*
 
-On the tested HyperOS Android 17 build both classes are in `classes3.dex`, but
-the DEX number can differ by ROM. Locate the classes instead of assuming a
-fixed number.
-
-## Fields to patch
-
+### Fields to Patch
 Remove `final` only from these declarations:
 
-Minimum set used by built-in Photos and common PIF profiles:
-
+**Minimum set for Google Photos unlimited backup & standard PIF profiles:**
 ```text
-Build.smali        : BRAND DEVICE FINGERPRINT HARDWARE ID MANUFACTURER MODEL
-                     PRODUCT TAGS TIME TYPE USER
-Build$VERSION.smali: RELEASE RELEASE_OR_CODENAME RELEASE_OR_PREVIEW_DISPLAY
-                     SECURITY_PATCH DEVICE_INITIAL_SDK_INT
+Build.smali        : BRAND, DEVICE, FINGERPRINT, HARDWARE, ID, MANUFACTURER, MODEL, PRODUCT, TAGS, TIME, TYPE, USER
+Build$VERSION.smali: RELEASE, RELEASE_OR_CODENAME, RELEASE_OR_PREVIEW_DISPLAY, SECURITY_PATCH, DEVICE_INITIAL_SDK_INT
 ```
 
-Also remove `final` from any additional Build field explicitly present in the
-selected PIF/game profile, including `DISPLAY`, `HOST`, `INCREMENTAL`, `SDK`, or
-`*_FOR_ATTESTATION` when used. Do not change `SDK_INT` casually.
+Also remove `final` from any optional Build fields used in custom PIF or GameProps profiles (`DISPLAY`, `HOST`, `INCREMENTAL`, `SDK`, or `*_FOR_ATTESTATION`). Keep `SDK_INT` unchanged.
 
-Keep the field name, type, visibility, and hidden-API modifier (`whitelist`,
-`greylist`, etc.) unchanged.
-
-## Expected Dex Comparator result
-
-<p align="center">
-  <img src="images/android17-build-dex-comparator.jpg" alt="Dex Comparator showing Android 17 Build fields with final removed and explicit null initializers" width="420">
-</p>
-
-<p align="center">
-  <img src="images/android17-build-version-dex-comparator.jpg" alt="Dex Comparator showing final removed from Android 17 Build VERSION RELEASE and SECURITY_PATCH fields" width="420">
-</p>
-
-The examples compare the original DEX (top) with the patched DEX (bottom):
-
-- In `Build`, highlighted fields such as `BRAND`, `DEVICE`, `FINGERPRINT`,
-  `HARDWARE`, and `ID` no longer contain `final`; this rebuild tool also
-  displays an explicit `= null` initializer.
-- In `Build$VERSION`, `RELEASE` and `SECURITY_PATCH` no longer contain `final`
-  and are displayed without an initializer. Nearby fields such as
-  `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SDK`, and `SDK_INT`
-  remain unchanged.
-
-The essential change is removal of `final`:
-
+### Smali Syntax
 ```smali
-# Before
+# Before (Stock)
 .field public static final whitelist BRAND:Ljava/lang/String;
 
-# Valid after form
+# After (Patched)
 .field public static whitelist BRAND:Ljava/lang/String;
 ```
+*(Note: Some decompiler tools may output an explicit `= null` default initializer on non-final static fields; this is completely valid).*
 
-Some smali editors or DEX rebuild tools serialize certain non-final reference
-fields with an explicit null initializer. This output is valid and matches the
-`Build` comparison:
+---
 
+## 2. Android 17 DEX Format & Tool Requirements
+
+### DEX Header Magic (`039` vs `040`)
+- **Stock Android 17 ROMs** (such as HyperOS on Xiaomi 13 Pro) ship DEX files with header `dex\n039\0`.
+- **D8 / AGP Compiler** targeting Android 17 (`compileSdk = 37`, `minSdk = 31`) also outputs `dex\n039\0`.
+- Both `039` and `040` are 100% natively supported by the Android 17 ART runtime.
+
+### Tooling Requirements (Smali / Baksmali 3.x)
+- **Do not use baksmali 2.5.2 or older**: Older versions will crash with:
+  `java.lang.ArrayIndexOutOfBoundsException: Index 6 out of bounds for length 6`
+  at `org.jf.dexlib2.HiddenApiRestriction.getAllFlags`. This is caused by new extended Hidden-API restriction flags introduced in Android 17 system classes.
+- **Always use smali/baksmali 3.0+** with the `--api 37` flag:
+  ```bash
+  java -jar baksmali-3.0.8.jar d framework.jar/classes3.dex --api 37 -o fw3
+  java -jar smali-3.0.8.jar a -a 37 fw3 -o classes3.dex
+  ```
+
+---
+
+## 3. Adding DEX to `framework.jar` (`classes7.dex`)
+
+On typical Android 17 system images (e.g. HyperOS), `framework.jar` contains 6 multi-dex files (`classes.dex` through `classes6.dex`).
+1. Extract `classes.dex` from the Kaorios Framework release artifact.
+2. Rename it to the next sequential DEX number: **`classes7.dex`**.
+3. Add `classes7.dex` into `framework.jar`.
+4. The stock DEX files 1–6 remain completely intact, eliminating binary conflicts.
+
+---
+
+## 4. SystemServer Hook on HyperOS / Qualcomm Android 17
+
+In `services.jar` -> `SystemServer.smali`, inject the OMK initialization hook at the beginning of `run()V`:
 ```smali
-.field public static whitelist BRAND:Ljava/lang/String; = null
-.field public static whitelist DEVICE:Ljava/lang/String; = null
-.field public static whitelist FINGERPRINT:Ljava/lang/String; = null
-.field public static whitelist HARDWARE:Ljava/lang/String; = null
-.field public static whitelist ID:Ljava/lang/String; = null
+.method private run()V
+    .registers 20
+
+    .line 975
+    # [Kaorios Hook] Initialize OmkService & RootOfTrust
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+
+    move-object/from16 v1, p0
+    const-string/jumbo v0, "persist.sys.language"
 ```
+*(On MediaTek ROMs, place it right before `startOtherServices(TimingsTraceAndSlog)`).*
 
-`= null` is only the default value before class initialization. It does not
-force the property to remain null and does not replace the value assigned by
-the original class initializer. The `Build$VERSION` comparison confirms that a
-valid patched field may also have no explicit initializer. Do not manually add
-or remove `= null`; removing `final` is the required part.
+---
 
-Do not modify unrelated nearby fields merely because they are visible in the
-comparator. A field outside the minimum list should change only when the active
-profile writes that exact field.
+## 5. Verification & Testing
 
-## Rebuild and verification
-
-Reassemble with smali 3.x using `--api 29` or higher so hidden-API modifiers
-remain valid. After rebuilding:
-
-1. Open the rebuilt DEX in a comparator and confirm each selected field no
-   longer contains `final`.
-2. Confirm unrelated fields and the original class initializer were not
-   changed.
-3. Boot the ROM and verify normal `Build` values are populated.
-4. Enable a Kaorios PIF/GPhotos profile and verify only configured processes
-   receive spoofed values.
-
-No method register changes are needed for this field-only patch. Default values
-remain unchanged for processes that are not configured for spoofing.
+1. **Verify DEX Header**: Check with `xxd -l 8 classes7.dex` -> `dex\n039\0` or `dex\n040\0`.
+2. **Flash into `/system/framework/`**:
+   ```sh
+   mount -o rw,remount /system
+   cp framework.jar /system/framework/framework.jar
+   cp services.jar /system/framework/services.jar
+   chmod 644 /system/framework/framework.jar /system/framework/services.jar
+   rm -rf /data/misc/apexdata/com.android.art/dalvik-cache/arm64/*
+   sync && reboot
+   ```
+3. **Check Logs**:
+   ```sh
+   adb logcat -s KaoriosOmkService KaoriosCertificateGenerator OmkRootOfTrust KaoriosHook
+   ```

@@ -11,7 +11,7 @@ Tài liệu này mô tả chi tiết quy trình tích hợp file DEX của frame
 ## 1. Cảnh báo và nguyên tắc an toàn bắt buộc
 
 - **Luôn sao lưu (backup)**: Lưu lại các file `framework.jar`, `services.jar`, các file tối ưu hóa đi kèm (VDEX/ODEX) và phân vùng khởi động (boot image) đang hoạt động ổn định trước khi chỉnh sửa.
-- **Phiên bản DEX trên Android 17**: Android 17 sử dụng định dạng DEX 040. Bắt buộc phải sử dụng công cụ smali/baksmali phiên bản 3.x trở lên. Không hạ phiên bản header từ `040` xuống `039` để flash vào hệ thống.
+- **Phiên bản DEX trên Android 17**: Android 17 hỗ trợ cả định dạng DEX `039` và `040` (các bản ROM thực tế như HyperOS Android 17 dùng `039`). Bắt buộc phải sử dụng công cụ smali/baksmali phiên bản 3.x trở lên với cờ `--api 37` do các class hệ thống của Android 17 chứa các cờ `HiddenApiRestrictions` mở rộng khiến baksmali 2.5.2 bị lỗi.
 - **Quy tắc phân biệt hoa - thường**: Tên phương thức và định danh (descriptor) phân biệt chính xác chữ hoa và chữ thường. Ví dụ: `OnGetKeyEntry` có chữ `O` viết hoa; `CertificateChainIfNeeded` không phải là `getCertificateChain`.
 - **Vị trí file DEX**: Không mặc định các lớp cần vá luôn nằm ở `classes3.dex` hay `classes7.dex`; luôn luôn giải nén và tìm kiếm trực tiếp trên bản ROM mục tiêu.
 - **Tránh trùng lặp mã**: Tuyệt đối không để tồn tại đồng thời hai phiên bản của gói `Landroid/security/kaorios/*` hoặc `Lcom/kousei/framework/*` trong boot classpath của hệ thống.
@@ -29,10 +29,8 @@ mkdir -p work/framework work/services
 unzip -q framework.jar -d work/framework
 unzip -q services.jar -d work/services
 
-java -jar baksmali-3.0.9-fat-release.jar disassemble \
-  work/framework/classes3.dex --api 37 --output work/fw3
-java -jar baksmali-3.0.9-fat-release.jar disassemble \
-  work/services/classes.dex --api 37 --output work/sv1
+java -jar baksmali-3.0.8.jar d work/framework/classes3.dex --api 37 -o work/fw3
+java -jar baksmali-3.0.8.jar d work/services/classes.dex --api 37 -o work/sv1
 ```
 
 Lặp lại thao tác dịch ngược với tất cả các file `classes*.dex`, sau đó tiến hành tìm kiếm vị trí các lớp cần can thiệp:
@@ -49,7 +47,7 @@ rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
 
 ## 3. Thêm file DEX vào framework không tạo lớp trùng lặp
 
-Đổi tên file thành phẩm `classes.dex` của framework thành số thứ tự DEX tiếp theo chưa tồn tại trong bản ROM (ví dụ: `classes8.dex`), sau đó thêm file này vào bên trong `framework.jar`.
+Đổi tên file thành phẩm `classes.dex` của framework thành số thứ tự DEX tiếp theo chưa tồn tại trong bản ROM (ví dụ: các bản ROM có 6 file DEX gốc như HyperOS A17 sẽ đổi thành `classes7.dex`), sau đó thêm file này vào bên trong `framework.jar`. Giữ nguyên toàn bộ các file DEX gốc `classes.dex` .. `classes6.dex`.
 
 ---
 
@@ -153,7 +151,7 @@ return-object v3
 
 Trên Android 17, hệ thống chặn việc sửa đổi các trường `static final` qua `Field.set()` và `Unsafe`. Vì vậy bắt buộc phải xóa từ khóa `final` khỏi các trường trong `Build` và `Build$VERSION`.
 
-Chi tiết xem tại: [notes-a17.md](notes-a17.md) (hoặc [tài liệu trực tuyến trên GitHub](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17.md)).
+Chi tiết xem tại: [notes-a17_VI.md](notes-a17_VI.md) (hoặc bản tiếng Anh [notes-a17.md](notes-a17.md)).
 
 ---
 
@@ -161,14 +159,31 @@ Chi tiết xem tại: [notes-a17.md](notes-a17.md) (hoặc [tài liệu trực t
 
 ### 6.1 `SystemServer.initSystemServer`
 
-Trong phương thức khởi động dịch vụ của hệ thống, chèn ngay trước khi gọi đến `startOtherServices(...)`:
+Khởi tạo dịch vụ OMK và tự động kiểm tra, nạp `RootOfTrust` từ TEE thật của thiết bị. Có 2 vị trí chèn tùy thuộc vào nền tảng:
 
+**Cách 1: AOSP / Qualcomm / HyperOS Android 17 (Khuyến nghị)**
+Chèn ngay đầu phương thức `run()V`:
 ```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+.method private run()V
+    .registers 20
+
+    .line 975
+    # [Kaorios Hook] Khởi tạo OmkService và RootOfTrust
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+
+    move-object/from16 v1, p0
+    const-string/jumbo v0, "persist.sys.language"
 ```
 
-> **Lưu ý**: Các thanh ghi truyền vào `startOtherServices` có thể khác nhau tùy bản ROM; chỉ có vị trí tương đối là cố định. Hook này sẽ khởi tạo dịch vụ OMK và tự động kiểm tra giới hạn kích thước challenge của TEE.
+**Cách 2: MediaTek (Trước `startOtherServices`)**
+Chèn ngay trước khi gọi đến `startOtherServices(...)`:
+```smali
+    # [Kaorios Hook] Khởi tạo OmkService và RootOfTrust
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+    invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+```
+
+> **Lưu ý**: Các thanh ghi truyền vào `startOtherServices` có thể khác nhau tùy bản ROM; chỉ có vị trí tương đối là cố định. Mẫu tham chiếu đầy đủ: [`Template/Template_V2060/SystemServer.smali`](../Template/Template_V2060/SystemServer.smali).
 
 ---
 
@@ -277,6 +292,8 @@ Gọi hàm kiểm tra `isSecureFlag()Z`. Nếu trả về `true`:
 - Sửa `WindowState[Animator].isSecureLocked()Z` để luôn trả về `0` (không khóa bảo mật hiển thị).
 - Phương thức `setSecureLocked(Z)V` có thể cho kết thúc sớm (`return-void`).
 
+Chi tiết xem tại tài liệu chuyên sâu: [Disable_Secure_Flag.md](Disable_Secure_Flag.md) và mẫu mã nguồn tham chiếu: [`Template/Template_V2060/WindowState.smali`](../Template/Template_V2060/WindowState.smali).
+
 > **Lưu ý**: Chú ý không đảo ngược giá trị trả về của hai phương thức đầu.
 
 ---
@@ -286,13 +303,11 @@ Gọi hàm kiểm tra `isSecureFlag()Z`. Nếu trả về `true`:
 Sau khi hoàn tất chỉnh sửa smali, tiến hành dịch ngược lại thành file DEX và cập nhật vào các file JAR hệ thống:
 
 ```bash
-java -jar smali-3.0.9-fat-release.jar assemble work/fw3 \
-  --api 37 --output work/framework/classes3.dex
-java -jar smali-3.0.9-fat-release.jar assemble work/sv1 \
-  --api 37 --output work/services/classes.dex
+java -jar smali-3.0.8.jar a -a 37 work/fw3 -o work/framework/classes3.dex
+java -jar smali-3.0.8.jar a -a 37 work/sv1 -o work/services/classes.dex
 
-java -jar baksmali-3.0.9-fat-release.jar list classes work/framework/classes3.dex >/dev/null
-java -jar baksmali-3.0.9-fat-release.jar list classes work/services/classes.dex >/dev/null
+java -jar baksmali-3.0.8.jar list classes work/framework/classes3.dex >/dev/null
+java -jar baksmali-3.0.8.jar list classes work/services/classes.dex >/dev/null
 rg -n 'KaoriosHook;->' work/fw3 work/sv1
 ```
 
