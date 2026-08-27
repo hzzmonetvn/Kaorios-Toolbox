@@ -12,7 +12,8 @@ on the target ROM instead of assuming the same DEX number or line number.
 - Hooks work on **Android 12–17 (API 31–37)**
 - `minSdk=31`, `compileSdk=37`, `targetSdk=37`
 - `KaoriosHook` methods are all `public static` — no instance needed
-- Verified framework source commit: `2d1bf73a60d044a755977c6a0bafa0413dc88dd7`
+- Release branches: `Toolbox-Framework` (full DEX) and
+  `Toolbox-Framework-Native` (JNI bridge + framework native library)
 
 > Hook names and descriptors are case-sensitive. Copy the complete descriptor,
 > not only the method name. The files under
@@ -42,13 +43,23 @@ on the target ROM instead of assuming the same DEX number or line number.
 
 ---
 
-## Build artifact and DEX placement
+## Choose a build branch and place its artifacts
 
-The `Build APK and DEX` workflow in the framework repository publishes one
-artifact with `KaoriosToolbox-release.apk`, `KaoriosFramework-release.apk`,
-`classes.dex`, and `SHA256SUMS`. Verify the checksums before integration.
+| Branch | Framework payload | Toolbox APK | Recommended use |
+|---|---|---|---|
+| [`Toolbox-Framework`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework) | Full `classes.dex` | Includes `libkaorios_toolbox.so` | Normal ROM integration; fewer linker dependencies |
+| [`Toolbox-Framework-Native`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework-Native) | Thin JNI bridge DEX + `libkaorios_framework.so` | Includes `libkaorios_toolbox.so` | Native framework policy; requires ROM-side library integration |
 
-Import the artifact's `classes.dex` into `framework.jar`. Its final name depends
+Both workflows publish `KaoriosToolbox-release.apk`,
+`KaoriosFramework-release.apk`, the extracted `classes.dex`, native libraries
+used by the branch, and `SHA256SUMS`. Always verify the checksums.
+
+`libkaorios_toolbox.so` is already packaged inside `KaoriosToolbox-release.apk`.
+The separately extracted copy is for checksum and architecture verification;
+do not install it on a system partition.
+
+For the default `Toolbox-Framework` branch, import the artifact's full
+`classes.dex` into `framework.jar`. Its final name depends
 on the target ROM. On a clean ROM, use the next unused DEX name. On a ROM that
 already contains Kaorios, first locate both package trees:
 
@@ -62,6 +73,21 @@ system classes, remove both old package trees from that DEX, rebuild it, then
 append the new artifact using the next unused DEX name. Never append a duplicate
 copy. Smali call-site patches stay in the DEX that originally owns each Android
 class.
+
+For `Toolbox-Framework-Native`, the extracted `classes.dex` is only the JNI
+bridge. Keep it paired with `libkaorios_framework.so` from the same artifact.
+For an arm64 ROM, install the library in `/system_ext/lib64/` or
+`/product/lib64/` with mode `0644` and owner `root:root`:
+
+```bash
+install -m 0644 lib/arm64-v8a/libkaorios_framework.so \
+  "$ROM/system_ext/lib64/libkaorios_framework.so"
+```
+
+If `system_server` uses a restricted linker namespace, declare the library in
+the ROM build tree/linker configuration. Do not place the framework library
+only under `/data/app/...`, and never mix a native bridge DEX with a `.so` from
+a different build. The smali call-site instructions below apply to both branches.
 
 Before editing, disassemble every candidate DEX with the target API, for example:
 

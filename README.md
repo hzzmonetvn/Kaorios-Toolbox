@@ -33,14 +33,16 @@
 
 > **ROM builders**: see Patch Guide v2.0.6.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0_VI.md).
 
-The framework build publishes one GitHub Actions artifact containing:
+The framework repository provides two build branches:
 
-- `KaoriosToolbox-release.apk`
-- `KaoriosFramework-release.apk`
-- `classes.dex` for ROM framework integration
-- `SHA256SUMS`
+| Branch | Framework | Toolbox APK |
+|---|---|---|
+| [`Toolbox-Framework`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework) | Full framework `classes.dex` (recommended for ROM integration) | Includes `libkaorios_toolbox.so` |
+| [`Toolbox-Framework-Native`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework-Native) | Thin bridge DEX + `libkaorios_framework.so` | Includes `libkaorios_toolbox.so` |
 
-Framework source and CI builds: [KaoriosToolbox-Frameowrk](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/actions)
+Every artifact contains both release APKs, the extracted framework `classes.dex`,
+native libraries used by that branch, and `SHA256SUMS`. Download builds from
+[GitHub Actions](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/actions).
 
 Follow the detailed usage guide here:  
 👉 [Kaorios-Toolbox Guide](https://github.com/hzzmonetvn/Kaorios-Toolbox/tree/main/Toolbox-docs)

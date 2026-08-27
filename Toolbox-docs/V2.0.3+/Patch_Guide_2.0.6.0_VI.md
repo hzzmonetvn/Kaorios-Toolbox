@@ -17,14 +17,22 @@ Tài liệu này mô tả quy trình tích hợp DEX framework 2.0.6.0 vào ROM 
 - Không tăng `.registers` rồi giữ tham số viết bằng `vN` mà không tính lại. Ưu tiên `p0..pN`, local đang trống hoặc tăng `.locals`.
 - Patch từng nhóm, boot-test từng nhóm. Sai một descriptor trong `SystemServer` có thể bootloop.
 
-## 2. Artifact từ GitHub Build
+## 2. Chọn nhánh build và artifact
 
-Workflow `Build APK and DEX` xuất:
+Repository framework có hai nhánh độc lập:
+
+| Nhánh | Framework | Toolbox APK | Khi nào dùng |
+|---|---|---|---|
+| [`Toolbox-Framework`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework) | Full `classes.dex` | Có `libkaorios_toolbox.so` | Khuyến nghị khi patch ROM; ít phụ thuộc linker namespace |
+| [`Toolbox-Framework-Native`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework-Native) | DEX bridge mỏng + `libkaorios_framework.so` | Có `libkaorios_toolbox.so` | Muốn đưa policy framework sang native; cần tích hợp `.so` vào ROM |
+
+Nhánh mặc định `Toolbox-Framework` xuất:
 
 ```text
 KaoriosToolbox-release.apk
 KaoriosFramework-release.apk
 classes.dex
+lib/arm64-v8a/libkaorios_toolbox.so
 SHA256SUMS
 ```
 
@@ -34,7 +42,30 @@ java -jar baksmali-3.0.9-fat-release.jar list classes classes.dex \
   | grep -E 'Landroid/security/kaorios/KaoriosHook;|Lcom/kousei/framework/KaoriosFramework;'
 ```
 
-`classes.dex` là DEX framework cần nhập vào `framework.jar`. Không lấy DEX từ Toolbox APK.
+`classes.dex` của nhánh mặc định là full DEX framework cần nhập vào `framework.jar`.
+Không lấy DEX từ Toolbox APK. `libkaorios_toolbox.so` đã được đóng gói sẵn trong
+`KaoriosToolbox-release.apk`; file được tách riêng chỉ để kiểm tra checksum/kiến trúc,
+không chép nó vào phân vùng system.
+
+Artifact nhánh `Toolbox-Framework-Native` có thêm:
+
+```text
+lib/arm64-v8a/libkaorios_framework.so
+```
+
+Ở nhánh này, `classes.dex` chỉ là bridge JNI và phải đi cùng đúng
+`libkaorios_framework.so` cùng một artifact. Với ROM arm64, tích hợp thư viện vào
+`/system_ext/lib64/` hoặc `/product/lib64/`, permission `0644`, owner `root:root`:
+
+```bash
+install -m 0644 lib/arm64-v8a/libkaorios_framework.so \
+  "$ROM/system_ext/lib64/libkaorios_framework.so"
+```
+
+Nếu `system_server` bị giới hạn linker namespace, phải khai báo thư viện trong build
+tree/linker config của ROM. Không đặt thư viện framework chỉ trong `/data/app/...`.
+Không trộn bridge DEX của nhánh native với `.so` từ build khác; mismatch JNI có thể
+làm hook fail hoặc crash process. Các mục patch smali phía dưới áp dụng cho cả hai nhánh.
 
 ## 3. Khảo sát ROM đích
 
@@ -361,7 +392,9 @@ Sau khi ghi Settings trực tiếp, bump `kaorios_time` hoặc restart process �
 
 ### Static
 
-- DEX artifact chứa `KaoriosHook` và `KaoriosFramework`.
+- Nhánh full DEX: artifact chứa `KaoriosHook` và `KaoriosFramework` đầy đủ.
+- Nhánh native: bridge DEX và `libkaorios_framework.so` lấy từ cùng một artifact;
+  kiểm tra `.so` có kiến trúc AArch64 và nằm trong linker namespace của `system_server`.
 - Boot JAR cuối không còn class Kaorios cũ/trùng.
 - Mọi `invoke-static` khớp bảng descriptor mục 5.
 - Build fields cần spoof đã mất `final`; field không liên quan giữ nguyên.
@@ -405,5 +438,3 @@ adb logcat -v threadtime -s KaoriosHook KaoriosOmkService OmkRootOfTrust Kaorios
 6. Patch installer/settings/secure flag sau cùng vì phụ thuộc ROM nhiều nhất.
 
 Không patch tất cả rồi flash một lần; khi bootloop sẽ không khoanh được call site sai.
-
-
