@@ -79,7 +79,7 @@
 
 # direct methods
 .method static constructor blacklist <clinit>()V
-    .registers 5
+    .locals 5
 
     .line 448
     const-string/jumbo v0, "ro.build.version.incremental"
@@ -267,17 +267,17 @@
 
     move-result v0
 
-    if-eqz v0, :cond_b7
+    if-eqz v0, :cond_0
 
     .line 631
     new-array v0, v2, [Ljava/lang/String;
 
-    goto :goto_b9
+    goto :goto_0
 
-    :cond_b7
+    :cond_0
     sget-object v0, Landroid/os/Build$VERSION;->ALL_CODENAMES:[Ljava/lang/String;
 
-    :goto_b9
+    :goto_0
     sput-object v0, Landroid/os/Build$VERSION;->ACTIVE_CODENAMES:[Ljava/lang/String;
 
     .line 640
@@ -319,7 +319,7 @@
 .end method
 
 .method public constructor whitelist <init>()V
-    .registers 1
+    .locals 0
 
     .line 442
     invoke-direct {p0}, Ljava/lang/Object;-><init>()V

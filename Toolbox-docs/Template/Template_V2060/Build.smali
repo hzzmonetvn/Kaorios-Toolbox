@@ -161,7 +161,7 @@
 
 # direct methods
 .method static bridge synthetic blacklist -$$Nest$smgetString(Ljava/lang/String;)Ljava/lang/String;
-    .registers 1
+    .locals 0
 
     invoke-static {p0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
 
@@ -171,7 +171,7 @@
 .end method
 
 .method static bridge synthetic blacklist -$$Nest$smgetStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
-    .registers 2
+    .locals 0
 
     invoke-static {p0, p1}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
 
@@ -181,7 +181,7 @@
 .end method
 
 .method static constructor blacklist <clinit>()V
-    .registers 7
+    .locals 7
 
     .line 71
     const-string/jumbo v0, "ro.build.id"
@@ -450,16 +450,16 @@
 
     const/4 v2, 0x0
 
-    if-lez v0, :cond_ff
+    if-lez v0, :cond_0
 
     move v0, v1
 
-    goto :goto_100
+    goto :goto_0
 
-    :cond_ff
+    :cond_0
     move v0, v2
 
-    :goto_100
+    :goto_0
     sput-boolean v0, Landroid/os/Build;->IS_MIUI:Z
 
     .line 270
@@ -492,20 +492,20 @@
 
     const-string/jumbo v4, "ro.system.product.cpu.abilist"
 
-    if-eqz v0, :cond_126
+    if-eqz v0, :cond_1
 
     .line 347
     invoke-static {v4, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
 
     move-result-object v0
 
-    goto :goto_128
+    goto :goto_1
 
     .line 348
-    :cond_126
+    :cond_1
     sget-object v0, Landroid/os/Build;->SUPPORTED_ABIS:[Ljava/lang/String;
 
-    :goto_128
+    :goto_1
     sput-object v0, Landroid/os/Build;->MTK_HBT_SUPPORTED_ABIS:[Ljava/lang/String;
 
     .line 356
@@ -525,20 +525,20 @@
 
     const-string/jumbo v5, "ro.system.product.cpu.abilist32"
 
-    if-eqz v0, :cond_140
+    if-eqz v0, :cond_2
 
     .line 364
     invoke-static {v5, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
 
     move-result-object v0
 
-    goto :goto_142
+    goto :goto_2
 
     .line 365
-    :cond_140
+    :cond_2
     sget-object v0, Landroid/os/Build;->SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
-    :goto_142
+    :goto_2
     sput-object v0, Landroid/os/Build;->MTK_HBT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
     .line 372
@@ -594,54 +594,54 @@
 
     move-result v0
 
-    if-eqz v0, :cond_174
+    if-eqz v0, :cond_3
 
     .line 420
     sget-object v0, Landroid/os/Build;->SUPPORTED_64_BIT_ABIS:[Ljava/lang/String;
 
     .local v0, "abiList":[Ljava/lang/String;
-    goto :goto_18a
+    goto :goto_3
 
     .line 423
     .end local v0    # "abiList":[Ljava/lang/String;
-    :cond_174
+    :cond_3
     invoke-static {}, Lcom/android/internal/hidden_from_bootclasspath/xiaomi/platform/flags/Flags;->mtkEnabled()Z
 
     move-result v0
 
-    if-eqz v0, :cond_181
+    if-eqz v0, :cond_4
 
     sget-boolean v0, Landroid/os/Build;->MTK_HBT_ON_64BIT_ONLY_CHIP:Z
 
-    if-eqz v0, :cond_181
+    if-eqz v0, :cond_4
 
     .line 424
     sget-object v0, Landroid/os/Build;->MTK_HBT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
     .restart local v0    # "abiList":[Ljava/lang/String;
-    goto :goto_18a
+    goto :goto_3
 
     .line 425
     .end local v0    # "abiList":[Ljava/lang/String;
-    :cond_181
+    :cond_4
     sget-boolean v0, Landroid/os/Build;->IS_SUPPORT_MI_FAKE_32BIT:Z
 
-    if-eqz v0, :cond_188
+    if-eqz v0, :cond_5
 
     .line 426
     sget-object v0, Landroid/os/Build;->MI_FAKE_32BIT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
     .restart local v0    # "abiList":[Ljava/lang/String;
-    goto :goto_18a
+    goto :goto_3
 
     .line 428
     .end local v0    # "abiList":[Ljava/lang/String;
-    :cond_188
+    :cond_5
     sget-object v0, Landroid/os/Build;->SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
     .line 433
     .restart local v0    # "abiList":[Ljava/lang/String;
-    :goto_18a
+    :goto_3
     aget-object v3, v0, v2
 
     sput-object v3, Landroid/os/Build;->CPU_ABI:Ljava/lang/String;
@@ -649,24 +649,24 @@
     .line 434
     array-length v3, v0
 
-    if-le v3, v1, :cond_196
+    if-le v3, v1, :cond_6
 
     .line 435
     aget-object v3, v0, v1
 
     sput-object v3, Landroid/os/Build;->CPU_ABI2:Ljava/lang/String;
 
-    goto :goto_19a
+    goto :goto_4
 
     .line 437
-    :cond_196
+    :cond_6
     const-string v3, ""
 
     sput-object v3, Landroid/os/Build;->CPU_ABI2:Ljava/lang/String;
 
     .line 1722
     .end local v0    # "abiList":[Ljava/lang/String;
-    :goto_19a
+    :goto_4
     const-string/jumbo v0, "ro.build.type"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -768,16 +768,16 @@
 
     move-result v0
 
-    if-ne v0, v1, :cond_1fa
+    if-ne v0, v1, :cond_7
 
     move v0, v1
 
-    goto :goto_1fb
+    goto :goto_5
 
-    :cond_1fa
+    :cond_7
     move v0, v2
 
-    :goto_1fb
+    :goto_5
     sput-boolean v0, Landroid/os/Build;->IS_DEBUGGABLE:Z
 
     .line 2036
@@ -790,16 +790,16 @@
 
     move-result v0
 
-    if-ne v0, v1, :cond_209
+    if-ne v0, v1, :cond_8
 
     move v0, v1
 
-    goto :goto_20a
+    goto :goto_6
 
-    :cond_209
+    :cond_8
     move v0, v2
 
-    :goto_20a
+    :goto_6
     sput-boolean v0, Landroid/os/Build;->IS_DEVELOPMENT:Z
 
     .line 2055
@@ -845,16 +845,16 @@
 
     move-result v0
 
-    if-ne v0, v1, :cond_238
+    if-ne v0, v1, :cond_9
 
     move v0, v1
 
-    goto :goto_239
+    goto :goto_7
 
-    :cond_238
+    :cond_9
     move v0, v2
 
-    :goto_239
+    :goto_7
     sput-boolean v0, Landroid/os/Build;->IS_TIMINGTRACE:Z
 
     .line 2082
@@ -874,7 +874,7 @@
 
     move-result v0
 
-    if-eqz v0, :cond_25e
+    if-eqz v0, :cond_b
 
     .line 2105
     const-string/jumbo v0, "ro.salsa.build_configured"
@@ -883,7 +883,7 @@
 
     move-result v0
 
-    if-nez v0, :cond_25d
+    if-nez v0, :cond_a
 
     .line 2106
     const-string/jumbo v0, "ro.vendor.salsa.build_configured"
@@ -892,15 +892,15 @@
 
     move-result v0
 
-    if-eqz v0, :cond_25e
+    if-eqz v0, :cond_b
 
-    :cond_25d
-    goto :goto_25f
+    :cond_a
+    goto :goto_8
 
-    :cond_25e
+    :cond_b
     move v1, v2
 
-    :goto_25f
+    :goto_8
     sput-boolean v1, Landroid/os/Build;->IS_SALSA_BUILD:Z
 
     .line 2103
@@ -908,7 +908,7 @@
 .end method
 
 .method public constructor whitelist <init>()V
-    .registers 1
+    .locals 0
 
     .line 64
     invoke-direct {p0}, Ljava/lang/Object;-><init>()V
@@ -917,7 +917,7 @@
 .end method
 
 .method private static greylist-max-o deriveFingerprint()Ljava/lang/String;
-    .registers 5
+    .locals 5
 
     .line 1806
     const-string/jumbo v0, "ro.build.fingerprint"
@@ -932,7 +932,7 @@
 
     move-result v1
 
-    if-eqz v1, :cond_8e
+    if-eqz v1, :cond_0
 
     .line 1808
     new-instance v1, Ljava/lang/StringBuilder;
@@ -1063,12 +1063,12 @@
     move-result-object v0
 
     .line 1817
-    :cond_8e
+    :cond_0
     return-object v0
 .end method
 
 .method public static greylist-max-o ensureFingerprintProperty()V
-    .registers 3
+    .locals 3
 
     .line 1828
     const-string/jumbo v0, "ro.build.fingerprint"
@@ -1081,21 +1081,21 @@
 
     move-result v1
 
-    if-eqz v1, :cond_1b
+    if-eqz v1, :cond_0
 
     .line 1830
-    :try_start_d
+    :try_start_0
     sget-object v1, Landroid/os/Build;->FINGERPRINT:Ljava/lang/String;
 
     invoke-static {v0, v1}, Landroid/os/SystemProperties;->set(Ljava/lang/String;Ljava/lang/String;)V
-    :try_end_12
-    .catch Ljava/lang/IllegalArgumentException; {:try_start_d .. :try_end_12} :catch_13
+    :try_end_0
+    .catch Ljava/lang/IllegalArgumentException; {:try_start_0 .. :try_end_0} :catch_0
 
     .line 1833
-    goto :goto_1b
+    goto :goto_0
 
     .line 1831
-    :catch_13
+    :catch_0
     move-exception v0
 
     .line 1832
@@ -1108,17 +1108,17 @@
 
     .line 1835
     .end local v0    # "e":Ljava/lang/IllegalArgumentException;
-    :cond_1b
-    :goto_1b
+    :cond_0
+    :goto_0
     return-void
 .end method
 
 .method public static blacklist fullVersionToString(I)Ljava/lang/String;
-    .registers 4
+    .locals 3
     .param p0, "version"    # I
 
     .line 1702
-    if-ltz p0, :cond_1d
+    if-ltz p0, :cond_0
 
     .line 1706
     invoke-static {p0}, Landroid/os/Build;->getMajorSdkVersion(I)I
@@ -1150,7 +1150,7 @@
     return-object v0
 
     .line 1703
-    :cond_1d
+    :cond_0
     new-instance v0, Ljava/lang/IllegalArgumentException;
 
     new-instance v1, Ljava/lang/StringBuilder;
@@ -1183,7 +1183,7 @@
 .end method
 
 .method public static whitelist getBackportedFixStatus(J)I
-    .registers 6
+    .locals 4
     .param p0, "id"    # J
 
     .line 1779
@@ -1201,13 +1201,13 @@
 
     cmp-long v2, p0, v2
 
-    if-lez v2, :cond_20
+    if-lez v2, :cond_1
 
     const-wide/16 v2, 0x3ff
 
     cmp-long v2, p0, v2
 
-    if-gtz v2, :cond_20
+    if-gtz v2, :cond_1
 
     .line 1782
     invoke-static {}, Landroid/sysprop/BackportedFixesProperties;->alias_bitset()Ljava/util/List;
@@ -1220,21 +1220,21 @@
 
     move-result v2
 
-    if-eqz v2, :cond_1e
+    if-eqz v2, :cond_0
 
     .line 1783
     const/4 v2, 0x1
 
-    goto :goto_1f
+    goto :goto_0
 
-    :cond_1e
+    :cond_0
     const/4 v2, 0x0
 
-    :goto_1f
+    :goto_0
     move v0, v2
 
     .line 1785
-    :cond_20
+    :cond_1
     const/16 v2, 0x3db
 
     invoke-static {v2, v1, p0, p1, v0}, Lcom/android/internal/util/FrameworkStatsLog;->write(IIJI)V
@@ -1244,7 +1244,7 @@
 .end method
 
 .method public static whitelist getFingerprintedPartitions()Ljava/util/List;
-    .registers 10
+    .locals 10
     .annotation system Ldalvik/annotation/Signature;
         value = {
             "()",
@@ -1265,7 +1265,7 @@
 
     move-result v1
 
-    if-eqz v1, :cond_24
+    if-eqz v1, :cond_0
 
     .line 1978
     const-string/jumbo v7, "vendor"
@@ -1287,11 +1287,11 @@
     move-result-object v1
 
     .local v1, "names":[Ljava/lang/String;
-    goto :goto_39
+    goto :goto_0
 
     .line 1988
     .end local v1    # "names":[Ljava/lang/String;
-    :cond_24
+    :cond_0
     const-string/jumbo v6, "system"
 
     const-string/jumbo v7, "vendor"
@@ -1310,13 +1310,13 @@
 
     .line 1998
     .restart local v1    # "names":[Ljava/lang/String;
-    :goto_39
+    :goto_0
     array-length v2, v1
 
     const/4 v3, 0x0
 
-    :goto_3b
-    if-ge v3, v2, :cond_90
+    :goto_1
+    if-ge v3, v2, :cond_2
 
     aget-object v5, v1, v3
 
@@ -1356,13 +1356,13 @@
 
     move-result v7
 
-    if-eqz v7, :cond_64
+    if-eqz v7, :cond_1
 
     .line 2001
-    goto :goto_8d
+    goto :goto_2
 
     .line 2003
-    :cond_64
+    :cond_1
     new-instance v7, Ljava/lang/StringBuilder;
 
     invoke-direct {v7}, Ljava/lang/StringBuilder;-><init>()V
@@ -1411,18 +1411,18 @@
     .end local v5    # "name":Ljava/lang/String;
     .end local v6    # "fingerprint":Ljava/lang/String;
     .end local v7    # "time":J
-    :goto_8d
+    :goto_2
     add-int/lit8 v3, v3, 0x1
 
-    goto :goto_3b
+    goto :goto_1
 
     .line 2007
-    :cond_90
+    :cond_2
     return-object v0
 .end method
 
 .method private static greylist getLong(Ljava/lang/String;)J
-    .registers 4
+    .locals 3
     .param p0, "property"    # Ljava/lang/String;
 
     .line 2145
@@ -1434,13 +1434,13 @@
     invoke-static {v0}, Ljava/lang/Long;->parseLong(Ljava/lang/String;)J
 
     move-result-wide v0
-    :try_end_8
-    .catch Ljava/lang/NumberFormatException; {:try_start_0 .. :try_end_8} :catch_9
+    :try_end_0
+    .catch Ljava/lang/NumberFormatException; {:try_start_0 .. :try_end_0} :catch_0
 
     return-wide v0
 
     .line 2146
-    :catch_9
+    :catch_0
     move-exception v0
 
     .line 2147
@@ -1451,7 +1451,7 @@
 .end method
 
 .method public static whitelist getMajorSdkVersion(I)I
-    .registers 2
+    .locals 1
     .param p0, "sdkIntFull"    # I
 
     .line 1634
@@ -1463,7 +1463,7 @@
 .end method
 
 .method public static whitelist getMinorSdkVersion(I)I
-    .registers 2
+    .locals 1
     .param p0, "sdkIntFull"    # I
 
     .line 1644
@@ -1475,7 +1475,7 @@
 .end method
 
 .method public static whitelist getRadioVersion()Ljava/lang/String;
-    .registers 2
+    .locals 2
 
     .line 2114
     invoke-static {}, Landroid/sysprop/TelephonyProperties;->baseband_version()Ljava/util/List;
@@ -1492,7 +1492,7 @@
 .end method
 
 .method public static whitelist getSerial()Ljava/lang/String;
-    .registers 4
+    .locals 4
 
     .line 314
     nop
@@ -1510,7 +1510,7 @@
 
     .line 317
     .local v0, "service":Landroid/os/IDeviceIdentifiersPolicyService;
-    :try_start_b
+    :try_start_0
     invoke-static {}, Landroid/app/ActivityThread;->currentApplication()Landroid/app/Application;
 
     move-result-object v1
@@ -1519,32 +1519,32 @@
     .local v1, "application":Landroid/app/Application;
     const/4 v2, 0x0
 
-    if-eqz v1, :cond_17
+    if-eqz v1, :cond_0
 
     invoke-virtual {v1}, Landroid/app/Application;->getPackageName()Ljava/lang/String;
 
     move-result-object v3
 
-    goto :goto_18
+    goto :goto_0
 
-    :cond_17
+    :cond_0
     move-object v3, v2
 
     .line 319
     .local v3, "callingPackage":Ljava/lang/String;
-    :goto_18
+    :goto_0
     invoke-interface {v0, v3, v2}, Landroid/os/IDeviceIdentifiersPolicyService;->getSerialForPackage(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 
     move-result-object v2
-    :try_end_1c
-    .catch Landroid/os/RemoteException; {:try_start_b .. :try_end_1c} :catch_1d
+    :try_end_0
+    .catch Landroid/os/RemoteException; {:try_start_0 .. :try_end_0} :catch_0
 
     return-object v2
 
     .line 320
     .end local v1    # "application":Landroid/app/Application;
     .end local v3    # "callingPackage":Ljava/lang/String;
-    :catch_1d
+    :catch_0
     move-exception v1
 
     .line 321
@@ -1559,7 +1559,7 @@
 .end method
 
 .method private static greylist getString(Ljava/lang/String;)Ljava/lang/String;
-    .registers 2
+    .locals 1
     .param p0, "property"    # Ljava/lang/String;
 
     .line 2119
@@ -1573,7 +1573,7 @@
 .end method
 
 .method private static greylist-max-o getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
-    .registers 4
+    .locals 2
     .param p0, "property"    # Ljava/lang/String;
     .param p1, "separator"    # Ljava/lang/String;
 
@@ -1588,7 +1588,7 @@
 
     move-result v1
 
-    if-eqz v1, :cond_e
+    if-eqz v1, :cond_0
 
     .line 2136
     const/4 v1, 0x0
@@ -1598,7 +1598,7 @@
     return-object v1
 
     .line 2138
-    :cond_e
+    :cond_0
     invoke-virtual {v0, p1}, Ljava/lang/String;->split(Ljava/lang/String;)[Ljava/lang/String;
 
     move-result-object v1
@@ -1607,7 +1607,7 @@
 .end method
 
 .method private static blacklist getVendorDeviceIdProperty(Ljava/lang/String;)Ljava/lang/String;
-    .registers 4
+    .locals 3
     .param p0, "property"    # Ljava/lang/String;
 
     .line 2127
@@ -1635,7 +1635,7 @@
 
     move-result v1
 
-    if-eqz v1, :cond_28
+    if-eqz v1, :cond_0
 
     .line 2130
     const-string/jumbo v1, "ro.product.vendor.%s"
@@ -1652,18 +1652,18 @@
 
     move-result-object v1
 
-    goto :goto_29
+    goto :goto_0
 
-    :cond_28
+    :cond_0
     move-object v1, v0
 
     .line 2129
-    :goto_29
+    :goto_0
     return-object v1
 .end method
 
 .method public static blacklist is64BitAbi(Ljava/lang/String;)Z
-    .registers 2
+    .locals 1
     .param p0, "abi"    # Ljava/lang/String;
 
     .line 387
@@ -1675,7 +1675,7 @@
 .end method
 
 .method private static blacklist isBitSet(Ljava/util/List;I)Z
-    .registers 8
+    .locals 6
     .param p1, "bitIndex"    # I
     .annotation system Ldalvik/annotation/Signature;
         value = {
@@ -1690,13 +1690,13 @@
     .local p0, "bitsetLongArray":Ljava/util/List;, "Ljava/util/List<Ljava/lang/Long;>;"
     const/4 v0, 0x0
 
-    if-gez p1, :cond_4
+    if-gez p1, :cond_0
 
     .line 1792
     return v0
 
     .line 1794
-    :cond_4
+    :cond_0
     shr-int/lit8 v1, p1, 0x6
 
     .line 1795
@@ -1705,13 +1705,13 @@
 
     move-result v2
 
-    if-gt v2, v1, :cond_d
+    if-gt v2, v1, :cond_1
 
     .line 1796
     return v0
 
     .line 1798
-    :cond_d
+    :cond_1
     invoke-interface {p0, v1}, Ljava/util/List;->get(I)Ljava/lang/Object;
 
     move-result-object v2
@@ -1732,35 +1732,35 @@
 
     cmp-long v2, v2, v4
 
-    if-eqz v2, :cond_22
+    if-eqz v2, :cond_2
 
     const/4 v0, 0x1
 
-    :cond_22
+    :cond_2
     return v0
 .end method
 
 .method public static greylist-max-o isBuildConsistent()Z
-    .registers 3
+    .locals 3
 
     .line 1889
     sget-boolean v0, Landroid/os/Build;->IS_ENG:Z
 
     const/4 v1, 0x1
 
-    if-eqz v0, :cond_6
+    if-eqz v0, :cond_0
 
     return v1
 
     .line 1891
-    :cond_6
+    :cond_0
     invoke-static {}, Landroid/os/VintfObject;->verifyBuildAtBoot()I
 
     move-result v0
 
     .line 1892
     .local v0, "result":I
-    if-eqz v0, :cond_26
+    if-eqz v0, :cond_1
 
     .line 1893
     new-instance v1, Ljava/lang/StringBuilder;
@@ -1791,12 +1791,12 @@
     return v1
 
     .line 1897
-    :cond_26
+    :cond_1
     return v1
 .end method
 
 .method public static blacklist isDebuggable()Z
-    .registers 1
+    .locals 1
     .annotation runtime Landroid/annotation/SystemApi;
         client = .enum Landroid/annotation/SystemApi$Client;->MODULE_LIBRARIES:Landroid/annotation/SystemApi$Client;
     .end annotation
@@ -1808,31 +1808,31 @@
 .end method
 
 .method public static blacklist isEnabled32BitTranslate()Z
-    .registers 3
+    .locals 3
 
     .line 2163
     sget-boolean v0, Landroid/os/Build;->IS_SUPPORT_MI_FAKE_32BIT:Z
 
     const/4 v1, 0x0
 
-    if-nez v0, :cond_6
+    if-nez v0, :cond_0
 
     return v1
 
     .line 2166
-    :cond_6
+    :cond_0
     sget v0, Landroid/os/Build$VERSION;->DEVICE_INITIAL_SDK_INT:I
 
     const/16 v2, 0x22
 
-    if-gt v0, v2, :cond_e
+    if-gt v0, v2, :cond_1
 
     const/4 v0, 0x1
 
     return v0
 
     .line 2169
-    :cond_e
+    :cond_1
     const-string/jumbo v0, "persist.sys.force_32bit_install"
 
     invoke-static {v0, v1}, Landroid/os/SystemProperties;->getBoolean(Ljava/lang/String;Z)Z
@@ -1843,7 +1843,7 @@
 .end method
 
 .method private static blacklist joinListOrElse(Ljava/util/List;Ljava/lang/String;)Ljava/lang/String;
-    .registers 4
+    .locals 2
     .param p1, "defaultValue"    # Ljava/lang/String;
     .annotation system Ldalvik/annotation/Signature;
         value = {
@@ -1891,41 +1891,41 @@
 
     move-result v1
 
-    if-eqz v1, :cond_21
+    if-eqz v1, :cond_0
 
     move-object v1, p1
 
-    goto :goto_22
+    goto :goto_0
 
-    :cond_21
+    :cond_0
     move-object v1, v0
 
-    :goto_22
+    :goto_0
     return-object v1
 .end method
 
 .method static synthetic blacklist lambda$joinListOrElse$0(Ljava/lang/Object;)Ljava/lang/String;
-    .registers 2
+    .locals 1
     .param p0, "elem"    # Ljava/lang/Object;
 
     .line 2152
-    if-nez p0, :cond_5
+    if-nez p0, :cond_0
 
     const-string v0, ""
 
-    goto :goto_9
+    goto :goto_0
 
-    :cond_5
+    :cond_0
     invoke-virtual {p0}, Ljava/lang/Object;->toString()Ljava/lang/String;
 
     move-result-object v0
 
-    :goto_9
+    :goto_0
     return-object v0
 .end method
 
 .method public static blacklist parseFullVersion(Ljava/lang/String;)I
-    .registers 7
+    .locals 6
     .param p0, "version"    # Ljava/lang/String;
 
     .line 1660
@@ -1943,20 +1943,20 @@
     .local v1, "minor":I
     const/4 v2, -0x1
 
-    if-ne v0, v2, :cond_f
+    if-ne v0, v2, :cond_0
 
     .line 1665
-    :try_start_a
+    :try_start_0
     invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
 
     move-result v2
 
     .local v2, "major":I
-    goto :goto_23
+    goto :goto_0
 
     .line 1667
     .end local v2    # "major":I
-    :cond_f
+    :cond_0
     const/4 v2, 0x0
 
     invoke-virtual {p0, v2, v0}, Ljava/lang/String;->substring(II)Ljava/lang/String;
@@ -1982,21 +1982,21 @@
     move v1, v3
 
     .line 1670
-    :goto_23
-    if-ltz v2, :cond_4f
+    :goto_0
+    if-ltz v2, :cond_4
 
     .line 1673
     const/16 v3, 0x53e2
 
-    if-ge v2, v3, :cond_46
+    if-ge v2, v3, :cond_3
 
     .line 1676
-    if-ltz v1, :cond_3d
+    if-ltz v1, :cond_2
 
     .line 1679
     const v3, 0x186a0
 
-    if-ge v1, v3, :cond_34
+    if-ge v1, v3, :cond_1
 
     .line 1686
     nop
@@ -2009,7 +2009,7 @@
     return v3
 
     .line 1680
-    :cond_34
+    :cond_1
     new-instance v3, Ljava/lang/NumberFormatException;
 
     const-string/jumbo v4, "minor version too large, must be less than 100000"
@@ -2025,7 +2025,7 @@
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
     .restart local p0    # "version":Ljava/lang/String;
-    :cond_3d
+    :cond_2
     new-instance v3, Ljava/lang/NumberFormatException;
 
     const-string/jumbo v4, "negative minor version"
@@ -2041,7 +2041,7 @@
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
     .restart local p0    # "version":Ljava/lang/String;
-    :cond_46
+    :cond_3
     new-instance v3, Ljava/lang/NumberFormatException;
 
     const-string/jumbo v4, "major version too large, must be less than 21474"
@@ -2057,7 +2057,7 @@
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
     .restart local p0    # "version":Ljava/lang/String;
-    :cond_4f
+    :cond_4
     new-instance v3, Ljava/lang/NumberFormatException;
 
     const-string/jumbo v4, "negative major version"
@@ -2068,15 +2068,15 @@
     .end local v1    # "minor":I
     .end local p0    # "version":Ljava/lang/String;
     throw v3
-    :try_end_58
-    .catch Ljava/lang/NumberFormatException; {:try_start_a .. :try_end_58} :catch_58
+    :try_end_0
+    .catch Ljava/lang/NumberFormatException; {:try_start_0 .. :try_end_0} :catch_0
 
     .line 1683
     .end local v2    # "major":I
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
     .restart local p0    # "version":Ljava/lang/String;
-    :catch_58
+    :catch_0
     move-exception v2
 
     .line 1684
