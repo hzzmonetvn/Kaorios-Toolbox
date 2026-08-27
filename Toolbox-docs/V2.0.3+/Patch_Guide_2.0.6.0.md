@@ -327,6 +327,9 @@ apply this snippet blindly to every `GET_*` branch.
 
 ## framework.jar — Android 17 Build field patch (MANDATORY on A17+)
 
+See [Android 17 field-patch notes](notes-a17.md) for the Dex Comparator
+example, explicit `= null` output, and the verification checklist.
+
 Android 17 blocks `Field.set()` and `sun.misc.Unsafe.putObject()` for
 `static final` fields. PIF spoofing and GPhotos toggle require these
 fields to be writable. **Strip `final` from the following fields:**

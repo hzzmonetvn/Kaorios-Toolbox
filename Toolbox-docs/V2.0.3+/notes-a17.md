@@ -1,13 +1,27 @@
-REQUIRED on Android 17+ (Tested on HyperOS 4 Beta) — Remove the `final` Flag from Build Fields
+# Android 17 note — make selected `Build` fields writable
 
-Android 17 (with libcore synced to newer OpenJDK behavior) **blocks all Java-based writes to static-final fields**: both `Field.set` and `sun.misc.Unsafe.putObject` are blocked, as confirmed via logcat.
+This patch is **required on Android 17+** and has been tested on HyperOS 4
+Beta. Android 17 blocks Java writes to `static final` fields through both
+`Field.set()` and `sun.misc.Unsafe.putObject()`. Kaorios therefore cannot spoof
+the selected `Build` properties until the ROM removes their `final` access
+flag.
 
-Therefore, the framework cannot spoof Build fields unless the ROM patch removes the `final` flag first.
+## Location
 
-**File:** `framework.jar` → DEX containing `Landroid/os/Build;` and `Landroid/os/Build$VERSION;`
-(On HyperOS A17, both are located in `classes3.dex`.)
+Patch the DEX inside `framework.jar` that contains:
 
-**Modification:** For each field below, remove the `final` token from its `.field` declaration:
+```smali
+Landroid/os/Build;
+Landroid/os/Build$VERSION;
+```
+
+On the tested HyperOS Android 17 build both classes are in `classes3.dex`, but
+the DEX number can differ by ROM. Locate the classes instead of assuming a
+fixed number.
+
+## Fields to patch
+
+Remove `final` only from these declarations:
 
 ```text
 Build.smali        : FINGERPRINT  BRAND  DEVICE  MANUFACTURER  MODEL  PRODUCT
@@ -15,24 +29,54 @@ Build.smali        : FINGERPRINT  BRAND  DEVICE  MANUFACTURER  MODEL  PRODUCT
 Build$VERSION.smali: RELEASE  SECURITY_PATCH  DEVICE_INITIAL_SDK_INT
 ```
 
-Example:
+Keep the field name, type, visibility, and hidden-API modifier (`whitelist`,
+`greylist`, etc.) unchanged.
+
+## Expected Dex Comparator result
+
+The essential change is removal of `final`:
 
 ```smali
 # Before
-.field public static final whitelist FINGERPRINT:Ljava/lang/String;
+.field public static final whitelist BRAND:Ljava/lang/String;
 
-# After
-.field public static whitelist FINGERPRINT:Ljava/lang/String;
+# Valid after form
+.field public static whitelist BRAND:Ljava/lang/String;
 ```
 
-After removing the flag, writes through reflection work again as on Android ≤16, without requiring `Unsafe`.
+Some smali editors or DEX rebuild tools serialize a non-final reference field
+with an explicit null initializer. This output is also valid and matches the
+Dex Comparator result:
 
-Default values remain unchanged — only processes configured through the PIF JSON / GPhotos toggle will have these values overridden.
+```smali
+.field public static whitelist BRAND:Ljava/lang/String; = null
+.field public static whitelist DEVICE:Ljava/lang/String; = null
+.field public static whitelist FINGERPRINT:Ljava/lang/String; = null
+.field public static whitelist HARDWARE:Ljava/lang/String; = null
+.field public static whitelist ID:Ljava/lang/String; = null
+```
 
-> Reassemble the DEX using smali ≥3.x with `--api 29` or higher so that `whitelist` / `blacklist` modifiers (hidden API flags) emitted by baksmali are recognized.
+`= null` is only the default value before `Build` class initialization. It does
+not force the property to remain null and does not replace the value assigned
+by the original class initializer. Do not manually add `= null` if the tool
+does not emit it; removing `final` is the required part.
 
----
+Do **not** modify nearby fields that are not in the list, such as
+`BRAND_FOR_ATTESTATION`, `DEVICE_FOR_ATTESTATION`, `CPU_ABI`, `CPU_ABI2`,
+`DISPLAY`, or `HOST`.
 
-* Adjust register counts carefully when adding new instructions.
-* Keep register usage consistent inside each method.
-* Make sure the **Fake Locked** value/property is shown in **green**.
+## Rebuild and verification
+
+Reassemble with smali 3.x using `--api 29` or higher so hidden-API modifiers
+remain valid. After rebuilding:
+
+1. Open the rebuilt DEX in a comparator and confirm each selected field no
+   longer contains `final`.
+2. Confirm unrelated fields and the original class initializer were not
+   changed.
+3. Boot the ROM and verify normal `Build` values are populated.
+4. Enable a Kaorios PIF/GPhotos profile and verify only configured processes
+   receive spoofed values.
+
+No method register changes are needed for this field-only patch. Default values
+remain unchanged for processes that are not configured for spoofing.
