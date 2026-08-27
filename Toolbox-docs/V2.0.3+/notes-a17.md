@@ -38,10 +38,19 @@ Keep the field name, type, visibility, and hidden-API modifier (`whitelist`,
   <img src="images/android17-build-dex-comparator.jpg" alt="Dex Comparator showing Android 17 Build fields with final removed and explicit null initializers" width="420">
 </p>
 
-The example above compares the original DEX (top) with the patched DEX
-(bottom). Highlighted fields such as `BRAND`, `DEVICE`, `FINGERPRINT`,
-`HARDWARE`, and `ID` no longer contain `final`; the rebuild tool also displays
-an explicit `= null` initializer.
+<p align="center">
+  <img src="images/android17-build-version-dex-comparator.jpg" alt="Dex Comparator showing final removed from Android 17 Build VERSION RELEASE and SECURITY_PATCH fields" width="420">
+</p>
+
+The examples compare the original DEX (top) with the patched DEX (bottom):
+
+- In `Build`, highlighted fields such as `BRAND`, `DEVICE`, `FINGERPRINT`,
+  `HARDWARE`, and `ID` no longer contain `final`; this rebuild tool also
+  displays an explicit `= null` initializer.
+- In `Build$VERSION`, `RELEASE` and `SECURITY_PATCH` no longer contain `final`
+  and are displayed without an initializer. Nearby fields such as
+  `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SDK`, and `SDK_INT`
+  remain unchanged.
 
 The essential change is removal of `final`:
 
@@ -53,9 +62,9 @@ The essential change is removal of `final`:
 .field public static whitelist BRAND:Ljava/lang/String;
 ```
 
-Some smali editors or DEX rebuild tools serialize a non-final reference field
-with an explicit null initializer. This output is also valid and matches the
-Dex Comparator result:
+Some smali editors or DEX rebuild tools serialize certain non-final reference
+fields with an explicit null initializer. This output is valid and matches the
+`Build` comparison:
 
 ```smali
 .field public static whitelist BRAND:Ljava/lang/String; = null
@@ -65,10 +74,11 @@ Dex Comparator result:
 .field public static whitelist ID:Ljava/lang/String; = null
 ```
 
-`= null` is only the default value before `Build` class initialization. It does
-not force the property to remain null and does not replace the value assigned
-by the original class initializer. Do not manually add `= null` if the tool
-does not emit it; removing `final` is the required part.
+`= null` is only the default value before class initialization. It does not
+force the property to remain null and does not replace the value assigned by
+the original class initializer. The `Build$VERSION` comparison confirms that a
+valid patched field may also have no explicit initializer. Do not manually add
+or remove `= null`; removing `final` is the required part.
 
 Do **not** modify nearby fields that are not in the list, such as
 `BRAND_FOR_ATTESTATION`, `DEVICE_FOR_ATTESTATION`, `CPU_ABI`, `CPU_ABI2`,
