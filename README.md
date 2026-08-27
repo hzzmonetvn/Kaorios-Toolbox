@@ -31,7 +31,7 @@
 
 ## 📦 Latest release: v2.0.6.0
 
-> **ROM builders**: see [Patch Guide v2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) for integration instructions.
+> **ROM builders**: see Patch Guide v2.0.6.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0_VI.md).
 
 The framework build publishes one GitHub Actions artifact containing:
 

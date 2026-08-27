@@ -1,5 +1,7 @@
 # Kaorios Toolbox Patch Guide — v2.0.6.0
 
+**English** | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
+
 This guide covers the full DEX placement, smali patch, rebuild, runtime
 configuration, verification, and rollback flow for Kaorios Toolbox 2.0.6.0.
 The examples are verified on HyperOS Android 17; locate classes and descriptors
