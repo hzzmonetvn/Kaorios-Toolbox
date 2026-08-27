@@ -5,7 +5,6 @@
 Tài liệu này mô tả quy trình tích hợp DEX framework 2.0.6.0 vào ROM Android 12–17 và vá call site smali. Mẫu register đã đối chiếu với HyperOS Android 17 (API 37); ROM khác phải tìm class/method theo descriptor, không đoán số DEX hay số dòng.
 
 - Mẫu smali HyperOS Android 17: [`Template/Template_V2060`](../Template/Template_V2060)
-- Ảnh đối chiếu DEX trên Android 17: [`notes-a17.md`](notes-a17.md)
 
 ## 1. Cảnh báo bắt buộc
 
@@ -17,57 +16,7 @@ Tài liệu này mô tả quy trình tích hợp DEX framework 2.0.6.0 vào ROM 
 - Không tăng `.registers` rồi giữ tham số viết bằng `vN` mà không tính lại. Ưu tiên `p0..pN`, local đang trống hoặc tăng `.locals`.
 - Patch từng nhóm, boot-test từng nhóm. Sai một descriptor trong `SystemServer` có thể bootloop.
 
-## 2. Chọn nhánh build và artifact
-
-Repository framework có hai nhánh độc lập:
-
-| Nhánh | Framework | Toolbox APK | Khi nào dùng |
-|---|---|---|---|
-| [`Toolbox-Framework`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework) | Full `classes.dex` | Có `libkaorios_toolbox.so` | Khuyến nghị khi patch ROM; ít phụ thuộc linker namespace |
-| [`Toolbox-Framework-Native`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework-Native) | DEX bridge mỏng + `libkaorios_framework.so` | Có `libkaorios_toolbox.so` | Muốn đưa policy framework sang native; cần tích hợp `.so` vào ROM |
-
-Nhánh mặc định `Toolbox-Framework` xuất:
-
-```text
-KaoriosToolbox-release.apk
-KaoriosFramework-release.apk
-classes.dex
-lib/arm64-v8a/libkaorios_toolbox.so
-SHA256SUMS
-```
-
-```bash
-sha256sum -c SHA256SUMS
-java -jar baksmali-3.0.9-fat-release.jar list classes classes.dex \
-  | grep -E 'Landroid/security/kaorios/KaoriosHook;|Lcom/kousei/framework/KaoriosFramework;'
-```
-
-`classes.dex` của nhánh mặc định là full DEX framework cần nhập vào `framework.jar`.
-Không lấy DEX từ Toolbox APK. `libkaorios_toolbox.so` đã được đóng gói sẵn trong
-`KaoriosToolbox-release.apk`; file được tách riêng chỉ để kiểm tra checksum/kiến trúc,
-không chép nó vào phân vùng system.
-
-Artifact nhánh `Toolbox-Framework-Native` có thêm:
-
-```text
-lib/arm64-v8a/libkaorios_framework.so
-```
-
-Ở nhánh này, `classes.dex` chỉ là bridge JNI và phải đi cùng đúng
-`libkaorios_framework.so` cùng một artifact. Với ROM arm64, tích hợp thư viện vào
-`/system_ext/lib64/` hoặc `/product/lib64/`, permission `0644`, owner `root:root`:
-
-```bash
-install -m 0644 lib/arm64-v8a/libkaorios_framework.so \
-  "$ROM/system_ext/lib64/libkaorios_framework.so"
-```
-
-Nếu `system_server` bị giới hạn linker namespace, phải khai báo thư viện trong build
-tree/linker config của ROM. Không đặt thư viện framework chỉ trong `/data/app/...`.
-Không trộn bridge DEX của nhánh native với `.so` từ build khác; mismatch JNI có thể
-làm hook fail hoặc crash process. Các mục patch smali phía dưới áp dụng cho cả hai nhánh.
-
-## 3. Khảo sát ROM đích
+## 2. Khảo sát ROM đích
 
 ```bash
 mkdir -p work/framework work/services
@@ -90,17 +39,9 @@ rg -l '^\.class .*Lcom/android/server/SystemServer;' work/sv*
 rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
 ```
 
-HyperOS A17 đã xác nhận: `SystemServer` ở `services/classes.dex`; Keystore SPI và `Build` ở `framework/classes3.dex`; Kaorios cũ ở `framework/classes7.dex`. Đây chỉ là tham chiếu.
-
 ## 4. Nhập DEX không tạo class trùng
 
-ROM sạch: đổi artifact `classes.dex` thành số DEX kế tiếp chưa tồn tại, ví dụ `classes8.dex`, rồi thêm vào `framework.jar`.
-
-ROM đã có Kaorios:
-
-- Nếu DEX cũ chỉ chứa Kaorios/dependency của nó: thay toàn bộ entry đó bằng artifact mới, giữ nguyên tên entry.
-- Nếu DEX cũ dùng chung với class hệ thống: xóa hai cây `android/security/kaorios/` và `com/kousei/framework/` khỏi smali DEX cũ, assemble lại, sau đó thêm artifact mới bằng số DEX kế tiếp.
-- Tuyệt đối không append DEX mới khi class cũ vẫn còn.
+Đổi artifact `classes.dex` thành số DEX kế tiếp chưa tồn tại, ví dụ `classes8.dex`, rồi thêm vào `framework.jar`.
 
 ## 5. Descriptor chuẩn 2.0.6.0
 
@@ -175,7 +116,7 @@ return-object v14
 :cond_kaorios_gen_stock
 ```
 
-`v14` chỉ đúng với mẫu A17 `.registers 16`; ROM khác phải chọn object local trống. Hook tự skip `OmkTeeCheck`, `omk_attestation_key`, `omk_challenge_probe`.
+`v14` chỉ đúng với mẫu A17 `.registers 16`; ROM khác phải chọn object local trống.
 
 ### 6.4 `AndroidKeyStoreSpi.engineGetCertificateChain`
 
@@ -197,36 +138,7 @@ return-object v3
 Không gọi hook bằng `{p0,p1}`. Nếu có nhiều `return-object`, wrap từng nhánh chain hợp lệ hoặc gom về common return.
 
 ### 6.5 Bỏ `final` khỏi Build fields trên Android 17
-
-```smali
-# trước
-.field public static final whitelist BRAND:Ljava/lang/String;
-# sau
-.field public static whitelist BRAND:Ljava/lang/String;
-```
-
-Danh sách tối thiểu cho Photos/PIF phổ biến:
-
-```text
-Build:
-  BRAND DEVICE FINGERPRINT HARDWARE ID MANUFACTURER MODEL PRODUCT
-  TAGS TIME TYPE USER
-
-Build$VERSION:
-  RELEASE RELEASE_OR_CODENAME RELEASE_OR_PREVIEW_DISPLAY
-  SECURITY_PATCH DEVICE_INITIAL_SDK_INT
-```
-
-Nếu profile ghi thêm `DISPLAY`, `HOST`, `INCREMENTAL`, `SDK` hoặc `*_FOR_ATTESTATION`, field đó cũng phải bỏ `final`. Không sửa `SDK_INT` nếu không thật sự cần.
-
-Editor có thể sinh dạng sau; đây là hợp lệ vì `<clinit>` vẫn gán giá trị thật:
-
-```smali
-.field public static whitelist BRAND:Ljava/lang/String; = null
-```
-
-Không tự thêm/xóa `= null`; việc bắt buộc là bỏ `final`.
-
+Xem tại: https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17.md
 ## 7. Patch lõi trong services.jar
 
 ### `SystemServer.initSystemServer`
@@ -263,8 +175,6 @@ return-object v0
 Hook trả primitive `Z`, không trả `Boolean`; method mẫu trả `String`, không phải `Pair`. Descriptor khác thì không paste block này.
 
 ### 8.2 Hide app caller-aware
-
-Mẫu HyperOS A17:
 
 ```smali
 shouldFilterApplication(Lcom/android/server/pm/snapshot/PackageDataSnapshot;ILjava/lang/Object;Lcom/android/server/pm/pkg/PackageStateInternal;I)Z
@@ -366,56 +276,8 @@ An toàn nhất là build lại image. Nếu test bằng overlay/module:
 
 Nếu treo logo, rollback cả JAR và VDEX/ODEX theo cùng một bộ, không trộn JAR mới với oat cũ.
 
-## 11. Cấu hình runtime
 
-Boolean nên ghi `1/0`. `kaorios_hide_app_work`, `kaorios_hide_dev_work`, `kaorios_secure_flag_work` là cờ chẩn đoán do hook tự ghi, không phải công tắc bật.
-
-```bash
-# Keybox GEN mọi app
-adb shell settings put global kaorios_keybox_enabled 1
-adb shell settings put global kaorios_keybox_apply_all 1
-adb shell settings put global kaorios_keybox_apply_all_mode gen
-
-# Photos
-adb shell settings put global kaorios_spoof_photos 1
-adb shell am force-stop com.google.android.apps.photos
-
-# BIDV: ẩn dev và làm caller không thấy app khác
-adb shell settings put global kaorios_hide_devlist '{"vn.com.bidv.mobilebanking":{"hidedev":true,"hideapp":true}}'
-adb shell settings put global kaorios_time "$(date +%s)000"
-adb shell am force-stop vn.com.bidv.mobilebanking
-```
-
-Sau khi ghi Settings trực tiếp, bump `kaorios_time` hoặc restart process để cache framework đọc dữ liệu mới.
-
-## 12. Checklist xác minh
-
-### Static
-
-- Nhánh full DEX: artifact chứa `KaoriosHook` và `KaoriosFramework` đầy đủ.
-- Nhánh native: bridge DEX và `libkaorios_framework.so` lấy từ cùng một artifact;
-  kiểm tra `.so` có kiến trúc AArch64 và nằm trong linker namespace của `system_server`.
-- Boot JAR cuối không còn class Kaorios cũ/trùng.
-- Mọi `invoke-static` khớp bảng descriptor mục 5.
-- Build fields cần spoof đã mất `final`; field không liên quan giữ nguyên.
-- DEX rebuilt disassemble lại được bằng smali 3.x.
-
-### Runtime
-
-```bash
-adb shell getprop sys.boot_completed
-adb shell settings get global kaorios_hide_dev_work
-adb shell settings get global kaorios_hide_app_work
-adb shell settings get global kaorios_secure_flag_work
-adb logcat -v threadtime -s KaoriosHook KaoriosOmkService OmkRootOfTrust KaoriosCertificateGenerator KaoriosCertificateHacker
-```
-
-- Chỉ test hide app sau `sys.boot_completed=1`.
-- Working flag chỉ thành `1` khi call site thật sự chạy.
-- Test `gen`, `leaf`, `auto` riêng; test GMS/Store/Photos sau force-stop.
-- Caller `hideapp=true` vẫn phải thấy chính nó nhưng không thấy target khác.
-
-## 13. Lỗi thường gặp
+## 11. Lỗi thường gặp
 
 | Triệu chứng | Nguyên nhân thường gặp | Kiểm tra |
 |---|---|---|
@@ -426,9 +288,8 @@ adb logcat -v threadtime -s KaoriosHook KaoriosOmkService OmkRootOfTrust Kaorios
 | PIF/Photos log chạy nhưng field không đổi | Field vẫn `final` | So sánh `Build.smali` sau rebuild |
 | Hide-dev không chạy | Patch nhầm overload/sai `Boolean` và `Z` | Method đích phải trả `String`, hook trả `Z` |
 | Hide-app lọc chính caller | Dùng hook cũ/truyền sai arg | Descriptor phải bắt đầu `I`; thứ tự uid,resolver,target,user |
-| `*_work` vẫn 0 | Call site chưa được kích hoạt | Mở app/action tương ứng rồi đọc lại flag |
 
-## 14. Thứ tự patch khuyến nghị
+## 12. Thứ tự patch khuyến nghị
 
 1. Nhập DEX, xử lý class trùng, boot thử.
 2. Patch `SystemServer`, boot thử.
