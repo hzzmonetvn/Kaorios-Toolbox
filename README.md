@@ -45,6 +45,15 @@ All releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-T
 
 ---
 
+## 📋 Todo List / Roadmap
+
+- [ ] ⚡ **Automated ROM Patcher Tool**: One-click GUI / CLI script to patch `framework.jar` and `services.jar` automatically.
+- [ ] ⚙️ **Fake & Filter System Settings**: Granular per-app spoofing and filtering for System, Secure, and Global settings (`filterSettingValue` / `shouldRemoveSetting`).
+- [ ] 📦 **Spoof Installer Source Package**: Spoof package installer origin per-app (`filterInstallerPackageName`, e.g. masquerade as Google Play Store `com.android.vending`).
+- [ ] 🌐 **Expanded Localization**: Add more community languages.
+
+---
+
 ## 🌍 Localization & Translations
 
 Help us translate Kaorios-Toolbox into your language! 🌐
