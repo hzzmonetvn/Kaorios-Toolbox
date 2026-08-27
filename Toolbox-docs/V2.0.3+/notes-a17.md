@@ -34,6 +34,15 @@ Keep the field name, type, visibility, and hidden-API modifier (`whitelist`,
 
 ## Expected Dex Comparator result
 
+<p align="center">
+  <img src="images/android17-build-dex-comparator.jpg" alt="Dex Comparator showing Android 17 Build fields with final removed and explicit null initializers" width="420">
+</p>
+
+The example above compares the original DEX (top) with the patched DEX
+(bottom). Highlighted fields such as `BRAND`, `DEVICE`, `FINGERPRINT`,
+`HARDWARE`, and `ID` no longer contain `final`; the rebuild tool also displays
+an explicit `= null` initializer.
+
 The essential change is removal of `final`:
 
 ```smali
