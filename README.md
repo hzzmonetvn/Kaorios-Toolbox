@@ -33,6 +33,15 @@
 
 > **ROM builders**: see [Patch Guide v2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) for integration instructions.
 
+The framework build publishes one GitHub Actions artifact containing:
+
+- `KaoriosToolbox-release.apk`
+- `KaoriosFramework-release.apk`
+- `classes.dex` for ROM framework integration
+- `SHA256SUMS`
+
+Framework source and CI builds: [KaoriosToolbox-Frameowrk](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/actions)
+
 Follow the detailed usage guide here:  
 👉 [Kaorios-Toolbox Guide](https://github.com/hzzmonetvn/Kaorios-Toolbox/tree/main/Toolbox-docs)
 

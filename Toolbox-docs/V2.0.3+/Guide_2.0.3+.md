@@ -1,8 +1,9 @@
-# Kaorios Toolbox Patch Guide
+# Kaorios Toolbox Legacy Patch Guide — v2.0.3+
 
-This guide explains the smali changes needed to import and use the Kaorios Toolbox hook classes.
+This page is retained for older v2.0.3-based integrations. Do not use its hook
+descriptors for a new v2.0.6.0 ROM build.
 
-> **For v2.0.6.0 full guide** (including challenge probe, Build field patch, HMA config),
+> **For v2.0.6.0**, use the full guide (including challenge probe, Build field patch, HMA config),
 > see [Patch_Guide_2.0.6.0.md](Patch_Guide_2.0.6.0.md).
 
 ## Framework.jar

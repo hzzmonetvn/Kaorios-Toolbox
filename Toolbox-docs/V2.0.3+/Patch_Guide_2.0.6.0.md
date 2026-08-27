@@ -8,6 +8,12 @@ framework hooks into a custom ROM.
 - Hooks work on **Android 12–17 (API 31–37)**
 - `minSdk=31`, `compileSdk=37`, `targetSdk=37`
 - `KaoriosHook` methods are all `public static` — no instance needed
+- Verified framework source commit: `1f0c768033653838a0c91756abd547e2f711c80b`
+
+> Hook names and descriptors are case-sensitive. Copy the complete descriptor,
+> not only the method name. The files under
+> [`Template/Template_V2060`](../Template/Template_V2060) are the tested
+> HyperOS Android 17 references; adapt registers and labels for other ROMs.
 
 ---
 
@@ -17,15 +23,28 @@ framework hooks into a custom ROM.
 |------|---------|-------|
 | baksmali/smali | ≥ 3.0 | `--api 29` needed for `whitelist/blacklist` modifier |
 | Java | ≥ 17 | JDK 21 recommended |
-| BouncyCastle | 1.78 | `bcprov-jdk18on` + `bcpkix-jdk18on` |
+| BouncyCastle | 1.84 | Bundled in the framework DEX (`bcprov-jdk18on` + `bcpkix-jdk18on`) |
 | Merged API-37 jar | f6a41ad… | compile-only classpath |
+
+---
+
+## Build artifact and DEX placement
+
+The `Build APK and DEX` workflow in the framework repository publishes one
+artifact with `KaoriosToolbox-release.apk`, `KaoriosFramework-release.apk`,
+`classes.dex`, and `SHA256SUMS`. Verify the checksums before integration.
+
+Import the artifact's `classes.dex` as a **new DEX entry** in `framework.jar`.
+Its final name (`classes4.dex`, `classes5.dex`, etc.) depends on the target ROM;
+do not overwrite an existing DEX. The smali patches below remain in the DEX
+that originally owns each Android class.
 
 ---
 
 ## framework.jar — hook sites
 
-All hooks go into **`classes3.dex`** (or whichever dex contains
-`Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;`).
+Patch each class in the DEX where the target ROM already stores it. Do not
+assume every class is in `classes3.dex`.
 
 ### 1) Instrumentation — initContext
 
@@ -114,31 +133,38 @@ return-object vX
 engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 
-Below `.registers X` (raise by 1), add:
+After the leaf certificate has been inserted into the result array and before
+that array is returned, pass it through `CertificateChainIfNeeded`:
 ```smali
-invoke-static {p0, p1}, Landroid/security/kaorios/KaoriosHook;->getCertificateChain(Landroid/security/keystore2/AndroidKeyStoreSpi;Ljava/lang/String;)[Ljava/security/cert/Certificate;
-move-result-object vX          # vX = registers − 2
+aput-object vLeaf, vChain, vIndex
 
-if-eqz vX, :cond_kaorios
-return-object vX
+invoke-static {vChain}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+move-result-object vChain
 
-:cond_kaorios
+return-object vChain
 ```
+
+No extra register is required when the existing chain register is reused. See
+[`AndroidKeyStoreSpi.smali`](../Template/Template_V2060/AndroidKeyStoreSpi.smali)
+for the tested placement.
 
 ---
 
-### 5) KeyStore2 — getKeyEntry / getKeyMetadata (LEAF path)
+### 5) KeyStore2 — getKeyEntry (optional cached LEAF path)
 
-**Class:** `Landroid/security/keystore2/KeyStore2;`
-
-**Method:**
+**Class:**
 ```smali
-getKeyEntry(Landroid/security/keystore2/IKeystoreSecurityLevel;Landroid/security/keystore2/KeyDescriptor;)Landroid/security/keystore2/KeyEntryResponse;
+Landroid/security/KeyStore2;
 ```
+
+The `getKeyEntry` descriptor and parameter order vary across Android/ROM
+branches. Identify the register containing
+`Landroid/system/keystore2/KeyDescriptor;` in the target method; call it
+`vDescriptor` below.
 
 Below `.registers X` (raise by 1), add:
 ```smali
-invoke-static {p2}, Landroid/security/kaorios/KaoriosHook;->onGetKeyEntry(Landroid/security/keystore2/KeyDescriptor;)Landroid/security/keystore2/KeyEntryResponse;
+invoke-static {vDescriptor}, Landroid/security/kaorios/KaoriosHook;->OnGetKeyEntry(Landroid/system/keystore2/KeyDescriptor;)Landroid/system/keystore2/KeyEntryResponse;
 move-result-object vX          # vX = registers − 2
 
 if-eqz vX, :cond_kaorios
@@ -146,6 +172,10 @@ return-object vX
 
 :cond_kaorios
 ```
+
+`OnGetKeyEntry` starts with an uppercase `O`. This repository does not ship a
+v2.0.6.0 `KeyStore2.smali` reference, so skip this optional patch unless the
+target method and free register have been verified manually.
 
 ---
 
@@ -153,32 +183,31 @@ return-object vX
 
 **Class:** `Landroid/provider/Settings$NameValueCache;`
 
-**Method:**
+**Method (AOSP/HyperOS 4 reference):**
 ```smali
-getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Landroid/util/Pair;
+getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;
 ```
 
-Below `.registers X` (raise by 1), add:
+Near the start of the method, after parameter declarations, add:
 ```smali
-invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/Boolean;
-move-result-object vX          # vX = registers − 2
+if-eqz p2, :cond_kaorios_original
 
-if-eqz vX, :cond_kaorios
-invoke-virtual {vX}, Ljava/lang/Boolean;->booleanValue()Z
+invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
 move-result v0
 
-if-eqz v0, :cond_kaorios_hide_dev
+if-eqz v0, :cond_kaorios_original
 
-# Build Pair(null, "0") to signal "not found / disabled"
-const/4 v1, 0x0
-const-string v2, "0"
-invoke-static {v1, v2}, Landroid/util/Pair;->create(Ljava/lang/Object;Ljava/lang/Object;)Landroid/util/Pair;
-move-result-object v0
+const-string v0, "0"
 return-object v0
 
-:cond_kaorios_hide_dev
-:cond_kaorios
+:cond_kaorios_original
+# original method body continues here
 ```
+
+The hook takes three arguments and returns primitive `Z`, not
+`Ljava/lang/Boolean;`. See
+[`Settings_NameValueCache.smali`](../Template/Template_V2060/Settings_NameValueCache.smali).
+
 ---
 
 ## services.jar — hook sites
@@ -199,7 +228,7 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 
 > **v2.0.6.0 change**: `initSystemServer()` now also calls
 > `AttestationUtils.initBootHash()` which triggers the challenge-probe
-> ladder .First boot may
+> ladder. First boot may
 > take ~200 ms extra.
 
 ---
@@ -214,12 +243,13 @@ shouldFilterApplication(Lcom/android/server/pm/snapshot/PackageDataSnapshot;ILja
 ```
 (`p2` = callingUid, `p4` = targetPkgSetting, `p5` = userId)
 
-Insert right after `.param p5 ...`, **before everything else**:
+The tested v2.0.6.0 template uses the compatibility hook below. Insert it after
+the parameter declarations and guard a nullable `targetPkgSetting`:
 
 ```smali
-move/from16 v0, p2
-
 move-object/from16 v1, p4
+
+if-eqz v1, :cond_kaorios_original
 
 invoke-interface {v1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
 
@@ -227,20 +257,23 @@ move-result-object v2
 
 const/4 v3, 0x0
 
-move/from16 v4, p5
-
-invoke-static {v3, v0, v2, v4}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
+invoke-static {v3, v2}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppList(Landroid/content/ContentResolver;Ljava/lang/String;)Z
 
 move-result v0
 
-if-eqz v0, :cond_kaorios_hide_app
+if-eqz v0, :cond_kaorios_original
 
 const/4 v0, 0x1
 
 return v0
 
-:cond_kaorios_hide_app
+:cond_kaorios_original
 ```
+
+Wrap this block in the target method's existing `Throwable` guard or add an
+equivalent guard. The complete tested placement is in
+[`AppsFilterBase.smali`](../Template/Template_V2060/AppsFilterBase.smali).
+
 ---
 
 ### 9) ComputerEngine — getInstallerPackageName (install source spoof)
@@ -249,31 +282,32 @@ return v0
 
 **Method:**
 ```smali
-getInstallerPackageName(Ljava/lang/String;)Ljava/lang/String;
+getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;
 ```
 
-Wrap the original return value:
+After the original installer value is stored in `vResult`, wrap it using the
+method's `p2` user ID:
 ```smali
-# vC = null, vUid = callingUid, vUser = callingUserId
 const/4 vC, 0x0
-invoke-static {p1}, Landroid/os/Binder;->getCallingUid()I
+invoke-static {}, Landroid/os/Binder;->getCallingUid()I
 move-result vUid
-invoke-static {}, Landroid/os/Binder;->getCallingUserHandle()Landroid/os/UserHandle;
-move-result-object vU
-invoke-virtual {vU}, Landroid/os/UserHandle;->getIdentifier()I
-move-result vUser
 
-invoke-static {vC, vUid, vUser, p1, vResult}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+invoke-static {vC, vUid, p2, p1, vResult}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 move-result-object vResult
 ```
 
+See [`ComputerEngine.smali`](../Template/Template_V2060/ComputerEngine.smali)
+for the tested HyperOS method and exception handling.
+
 ---
 
-### 10) SettingsProvider — filterSettingValue (per-caller settings spoof)
+### 10) SettingsProvider — filterSettingValue (ROM-specific, optional)
 
 **Class:** `Lcom/android/providers/settings/SettingsProvider;`
 
-Wrap every `GET_*` lookup result before returning it to the calling app:
+`SettingsProvider` implementations vary substantially by ROM. There is no
+universal v2.0.6.0 template in this repository. Patch the single common return
+path only after identifying the namespace, key name, and original string value:
 ```smali
 const/4 vC, 0x0
 invoke-static {vC, vNs, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
@@ -283,6 +317,11 @@ move-result-object vValue
 Raise `.registers`/`.locals` by 1 for `vC`. Replacement values come from
 `settingsTemplates` in `Settings.Global["kaorios_hma_config"]` and built-in
 presets (`dev_options`, `accessibility`, `input_method`).
+
+If a replacement is configured as JSON `null`, also call
+`KaoriosHook.shouldRemoveSetting(ContentResolver,String,String)Z` and convert
+that result to the target ROM's representation of a missing setting. Do not
+apply this snippet blindly to every `GET_*` branch.
 
 ---
 
