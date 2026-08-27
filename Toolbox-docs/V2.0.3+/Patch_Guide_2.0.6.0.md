@@ -2,18 +2,8 @@
 
 **English** | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
 
-This guide covers the full DEX placement, smali patch, rebuild, runtime
-configuration, verification, and rollback flow for Kaorios Toolbox 2.0.6.0.
 The examples are verified on HyperOS Android 17; locate classes and descriptors
 on the target ROM instead of assuming the same DEX number or line number.
-
-**Build info**
-- Compiled against **Android 17 (API 37)** merged boot jar
-- Hooks work on **Android 12–17 (API 31–37)**
-- `minSdk=31`, `compileSdk=37`, `targetSdk=37`
-- `KaoriosHook` methods are all `public static` — no instance needed
-- Release branches: `Toolbox-Framework` (full DEX) and
-  `Toolbox-Framework-Native` (JNI bridge + framework native library)
 
 > Hook names and descriptors are case-sensitive. Copy the complete descriptor,
 > not only the method name. The files under
@@ -43,22 +33,7 @@ on the target ROM instead of assuming the same DEX number or line number.
 
 ---
 
-## Choose a build branch and place its artifacts
-
-| Branch | Framework payload | Toolbox APK | Recommended use |
-|---|---|---|---|
-| [`Toolbox-Framework`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework) | Full `classes.dex` | Includes `libkaorios_toolbox.so` | Normal ROM integration; fewer linker dependencies |
-| [`Toolbox-Framework-Native`](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/tree/Toolbox-Framework-Native) | Thin JNI bridge DEX + `libkaorios_framework.so` | Includes `libkaorios_toolbox.so` | Native framework policy; requires ROM-side library integration |
-
-Both workflows publish `KaoriosToolbox-release.apk`,
-`KaoriosFramework-release.apk`, the extracted `classes.dex`, native libraries
-used by the branch, and `SHA256SUMS`. Always verify the checksums.
-
-`libkaorios_toolbox.so` is already packaged inside `KaoriosToolbox-release.apk`.
-The separately extracted copy is for checksum and architecture verification;
-do not install it on a system partition.
-
-For the default `Toolbox-Framework` branch, import the artifact's full
+Import the artifact's full
 `classes.dex` into `framework.jar`. Its final name depends
 on the target ROM. On a clean ROM, use the next unused DEX name. On a ROM that
 already contains Kaorios, first locate both package trees:
@@ -74,21 +49,6 @@ append the new artifact using the next unused DEX name. Never append a duplicate
 copy. Smali call-site patches stay in the DEX that originally owns each Android
 class.
 
-For `Toolbox-Framework-Native`, the extracted `classes.dex` is only the JNI
-bridge. Keep it paired with `libkaorios_framework.so` from the same artifact.
-For an arm64 ROM, install the library in `/system_ext/lib64/` or
-`/product/lib64/` with mode `0644` and owner `root:root`:
-
-```bash
-install -m 0644 lib/arm64-v8a/libkaorios_framework.so \
-  "$ROM/system_ext/lib64/libkaorios_framework.so"
-```
-
-If `system_server` uses a restricted linker namespace, declare the library in
-the ROM build tree/linker configuration. Do not place the framework library
-only under `/data/app/...`, and never mix a native bridge DEX with a `.so` from
-a different build. The smali call-site instructions below apply to both branches.
-
 Before editing, disassemble every candidate DEX with the target API, for example:
 
 ```bash
@@ -99,9 +59,6 @@ java -jar baksmali-3.0.9-fat-release.jar disassemble \
 ---
 
 ## framework.jar — hook sites
-
-Patch each class in the DEX where the target ROM already stores it. Do not
-assume every class is in `classes3.dex`.
 
 ### 1) Instrumentation — initContext
 
@@ -396,70 +353,10 @@ apply this snippet blindly to every `GET_*` branch.
 
 ## framework.jar — Android 17 Build field patch (MANDATORY on A17+)
 
-See [Android 17 field-patch notes](notes-a17.md) for the Dex Comparator
-example, explicit `= null` output, and the verification checklist.
-
-Android 17 blocks `Field.set()` and `sun.misc.Unsafe.putObject()` for
-`static final` fields. PIF spoofing and GPhotos toggle require these
-fields to be writable. **Strip `final` from the following fields:**
-
-**File:** `framework.jar` → dex containing `Landroid/os/Build;` and
-`Landroid/os/Build$VERSION;` (on HyperOS A17: `classes3.dex`)
-
-Minimum set for built-in Photos and common PIF profiles:
-
-```text
-Build.smali        : BRAND DEVICE FINGERPRINT HARDWARE ID MANUFACTURER MODEL
-                     PRODUCT TAGS TIME TYPE USER
-Build$VERSION.smali: RELEASE RELEASE_OR_CODENAME RELEASE_OR_PREVIEW_DISPLAY
-                     SECURITY_PATCH DEVICE_INITIAL_SDK_INT
-```
-
-If a PIF/game profile writes another field such as `DISPLAY`, `HOST`,
-`INCREMENTAL`, `SDK`, or a `*_FOR_ATTESTATION` field, remove `final` from that
-specific field too. Avoid changing `SDK_INT` unless the profile truly requires
-it; changing the runtime API value can break application and framework branches.
-
-**Before:**
-```smali
-.field public static final whitelist FINGERPRINT:Ljava/lang/String;
-```
-
-**After:**
-```smali
-.field public static whitelist FINGERPRINT:Ljava/lang/String;
-```
-
-Re-assemble with smali ≥ 3.0 and `--api 29` to preserve
-`whitelist/blacklist` modifiers.
-
+See [Android 17 field-patch notes](notes-a17.md)
 ---
 
-## JSON config formats
-
-### `kaorios_hide_devlist` — simple per-caller flags
-
-```json
-{
-  "com.example.app1": {
-    "hidedev": true,
-    "hideapp": true
-  },
-  "com.example.app2": {
-    "hidedev": false,
-    "hideapp": true
-  }
-}
-```
-
-- `hidedev=true` → app is hidden from Developer Options list
-- `hideapp=true` → app is "blind" (can't see other apps, but opens fine)
-- Legacy fallback: `"com.a,com.b"` → both flags = true
-
-`kaorios_hide_dev_work` and `kaorios_hide_app_work` are sticky diagnostic flags
-written by the hooks when their call sites execute. They are not enable switches.
-
-### `kaorios_hma_config` — HMA-OSS policy engine
+## JSON config formats (beta)
 
 ```json
 {
@@ -492,27 +389,6 @@ written by the hooks when their call sites execute. They are not enable switches
 }
 ```
 
-## Runtime quick start
-
-Use `1`/`0` for booleans. After direct Settings writes, bump `kaorios_time` or
-restart the affected process so framework caches observe the change.
-
-```bash
-# Keybox GEN for every app
-adb shell settings put global kaorios_keybox_enabled 1
-adb shell settings put global kaorios_keybox_apply_all 1
-adb shell settings put global kaorios_keybox_apply_all_mode gen
-
-# Photos
-adb shell settings put global kaorios_spoof_photos 1
-adb shell am force-stop com.google.android.apps.photos
-
-# BIDV is the caller being restricted; it still sees itself
-adb shell settings put global kaorios_hide_devlist '{"vn.com.bidv.mobilebanking":{"hidedev":true,"hideapp":true}}'
-adb shell settings put global kaorios_time "$(date +%s)000"
-adb shell am force-stop vn.com.bidv.mobilebanking
-```
-
 ## Rebuild and verification
 
 ```bash
@@ -521,25 +397,6 @@ java -jar smali-3.0.9-fat-release.jar assemble fw3 \
 java -jar baksmali-3.0.9-fat-release.jar list classes classes3.dex >/dev/null
 rg -n 'KaoriosHook;->' fw3 sv1
 ```
-
-Update only the modified DEX entries in copies of the original JARs. System
-JARs do not need zipalign. Prefer rebuilding the ROM image so the build system
-regenerates VDEX/ODEX. When testing an overlay, keep a recovery-restorable copy
-and never delete broad dalvik-cache paths with an unverified glob.
-
-After boot:
-
-```bash
-adb shell getprop sys.boot_completed
-adb shell settings get global kaorios_hide_dev_work
-adb shell settings get global kaorios_hide_app_work
-adb shell settings get global kaorios_secure_flag_work
-adb logcat -v threadtime -s KaoriosHook KaoriosOmkService OmkRootOfTrust KaoriosCertificateGenerator KaoriosCertificateHacker
-```
-
-Test `gen`, `leaf`, and `auto` separately. Test hide-app only after
-`sys.boot_completed=1`. A configured caller must still see itself while other
-targets are filtered.
 
 ## Failure table
 
@@ -552,7 +409,6 @@ targets are filtered.
 | PIF/Photos logs but Build is unchanged | Target field is still `final` | Compare rebuilt `Build.smali`/`Build$VERSION.smali` |
 | Hide-dev returns stock value | Wrong overload, `Boolean`/`Z` mismatch | Target returns `String`; hook returns primitive `Z` |
 | Hide-app filters the caller itself | Legacy hook or wrong argument order | Use descriptor starting with `I` and uid,resolver,target,user order |
-| `*_work` stays `0` | Call site has not executed | Trigger the target app/action, then read the flag again |
 
 ## Recommended patch order
 
