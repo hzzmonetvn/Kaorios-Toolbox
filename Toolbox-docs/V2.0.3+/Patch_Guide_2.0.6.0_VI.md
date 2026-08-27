@@ -39,11 +39,11 @@ rg -l '^\.class .*Lcom/android/server/SystemServer;' work/sv*
 rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
 ```
 
-## 4. Nhập DEX không tạo class trùng
+## 3. Nhập DEX không tạo class trùng
 
 Đổi artifact `classes.dex` thành số DEX kế tiếp chưa tồn tại, ví dụ `classes8.dex`, rồi thêm vào `framework.jar`.
 
-## 5. Descriptor chuẩn 2.0.6.0
+## 4. Descriptor chuẩn 2.0.6.0
 
 | Chức năng | Chữ ký smali chính xác |
 |---|---|
@@ -60,9 +60,9 @@ rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
 | Remove setting | `shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z` |
 | Bỏ secure flag | `isSecureFlag()Z` |
 
-## 6. Patch lõi trong framework.jar
+## 5. Patch lõi trong framework.jar
 
-### 6.1 `Instrumentation.newApplication`
+### 5.1 `Instrumentation.newApplication`
 
 Bắt buộc cho PIF/game props/Photos/TFT. Chèn sau `Application.attach()` và trước return.
 
@@ -88,7 +88,7 @@ return-object v0
 
 Không gọi trước `attach()`.
 
-### 6.2 `ApplicationPackageManager.hasSystemFeature`
+### 5.2 `ApplicationPackageManager.hasSystemFeature`
 
 Chèn đầu `hasSystemFeature(Ljava/lang/String;I)Z`. `null` nghĩa là chạy stock; `Boolean` khác null là override:
 
@@ -104,7 +104,7 @@ return v0
 
 Phải là `Ljava/lang/Boolean;`, không phải primitive `Z`.
 
-### 6.3 `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair`
+### 5.3 `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair`
 
 Chèn ngay đầu method, trước code stock gọi `getSecurityLevel()`:
 
@@ -118,7 +118,7 @@ return-object v14
 
 `v14` chỉ đúng với mẫu A17 `.registers 16`; ROM khác phải chọn object local trống.
 
-### 6.4 `AndroidKeyStoreSpi.engineGetCertificateChain`
+### 5.4 `AndroidKeyStoreSpi.engineGetCertificateChain`
 
 Method:
 
@@ -137,11 +137,13 @@ return-object v3
 
 Không gọi hook bằng `{p0,p1}`. Nếu có nhiều `return-object`, wrap từng nhánh chain hợp lệ hoặc gom về common return.
 
-### 6.5 Bỏ `final` khỏi Build fields trên Android 17
-Xem tại: https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17.md
-## 7. Patch lõi trong services.jar
+### 5.5 Bỏ `final` khỏi Build fields trên Android 17
 
-### `SystemServer.initSystemServer`
+Xem tại: https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17.md
+
+## 6. Patch lõi trong services.jar
+
+### 6.1 `SystemServer.initSystemServer`
 
 Trong method boot services, chèn ngay trước call `startOtherServices(...)`:
 
@@ -152,9 +154,9 @@ invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lc
 
 Register của `startOtherServices` tùy ROM; chỉ vị trí tương đối là cố định. Hook khởi tạo OMK và probe giới hạn challenge TEE.
 
-## 8. Patch tính năng tùy chọn
+## 7. Patch tính năng tùy chọn
 
-### 8.1 Hide developer status
+### 7.1 Hide developer status
 
 Chỉ áp dụng khi `Settings$NameValueCache` có descriptor trả `String`:
 
@@ -174,7 +176,7 @@ return-object v0
 
 Hook trả primitive `Z`, không trả `Boolean`; method mẫu trả `String`, không phải `Pair`. Descriptor khác thì không paste block này.
 
-### 8.2 Hide app caller-aware
+### 7.2 Hide app caller-aware
 
 ```smali
 shouldFilterApplication(Lcom/android/server/pm/snapshot/PackageDataSnapshot;ILjava/lang/Object;Lcom/android/server/pm/pkg/PackageStateInternal;I)Z
@@ -204,7 +206,7 @@ return v0
 
 Argument bắt buộc theo thứ tự `{uid, resolver, targetPackage, userId}`. Guide cũ truyền `{resolver, uid, ...}` là sai descriptor.
 
-### 8.3 Spoof installation source
+### 7.3 Spoof installation source
 
 Mẫu `ComputerEngine.getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;`: sau khi installer stock nằm ở `v2`, calling UID ở `v0`, userId ở `p2`:
 
@@ -220,7 +222,7 @@ return-object v2
 
 ROM không có `p2 userId` phải tính bằng `UserHandle.getUserId(callingUid)`.
 
-### 8.4 Settings replacement — ROM-specific
+### 7.4 Settings replacement — ROM-specific
 
 Chỉ patch sau khi xác định namespace, key và value string tại common return path:
 
@@ -232,9 +234,9 @@ move-result-object vValue
 
 Nếu JSON dùng `value:null`, gọi thêm `shouldRemoveSetting(...)Z` rồi chuyển sang representation “missing” đúng của ROM. Không paste vào mọi nhánh `GET_*`.
 
-### 8.5 Cached `KeyStore2` path — không bật mặc định
+### 7.5 Cached `KeyStore2` path — không bật mặc định
 
-Đường SPI mục 6.3/6.4 là đường đã kiểm chứng. Chỉ patch khi biết chính xác register `Landroid/system/keystore2/KeyDescriptor;`:
+Đường SPI mục 5.3/5.4 là đường đã kiểm chứng. Chỉ patch khi biết chính xác register `Landroid/system/keystore2/KeyDescriptor;`:
 
 ```smali
 invoke-static {vDescriptor}, Landroid/security/kaorios/KaoriosHook;->OnGetKeyEntry(Landroid/system/keystore2/KeyDescriptor;)Landroid/system/keystore2/KeyEntryResponse;
@@ -246,11 +248,11 @@ return-object vResult
 
 Type đúng là `android/system/keystore2`, không phải `android/security/keystore2`.
 
-### 8.6 Bỏ FLAG_SECURE
+### 7.6 Bỏ FLAG_SECURE
 
 Gọi `isSecureFlag()Z`. Nếu true: `DevicePolicyCacheImpl.isScreenCaptureAllowed(I)Z` trả `1`; `WindowState[Animator].isSecureLocked()Z` trả `0`; `setSecureLocked(Z)V` có thể return sớm. Không đảo giá trị hai method đầu.
 
-## 9. Assemble và đóng JAR
+## 8. Assemble và đóng JAR
 
 ```bash
 java -jar smali-3.0.9-fat-release.jar assemble work/fw3 \
@@ -265,7 +267,7 @@ rg -n 'KaoriosHook;->' work/fw3 work/sv1
 
 Update đúng entry DEX vào bản JAR gốc; không làm mất resource/file ngoài DEX. System JAR không cần zipalign. Nếu có source ROM, ưu tiên tích hợp vào build tree để build system sinh lại JAR/VDEX.
 
-## 10. Flash, cache và rollback
+## 9. Flash, cache và rollback
 
 An toàn nhất là build lại image. Nếu test bằng overlay/module:
 
@@ -276,8 +278,7 @@ An toàn nhất là build lại image. Nếu test bằng overlay/module:
 
 Nếu treo logo, rollback cả JAR và VDEX/ODEX theo cùng một bộ, không trộn JAR mới với oat cũ.
 
-
-## 11. Lỗi thường gặp
+## 10. Lỗi thường gặp
 
 | Triệu chứng | Nguyên nhân thường gặp | Kiểm tra |
 |---|---|---|
@@ -289,7 +290,7 @@ Nếu treo logo, rollback cả JAR và VDEX/ODEX theo cùng một bộ, không t
 | Hide-dev không chạy | Patch nhầm overload/sai `Boolean` và `Z` | Method đích phải trả `String`, hook trả `Z` |
 | Hide-app lọc chính caller | Dùng hook cũ/truyền sai arg | Descriptor phải bắt đầu `I`; thứ tự uid,resolver,target,user |
 
-## 12. Thứ tự patch khuyến nghị
+## 11. Thứ tự patch khuyến nghị
 
 1. Nhập DEX, xử lý class trùng, boot thử.
 2. Patch `SystemServer`, boot thử.
