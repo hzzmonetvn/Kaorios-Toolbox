@@ -34,7 +34,7 @@
 
 ## 📦 Latest release: v2.0.6.0
 
-> ⚡ **Auto Patcher**: *Stay tuned! An automated ROM patcher tool is coming soon.* ⏳  
+> ⚡ **Auto Patcher**: *Stay tuned!.* ⏳  
 > **ROM builders**: see Patch Guide v2.0.6.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0_VI.md).  
 > **Android 17 (SDK 37) notes**: [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17.md) | [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17_VI.md).
 
