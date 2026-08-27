@@ -34,7 +34,7 @@
 
 ## 📦 Latest release: v2.0.6.0
 
-> ⚡ **Auto Patcher**: *Stay tuned!.* ⏳  
+> ⚡ **Auto Patcher**: *Stay tuned!.*   
 > **ROM builders**: see Patch Guide v2.0.6.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0_VI.md).  
 > **Android 17 (SDK 37) notes**: [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17.md) | [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/notes-a17_VI.md).
 
@@ -47,7 +47,7 @@ All releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-T
 
 ## 📋 Todo List / Roadmap
 
-- [ ] ⚡ **Automated ROM Patcher Tool**: One-click GUI / CLI script to patch `framework.jar` and `services.jar` automatically.
+- [ ] ⚡ **Automated Patcher Tool**: One-click GUI / CLI script to patch `framework.jar` and `services.jar` automatically (new ver).
 - [ ] ⚙️ **Fake & Filter System Settings**: Granular per-app spoofing and filtering for System, Secure, and Global settings (`filterSettingValue` / `shouldRemoveSetting`).
 - [ ] 📦 **Spoof Installer Source Package**: Spoof package installer origin per-app (`filterInstallerPackageName`, e.g. masquerade as Google Play Store `com.android.vending`).
 - [ ] 🌐 **Expanded Localization**: Add more community languages.
