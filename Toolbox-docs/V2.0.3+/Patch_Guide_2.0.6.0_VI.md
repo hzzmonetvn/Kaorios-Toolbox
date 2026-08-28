@@ -1,349 +1,682 @@
-# Hướng dẫn tích hợp và vá (patch) Kaorios Toolbox Framework 2.0.6.0
+# Kaorios Toolbox Framework 2.0.6.0 — Hướng dẫn patch cho người mới
 
 [English](Patch_Guide_2.0.6.0.md) | **Tiếng Việt**
 
-Tài liệu này mô tả chi tiết quy trình tích hợp file DEX của framework 2.0.6.0 vào các bản ROM Android từ 12 đến 17.
-- Mẫu mã nguồn smali tham chiếu chuẩn: [`Template/Template_V2060`](../Template/Template_V2060)
+Smali tham khảo từ một bản HyperOS Android 17 đã patch hoàn chỉnh: [`Template/Template_V2060`](../Template/Template_V2060)
+
+> [!IMPORTANT]
+> Hướng dẫn này giả định bạn bắt đầu từ **`framework.jar` và `services.jar` stock sạch của đúng bản ROM đích**.
+>
+> Nếu các file đó đã từng được patch bởi Kaorios, framework mod khác, hoặc một bản patch thủ công cũ, tài liệu này **không** cố phát hiện, gỡ hay merge các thay đổi cũ. Hãy khôi phục file stock sạch trước, hoặc tự xử lý phần merge.
+
+Tài liệu được sắp xếp theo đúng thứ tự phù hợp cho người mới: thêm DEX Kaorios, patch các hook framework bắt buộc, patch `SystemServer`, rebuild và boot-test, sau đó mới thêm các hook tùy chọn.
 
 ---
 
-## 1. Cảnh báo và nguyên tắc an toàn bắt buộc
+## 1. Cần chuẩn bị gì
 
-- **Luôn sao lưu (backup)**: Lưu lại các file `framework.jar`, `services.jar`, các file tối ưu hóa đi kèm (VDEX/ODEX) và phân vùng khởi động (boot image) đang hoạt động ổn định trước khi chỉnh sửa.
-- **Phiên bản DEX trên Android 17**: Android 17 hỗ trợ cả định dạng DEX `039` và `040` (các bản ROM thực tế như HyperOS Android 17 dùng `039`). Bắt buộc phải sử dụng công cụ smali/baksmali phiên bản 3.x trở lên với cờ `--api 37` do các class hệ thống của Android 17 chứa các cờ `HiddenApiRestrictions` mở rộng khiến baksmali 2.5.2 bị lỗi.
-- **Quản lý thanh ghi (Registers)**: Không tự ý tăng số lượng `.registers` khi phương thức gốc vẫn tham chiếu tham số qua thanh ghi dạng `vN` mà chưa tính toán lại chỉ số. Ưu tiên sử dụng thanh ghi tham số `p0..pN`, các thanh ghi cục bộ (local) đang chưa dùng, hoặc tăng `.locals`.
-- **Quy trình thử nghiệm**: Thực hiện vá theo từng nhóm tính năng và khởi động lại thiết bị để kiểm tra (boot-test) sau mỗi nhóm. Chỉ cần sai lệch một descriptor trong `SystemServer` cũng có thể dẫn đến treo logo (bootloop).
+Trước khi chỉnh sửa, hãy chuẩn bị:
+
+- Một bản sạch của `/system/framework/framework.jar` từ ROM đích.
+- Một bản sạch của `/system/framework/services.jar` từ ROM đích.
+- File artifact `classes.dex` của Kaorios Framework 2.0.6.0.
+- `smali` và `baksmali`.
+- Công cụ ZIP/JAR như `7z`, `zip` hoặc `unzip`.
+- Công cụ tìm kiếm text như `rg` (ripgrep).
+- Phương án cứu máy nếu ROM bootloop.
+
+Luôn giữ riêng bản JAR gốc. Không thử nghiệm bằng bản duy nhất bạn có.
+
+### Người dùng Android 17
+
+Dùng **smali/baksmali 3.x trở lên** với API 37. Hãy đọc [`notes-a17_VI.md`](notes-a17_VI.md) trước khi patch Android 17 vì lớp `Build` cần thêm một thay đổi riêng.
 
 ---
 
-## 2. Khảo sát và tìm kiếm trên ROM đích
+## 2. Hiểu đúng file mình đang sửa
 
-Giải nén các file JAR hệ thống và dịch ngược (disassemble) mã nguồn smali:
+`framework.jar` và `services.jar` có thể chứa nhiều DEX:
+
+```text
+classes.dex
+classes2.dex
+classes3.dex
+...
+```
+
+Một class có thể nằm ở bất kỳ DEX nào trong số đó. **Không được** mặc định rằng class luôn nằm ở `classes3.dex` chỉ vì template tham khảo dùng bố cục đó.
+
+Bạn chỉ cần disassemble đúng DEX chứa class cần sửa.
+
+Ví dụ giải nén nhanh:
 
 ```bash
 mkdir -p work/framework work/services
 unzip -q framework.jar -d work/framework
 unzip -q services.jar -d work/services
+```
 
+Trên Android 17, một lệnh disassemble điển hình là:
+
+```bash
 java -jar baksmali-3.0.8.jar d work/framework/classes3.dex --api 37 -o work/fw3
 java -jar baksmali-3.0.8.jar d work/services/classes.dex --api 37 -o work/sv1
 ```
 
-Lặp lại thao tác dịch ngược với tất cả các file `classes*.dex`, sau đó tiến hành tìm kiếm vị trí các lớp cần can thiệp:
+Hãy lặp lại với đúng `classes*.dex` của ROM bạn đang làm.
 
-```bash
-rg -l '^\.class .*Landroid/app/Instrumentation;' work/fw*
-rg -l '^\.class .*Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;' work/fw*
-rg -l '^\.class .*Landroid/security/keystore2/AndroidKeyStoreSpi;' work/fw*
-rg -l '^\.class .*Lcom/android/server/SystemServer;' work/sv*
-rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
+> [!NOTE]
+> Số thứ tự DEX và số register trong ví dụ chỉ là ví dụ. Hãy bám theo class, descriptor của method và đoạn lệnh xung quanh trong **chính ROM của bạn**.
+
+---
+
+## 3. Thêm Kaorios Framework DEX
+
+Nên làm bước này trước khi thêm hook.
+
+1. Mở `framework.jar` stock sạch.
+2. Kiểm tra số DEX lớn nhất hiện có.
+3. Đổi tên artifact `classes.dex` của Kaorios 2.0.6.0 thành **số DEX tiếp theo chưa dùng**.
+4. Thêm file đó vào thư mục gốc của `framework.jar`.
+5. Giữ nguyên toàn bộ DEX stock.
+
+Ví dụ nếu `framework.jar` stock có:
+
+```text
+classes.dex
+classes2.dex
+classes3.dex
+classes4.dex
+classes5.dex
+classes6.dex
 ```
 
+thì đổi Kaorios DEX thành:
+
+```text
+classes7.dex
+```
+
+rồi thêm `classes7.dex` vào `framework.jar`.
+
+**Không thay thế DEX stock bằng DEX Kaorios.**
+
+Vì tài liệu này chỉ áp dụng cho file sạch, `Landroid/security/kaorios/KaoriosHook;` không nên tồn tại sẵn trong framework stock. Nếu class này đã tồn tại, hãy dừng lại: bạn không còn ở trạng thái đầu vào mà tài liệu giả định nữa.
+
+### Boot-test lần đầu
+
+Nếu có thể, hãy boot-test một lần chỉ với DEX Kaorios mới được thêm vào và chưa patch smali. Như vậy nếu có lỗi, bạn sẽ biết đó là lỗi đóng gói DEX hay lỗi hook.
+
 ---
 
-## 3. Thêm file DEX vào framework không tạo lớp trùng lặp
+## 4. Descriptor hook chuẩn của 2.0.6.0
 
-Đổi tên file thành phẩm `classes.dex` của framework thành số thứ tự DEX tiếp theo chưa tồn tại trong bản ROM (ví dụ: các bản ROM có 6 file DEX gốc sẽ đổi thành `classes7.dex`), sau đó thêm file này vào bên trong `framework.jar`. Giữ nguyên toàn bộ các file DEX gốc `classes.dex` .. `classes6.dex`.
+Các chữ ký dưới đây phải được gõ đúng tuyệt đối:
 
----
-
-## 4. Bảng định danh (Descriptor) chuẩn phiên bản 2.0.6.0
-
-| Tính năng | Chữ ký (Descriptor) Smali chính xác |
+| Tính năng | Descriptor hook Kaorios |
 |---|---|
-| Khởi tạo ứng dụng (Init app) | `initContext(Landroid/content/Context;)V` |
-| Khởi tạo system_server | `initSystemServer()V` |
-| Giả lập tính năng hệ thống (Feature spoof) | `hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;` |
-| Tạo khóa phần mềm (Software GEN) | `initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;` |
-| Thay thế chuỗi chứng chỉ (Hack chain) | `CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;` |
-| Lấy chứng chỉ từ bộ nhớ đệm (Tùy chọn) | `OnGetKeyEntry(Landroid/system/keystore2/KeyDescriptor;)Landroid/system/keystore2/KeyEntryResponse;` |
-| Ẩn tùy chọn nhà phát triển (Hide dev) | `shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z` |
-| Ẩn ứng dụng theo tiến trình gọi (Hide app) | `shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z` |
-| Giả lập nguồn cài đặt (Installer spoof) | `filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;` |
-| Lọc giá trị cài đặt hệ thống (Settings value) | `filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;` |
-| Xóa giá trị cài đặt (Remove setting) | `shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z` |
-| Vô hiệu hóa cờ bảo mật (FLAG_SECURE) | `isSecureFlag()Z` |
+| Khởi tạo app | `initContext(Landroid/content/Context;)V` |
+| Khởi tạo `system_server` | `initSystemServer()V` |
+| Giả lập system feature | `hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;` |
+| Tạo software key | `initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;` |
+| Thay certificate chain | `CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;` |
+| Cached KeyStore2 entry, tùy chọn | `OnGetKeyEntry(Landroid/system/keystore2/KeyDescriptor;)Landroid/system/keystore2/KeyEntryResponse;` |
+| Ẩn developer status | `shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z` |
+| Ẩn app list | `shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z` |
+| Giả lập installer source | `filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;` |
+| Thay giá trị Settings | `filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;` |
+| Xóa một setting | `shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z` |
+| Tắt `FLAG_SECURE` | `isSecureFlag()Z` |
+
+Sai thứ tự tham số hoặc sai kiểu trả về có thể vẫn assemble được nhưng crash khi runtime, vì vậy hãy copy descriptor chính xác.
 
 ---
 
-## 5. Vá các điểm móc lõi trong framework.jar
+# Phần A — Các patch bắt buộc
 
-### 5.1 `Instrumentation.newApplication`
+## 5. `framework.jar`: khởi tạo Kaorios cho từng app
 
-Điểm móc bắt buộc để hoạt động các tính năng: giả lập Play Integrity (PIF), thông số game, Google Photos và TFT. Chèn lệnh gọi ngay sau `Application.attach()` và trước lệnh `return-object`.
+### Class
 
-Đối với phương thức tĩnh (static method):
+```smali
+Landroid/app/Instrumentation;
+```
+
+Thường có hai overload của `newApplication`. Hãy patch những overload nào thực sự tồn tại trong ROM của bạn.
+
+### Method A
 
 ```smali
 newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
+```
 
+Tìm lệnh gọi `Application.attach()` có sẵn. Chèn Kaorios call **sau `attach()` và trước khi trả về Application**:
+
+```smali
 invoke-virtual {v0, p1}, Landroid/app/Application;->attach(Landroid/content/Context;)V
+
 invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+
 return-object v0
 ```
 
-Đối với phương thức đối tượng (instance method):
+### Method B
 
 ```smali
 newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
+```
 
+Dùng tham số `Context` của overload này:
+
+```smali
 invoke-virtual {v0, p3}, Landroid/app/Application;->attach(Landroid/content/Context;)V
+
 invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+
 return-object v0
 ```
 
-> **Lưu ý**: Tuyệt đối không gọi hook này trước khi phương thức `attach()` được thực thi.
+> [!WARNING]
+> Không được chuyển `initContext()` lên trước `Application.attach()`.
 
-### 5.2 `ApplicationPackageManager.hasSystemFeature`
+Hook này cần cho các tính năng phía app như PIF/property spoof, Google Photos spoof, game props và các hành vi theo từng app.
 
-Chèn vào ngay đầu phương thức `hasSystemFeature(Ljava/lang/String;I)Z`. Nếu hook trả về `null` nghĩa là sử dụng logic mặc định của hệ thống; nếu trả về đối tượng `Boolean` (khác null) thì sẽ ghi đè kết quả:
+---
+
+## 6. `framework.jar`: hook `hasSystemFeature`
+
+### Class
+
+```smali
+Landroid/app/ApplicationPackageManager;
+```
+
+### Method
+
+```smali
+hasSystemFeature(Ljava/lang/String;I)Z
+```
+
+Chèn đoạn này gần đầu method, sau khai báo register/local và trước phần xử lý feature stock:
 
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
 move-result-object v0
+
 if-eqz v0, :cond_kaorios_feature_stock
+
 invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
 move-result v0
 return v0
+
 :cond_kaorios_feature_stock
 ```
 
-> **Lưu ý**: Kiểu trả về của hook bắt buộc phải là đối tượng `Ljava/lang/Boolean;`, không được sử dụng kiểu nguyên thủy `Z`.
+Cách hoạt động:
 
-### 5.3 `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair`
+- Hook trả về `null` -> tiếp tục chạy logic stock của ROM.
+- Hook trả về `Boolean` -> dùng luôn giá trị đó.
 
-Chèn vào ngay đầu phương thức, trước đoạn mã gốc của hệ thống gọi `getSecurityLevel()`:
+Kiểu trả về của hook là **`Ljava/lang/Boolean;`**, không phải primitive `Z`.
+
+> [!NOTE]
+> Ví dụ dùng `v0`. Hãy chắc rằng `v0` dùng được ở vị trí này trong method của ROM bạn. Không tăng `.registers` một cách mù chỉ để có thêm register tạm.
+
+---
+
+## 7. `framework.jar`: hook software key generation
+
+### Class
+
+```smali
+Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
+```
+
+### Method
+
+```smali
+generateKeyPair()Ljava/security/KeyPair;
+```
+
+Chèn hook ở **đầu method**, trước khi code stock gọi `getSecurityLevel()` hoặc bắt đầu luồng tạo hardware-backed key.
+
+Template Android 17 tham khảo có một object local trống ở `v14`:
 
 ```smali
 invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
 move-result-object v14
+
 if-eqz v14, :cond_kaorios_gen_stock
 return-object v14
+
 :cond_kaorios_gen_stock
 ```
 
-> **Lưu ý**: Thanh ghi `v14` trong ví dụ trên chỉ áp dụng với mẫu Android 17 có khai báo `.registers 16`. Trên các bản ROM khác, bạn cần chọn một thanh ghi cục bộ (local) chứa đối tượng hiện đang còn trống.
+Cách hoạt động:
 
-### 5.4 `AndroidKeyStoreSpi.engineGetCertificateChain`
+- Trả về khác `null` -> Kaorios đã tạo key, trả về luôn.
+- Trả về `null` -> tiếp tục chạy method stock.
 
-Phương thức cần vá:
+### Cảnh báo về register
+
+`v14` **không phải giá trị dùng chung cho mọi ROM**. Nó chỉ đúng với template Android 17 đang cung cấp.
+
+Không dùng lại quy tắc cũ kiểu "tăng `.registers` thêm 1 rồi lấy `registers - 2`" nếu chưa kiểm tra method. Tăng `.registers` có thể làm thay đổi ánh xạ parameter register nếu method gốc còn tham chiếu tham số bằng `vN`.
+
+Với ROM khác, hãy dùng một object local thật sự đang trống hoặc tự điều chỉnh method cẩn thận.
+
+---
+
+## 8. `framework.jar`: hook certificate chain
+
+### Class
+
+```smali
+Landroid/security/keystore2/AndroidKeyStoreSpi;
+```
+
+### Method
 
 ```smali
 engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 
-Tìm mảng chuỗi chứng chỉ ở cuối phương thức, ngay sau khi chứng chỉ lá (leaf) được gán vào chỉ số 0 và trước khi trả về kết quả:
+Gần cuối method, tìm đoạn leaf certificate được đưa vào mảng `Certificate[]` cuối cùng, sau đó truyền **chính mảng đó** qua Kaorios trước khi return.
+
+Mẫu thường gặp:
 
 ```smali
+const/4 v4, 0x0
 aput-object v2, v3, v4
+
 invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
 move-result-object v3
+
 return-object v3
 ```
 
-> **Lưu ý**: Tuyệt đối không truyền `{p0, p1}` vào hàm hook này. Nếu phương thức có nhiều nhánh `return-object`, hãy bọc lệnh hook cho từng nhánh mảng chứng chỉ hợp lệ hoặc chuyển hướng tất cả về một lệnh `return` chung.
+Điểm quan trọng không phải số register. Quan trọng là register truyền vào `CertificateChainIfNeeded()` phải là register đang giữ `Certificate[]` cuối cùng.
 
-### 5.5 Bỏ thuộc tính `final` khỏi các trường Build trên Android 17
+> [!WARNING]
+> Không truyền `{p0, p1}` vào hook này. Hook chỉ nhận đúng một tham số `Certificate[]`.
 
-Trên Android 17, hệ thống chặn việc sửa đổi các trường `static final` qua `Field.set()` và `Unsafe`. Vì vậy bắt buộc phải xóa từ khóa `final` khỏi các trường trong `Build` và `Build$VERSION`.
-
-Chi tiết xem tại: [notes-a17_VI.md](notes-a17_VI.md) (hoặc bản tiếng Anh [notes-a17.md](notes-a17.md)).
+Nếu method có nhiều nhánh `return-object` hợp lệ, hãy hook từng nhánh chain cuối cùng hoặc chuyển các nhánh đó về một điểm return chung đã hook.
 
 ---
 
-## 6. Vá các điểm móc lõi trong services.jar
+## 9. Chỉ Android 17: cho phép ghi các trường `Build` cần thiết
 
-### 6.1 `SystemServer.initSystemServer`
+Trên Android 17, Kaorios không thể thay selected `Build` values một cách ổn định khi các trường đó vẫn là `static final`.
 
-Khởi tạo dịch vụ OMK và tự động kiểm tra, nạp `RootOfTrust` từ TEE thật của thiết bị. Có 2 vị trí chèn tùy thuộc vào nền tảng:
+Nếu ROM đích là Android 17 / SDK 37, làm đầy đủ hướng dẫn trong:
 
-**Cách 1: AOSP / Qualcomm / HyperOS Android 17 (Khuyến nghị)**
-Chèn ngay đầu phương thức `run()V`:
+[`notes-a17_VI.md`](notes-a17_VI.md)
+
+Bạn sửa `Build.smali` và `Build$VERSION.smali` stock của ROM đích, không sửa DEX Kaorios.
+
+Android 12-16 có thể bỏ qua mục này.
+
+---
+
+## 10. `services.jar`: khởi tạo Kaorios trong `SystemServer`
+
+### Class
+
+```smali
+Lcom/android/server/SystemServer;
+```
+
+Mục tiêu là gọi:
+
+```smali
+invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+```
+
+một lần trong quá trình `system_server` khởi động.
+
+### Mẫu A — AOSP / Qualcomm / template HyperOS Android 17 hiện tại
+
+Chèn gần đầu `run()V`:
+
 ```smali
 .method private run()V
     .registers 20
 
-    .line 975
-    # [Kaorios Hook] Khởi tạo OmkService và RootOfTrust
     invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 
-    move-object/from16 v1, p0
-    const-string/jumbo v0, "persist.sys.language"
+    # code gốc của ROM tiếp tục ở đây
 ```
 
-**Cách 2: MediaTek (Trước `startOtherServices`)**
-Chèn ngay trước khi gọi đến `startOtherServices(...)`:
+### Mẫu B — MediaTek / ROM có cấu trúc khác template
+
+Một vị trí thực tế dễ dùng là ngay trước lệnh gọi `startOtherServices(...)` có sẵn:
+
 ```smali
-    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-    invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+
+invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
 ```
 
-> **Lưu ý**: Các thanh ghi truyền vào `startOtherServices` có thể khác nhau tùy bản ROM; chỉ có vị trí tương đối là cố định. Mẫu tham chiếu đầy đủ: [`Template/Template_V2060/SystemServer.smali`](../Template/Template_V2060/SystemServer.smali).
+Register mà ROM dùng cho `startOtherServices` có thể khác. **Không copy `{v1, v3}` nếu method gốc của bạn không dùng đúng chúng ở đó.** Chỉ vị trí tương đối của hook là quan trọng.
+
+Hook này khởi tạo các thành phần system-side của Kaorios, bao gồm OMK / RootOfTrust.
+
+### Boot-test ở đây
+
+Đến thời điểm này bạn nên có:
+
+- DEX Kaorios đã nằm trong `framework.jar`;
+- `Instrumentation` đã patch;
+- `hasSystemFeature` đã patch;
+- hai hook KeyStore SPI đã patch;
+- các field `Build` Android 17 đã xử lý nếu cần;
+- `SystemServer` đã patch.
+
+Hãy rebuild và boot-test trước khi thêm tính năng tùy chọn.
 
 ---
 
-## 7. Vá các tính năng tùy chọn
+# Phần B — Patch tùy chọn
 
-### 7.1 Ẩn trạng thái tùy chọn nhà phát triển (Hide Developer Status)
+Các hook tùy chọn phụ thuộc nhiều hơn vào cách OEM triển khai framework. Chỉ patch sau khi phần core đã boot ổn định.
 
-Chỉ áp dụng khi phương thức trong `Settings$NameValueCache` có descriptor trả về kiểu chuỗi `String`:
+## 11. Ẩn Developer Options / trạng thái ADB
+
+### Class
+
+```smali
+Landroid/provider/Settings$NameValueCache;
+```
+
+Dùng overload trả về `String`:
 
 ```smali
 getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;
 ```
 
-Mã chèn:
+Mẫu hook:
 
 ```smali
 if-eqz p2, :cond_kaorios_dev_stock
+
 invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
 move-result v0
+
 if-eqz v0, :cond_kaorios_dev_stock
+
 const-string v0, "0"
 return-object v0
+
 :cond_kaorios_dev_stock
 ```
 
-> **Lưu ý**: Hook trả về kiểu nguyên thủy `Z` (boolean), không trả về đối tượng `Boolean`. Phương thức gốc của ROM phải trả về `String`, không phải kiểu `Pair`. Nếu ROM của bạn có định danh khác thì không áp dụng đoạn mã này.
+Hook Kaorios trả về primitive `Z`. Method ROM bạn patch phải trả về `Ljava/lang/String;`.
 
-### 7.2 Ẩn danh sách ứng dụng theo ứng dụng gọi (Hide App Caller-Aware)
+Nếu ROM có overload khác hoặc trả về `Pair`, không paste đoạn này nguyên xi.
 
-Phương thức cần can thiệp:
+---
+
+## 12. Ẩn danh sách app theo caller
+
+Một điểm hook tham khảo trên Android 17 là:
 
 ```smali
 shouldFilterApplication(Lcom/android/server/pm/snapshot/PackageDataSnapshot;ILjava/lang/Object;Lcom/android/server/pm/pkg/PackageStateInternal;I)Z
 ```
 
-Trong đó các tham số tương ứng là: `p2` = UID tiến trình gọi (`callingUid`), `p4` = trạng thái gói mục tiêu (`targetPkgSetting`), `p5` = ID người dùng (`userId`):
+Trong layout tham khảo:
+
+- `p2` = calling UID
+- `p4` = target package state
+- `p5` = user ID
+
+Mẫu hook:
 
 ```smali
 move/from16 v0, p2
 move-object/from16 v1, p4
 if-eqz v1, :cond_kaorios_hide_stock
+
 :try_start_kaorios_hide
 invoke-interface {v1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
 move-result-object v2
+
 const/4 v3, 0x0
 move/from16 v4, p5
+
 invoke-static {v0, v3, v2, v4}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
 move-result v0
+
 if-eqz v0, :cond_kaorios_hide_stock
 const/4 v0, 0x1
 return v0
 :try_end_kaorios_hide
 .catch Ljava/lang/Throwable; {:try_start_kaorios_hide .. :try_end_kaorios_hide} :catch_kaorios_hide
+
 :catch_kaorios_hide
 :cond_kaorios_hide_stock
 ```
 
-> **Lưu ý**: Các đối số truyền vào hook bắt buộc phải theo đúng thứ tự `{uid, resolver, targetPackage, userId}`. Tài liệu các bản cũ truyền `{resolver, uid, ...}` là sai thứ tự so với descriptor.
+Thứ tự đối số của hook bắt buộc là:
 
-### 7.3 Giả lập nguồn cài đặt ứng dụng (Installer Source Spoof)
+```text
+callingUid, resolver, targetPackageName, userId
+```
 
-Mẫu tham chiếu `ComputerEngine.getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;`: sau khi tên nguồn cài đặt gốc đã được lưu vào `v2`, UID tiến trình gọi nằm ở `v0`, và `userId` nằm ở `p2`:
+Không dùng lại patch cũ truyền `resolver` trước.
+
+Vì nội bộ Package Manager thay đổi giữa các Android/OEM, chỉ dùng [`Template/Template_V2060/AppsFilterBase.smali`](../Template/Template_V2060/AppsFilterBase.smali) để tham khảo, không copy nguyên class sang ROM khác.
+
+---
+
+## 13. Giả lập nguồn cài đặt
+
+Một class tham khảo là:
+
+```smali
+Lcom/android/server/pm/ComputerEngine;
+```
+
+method:
+
+```smali
+getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;
+```
+
+Sau khi ROM đã tính ra installer package name stock, truyền giá trị đó qua:
 
 ```smali
 :try_start_kaorios_installer
 const/4 v5, 0x0
+
 invoke-static {v5, v0, p2, p1, v2}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 move-result-object v2
 :try_end_kaorios_installer
 .catch Ljava/lang/Throwable; {:try_start_kaorios_installer .. :try_end_kaorios_installer} :catch_kaorios_installer
+
 return-object v2
 ```
 
-> **Lưu ý**: Đối với các bản ROM không có sẵn `userId` ở `p2`, cần tính toán giá trị này thông qua `UserHandle.getUserId(callingUid)`.
+Đây là ví dụ register của ROM tham khảo. Trước khi áp dụng, hãy xác định trong method của bạn:
 
-### 7.4 Thay thế giá trị cài đặt hệ thống (Settings Replacement — Tùy biến theo ROM)
+1. calling UID;
+2. user ID;
+3. package đang được truy vấn;
+4. installer package name stock.
 
-Chỉ thực hiện vá sau khi đã xác định rõ thanh ghi chứa namespace, tên khóa (key) và chuỗi giá trị (value) tại điểm trả về chung:
+Nếu chưa có user ID, tính từ calling UID bằng `UserHandle.getUserId(callingUid)`.
+
+---
+
+## 14. Thay hoặc xóa giá trị Settings
+
+Patch này cố ý để theo từng ROM. Không inject mù vào mọi đường đọc Settings.
+
+Khi đã xác định register chứa:
+
+- namespace;
+- setting name;
+- chuỗi value trả về;
+
+hãy truyền chúng qua:
 
 ```smali
 const/4 vC, 0x0
+
 invoke-static {vC, vNs, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 move-result-object vValue
 ```
 
-Nếu trong cấu hình JSON sử dụng giá trị `value:null`, cần gọi thêm phương thức `shouldRemoveSetting(...)Z` rồi chuyển sang cách biểu diễn trạng thái “không tồn tại” phù hợp với bản ROM của bạn. Tuyệt đối không dán đoạn mã này vào tất cả các nhánh `GET_*`.
+Với cấu hình biểu diễn xóa setting (`value: null`), dùng thêm:
 
-### 7.5 Đường dẫn KeyStore2 qua bộ nhớ đệm (Cached KeyStore2 — Mặc định tắt)
+```smali
+shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
+```
 
-Can thiệp qua Keystore SPI ở mục 5.3 và 5.4 là giải pháp chuẩn đã được kiểm chứng hoạt động ổn định. Chỉ nên vá mục này khi bạn biết chính xác thanh ghi chứa đối tượng `Landroid/system/keystore2/KeyDescriptor;`:
+rồi ánh xạ kết quả về cách ROM đích biểu diễn setting không tồn tại.
+
+`vC`, `vNs`, `vName`, `vValue` ở trên chỉ là ký hiệu giải thích, **không phải register literal để paste**.
+
+---
+
+## 15. Cached KeyStore2 entry — tùy chọn, thường nên bỏ qua
+
+Hai patch KeyStore SPI ở mục 7 và 8 là luồng tích hợp tiêu chuẩn.
+
+Chỉ dùng cached-entry hook khi bạn đã xác định đúng object kiểu:
+
+```smali
+Landroid/system/keystore2/KeyDescriptor;
+```
+
+Mẫu:
 
 ```smali
 invoke-static {vDescriptor}, Landroid/security/kaorios/KaoriosHook;->OnGetKeyEntry(Landroid/system/keystore2/KeyDescriptor;)Landroid/system/keystore2/KeyEntryResponse;
 move-result-object vResult
+
 if-eqz vResult, :cond_kaorios_keystore_stock
 return-object vResult
+
 :cond_kaorios_keystore_stock
 ```
 
-> **Lưu ý**: Kiểu dữ liệu chính xác là `android/system/keystore2`, không phải `android/security/keystore2`.
-
-### 7.6 Vô hiệu hóa cờ bảo mật chống chụp màn hình (Bỏ FLAG_SECURE)
-
-Gọi hàm kiểm tra `isSecureFlag()Z`. Nếu trả về `true`:
-- Sửa `DevicePolicyCacheImpl.isScreenCaptureAllowed(I)Z` để luôn trả về `1` (cho phép chụp ảnh màn hình).
-- Sửa `WindowState[Animator].isSecureLocked()Z` để luôn trả về `0` (không khóa bảo mật hiển thị).
-- Phương thức `setSecureLocked(Z)V` có thể cho kết thúc sớm (`return-void`).
-
-Chi tiết xem tại tài liệu chuyên sâu: [Disable_Secure_Flag.md](Disable_Secure_Flag.md) và mẫu mã nguồn tham chiếu: [`Template/Template_V2060/WindowState.smali`](../Template/Template_V2060/WindowState.smali).
-
-> **Lưu ý**: Chú ý không đảo ngược giá trị trả về của hai phương thức đầu.
+Package đúng là `android/system/keystore2`, không phải `android/security/keystore2`.
 
 ---
 
-## 8. Đóng gói lại Smali và ráp file JAR
+## 16. Tắt `FLAG_SECURE` — tùy chọn
 
-Sau khi hoàn tất chỉnh sửa smali, tiến hành dịch ngược lại thành file DEX và cập nhật vào các file JAR hệ thống:
+Tính năng này dùng:
+
+```smali
+Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
+```
+
+Tùy ROM, phần triển khai có thể liên quan tới:
+
+- `DevicePolicyCacheImpl.isScreenCaptureAllowed(I)Z`;
+- logic secure-state trong `WindowState` / `WindowStateAnimator`;
+- `setSecureLocked(Z)V`.
+
+Hãy dùng tài liệu riêng thay vì suy đoán patch từ trang này:
+
+[`Disable_Secure_Flag.md`](Disable_Secure_Flag.md)
+
+Các file tham khảo cũng có trong [`Template/Template_V2060`](../Template/Template_V2060).
+
+---
+
+# Phần C — Rebuild và test
+
+## 17. Chỉ assemble lại những DEX đã sửa
+
+Ví dụ Android 17:
 
 ```bash
 java -jar smali-3.0.8.jar a -a 37 work/fw3 -o work/framework/classes3.dex
 java -jar smali-3.0.8.jar a -a 37 work/sv1 -o work/services/classes.dex
-
-java -jar baksmali-3.0.8.jar list classes work/framework/classes3.dex >/dev/null
-java -jar baksmali-3.0.8.jar list classes work/services/classes.dex >/dev/null
-rg -n 'KaoriosHook;->' work/fw3 work/sv1
 ```
 
-Cập nhật chính xác các file DEX đã sửa đổi vào bản sao của file JAR gốc; chú ý không làm mất các file tài nguyên khác nằm bên ngoài DEX. Các file JAR hệ thống không cần chạy căn chỉnh (zipalign). Nếu có sẵn mã nguồn ROM, nên tích hợp trực tiếp vào cây build để hệ thống biên dịch tự động sinh lại các file JAR và VDEX/ODEX đồng bộ.
+Sau đó kiểm tra DEX đọc lại được:
+
+```bash
+java -jar baksmali-3.0.8.jar list classes work/framework/classes3.dex >/dev/null
+java -jar baksmali-3.0.8.jar list classes work/services/classes.dex >/dev/null
+```
+
+Tìm hook thêm một lần cuối trong output smali:
+
+```bash
+rg -n 'Landroid/security/kaorios/KaoriosHook;->' work/fw3 work/sv1
+```
+
+Chỉ thay các DEX đã chỉnh sửa vào bản sao của JAR gốc. Giữ nguyên mọi entry khác trong JAR và toàn bộ DEX chưa đụng tới.
+
+System framework JAR không cần `zipalign`.
 
 ---
 
-## 9. Nạp vào thiết bị (Flash), bộ nhớ đệm (Cache) và khôi phục (Rollback)
+## 18. Flash / cài đặt an toàn
 
-Phương án an toàn nhất là biên dịch lại toàn bộ ảnh hệ thống (system image). Trong trường hợp thử nghiệm qua giải pháp overlay hoặc Module (Magisk / KernelSU):
+Cách deploy JAR đã patch phụ thuộc hệ thống build ROM, recovery, Magisk/KernelSU overlay hay cách repack image của bạn.
 
-1. **Luôn lưu trữ bản gốc**: Đảm bảo luôn có sẵn file gốc để có thể phục hồi từ chế độ Recovery khi phát sinh sự cố.
-2. **Nạp đúng đường dẫn**: Đè chính xác file vào `/system/framework/framework.jar` và `/system/framework/services.jar`.
-3. **Xử lý bộ nhớ đệm**: Chỉ xử lý các file VDEX/ODEX tương ứng đã xác định; không tùy tiện xóa toàn bộ `dalvik-cache` bằng các lệnh hàng loạt.
-4. **Khởi động**: Chạy lệnh `sync`, khởi động lại máy (reboot) và chờ hệ thống tối ưu hóa mã (dexopt). Lần khởi động đầu tiên sau khi vá có thể lâu hơn bình thường.
+Những nguyên tắc quan trọng:
 
-> **Xử lý sự cố**: Nếu thiết bị bị treo logo (bootloop), hãy khôi phục (rollback) đồng thời cả bộ file JAR cùng các file VDEX/ODEX gốc đi kèm, tuyệt đối không dùng lẫn file JAR mới với file oat/odex cũ.
+1. Luôn giữ `framework.jar` và `services.jar` stock sạch để rollback.
+2. Chỉ thay đúng đường dẫn hệ thống.
+3. Không trộn JAR mới với optimized artifacts cũ được giữ thủ công nếu phương pháp deploy của bạn yêu cầu chúng đồng bộ.
+4. Không xóa hàng loạt ART / dalvik cache bằng wildcard chỉ vì một guide nào đó bảo làm vậy.
+5. Lần boot đầu sau khi đổi framework có thể lâu hơn bình thường.
+
+Nếu bạn build ROM từ source, nên tích hợp thay đổi vào cây build và để build system tự sinh lại optimized artifacts.
 
 ---
 
-## 10. Bảng chẩn đoán và xử lý các lỗi thường gặp
+## 19. Thứ tự patch khuyến nghị cho người mới
 
-| Triệu chứng | Nguyên nhân thường gặp | Hướng kiểm tra & Khắc phục |
+Không patch tất cả một lần.
+
+1. Bắt đầu từ JAR stock sạch.
+2. Chỉ thêm DEX Kaorios -> boot-test.
+3. Patch `SystemServer.initSystemServer()` -> boot-test.
+4. Patch `Instrumentation.newApplication()` và `hasSystemFeature()`.
+5. Nếu là Android 17, patch các field `Build` theo [`notes-a17_VI.md`](notes-a17_VI.md) -> boot-test.
+6. Patch `generateKeyPair()` và `engineGetCertificateChain()` -> test key generation / chain.
+7. Thêm hide-dev và hide-app -> test riêng từng tính năng.
+8. Thêm installer spoof, Settings filtering và `FLAG_SECURE` cuối cùng vì đây là phần phụ thuộc ROM nhiều nhất.
+
+Làm theo thứ tự này giúp khoanh vùng bootloop dễ hơn rất nhiều.
+
+---
+
+## 20. Lỗi thường gặp
+
+| Triệu chứng | Nguyên nhân có khả năng nhất | Cần kiểm tra |
 |---|---|---|
-| **Treo logo (Bootloop)** | Sai thanh ghi, sai định danh (descriptor) hoặc file DEX bị lỗi cú pháp khi assemble | Khôi phục lại `services.jar` trước; dịch ngược lại file DEX vừa đóng gói và kiểm tra log verifier của Android |
-| **Tính năng GEN không chạy (không tạo key)** | Hook bị đặt sau lệnh `getSecurityLevel()`, hoặc tính năng keybox bị tắt / file keybox rỗng | Kiểm tra lại điểm chèn ở đầu phương thức `generateKeyPair`, kiểm tra cấu hình trong Settings và logcat của OMK |
-| **Chứng chỉ LEAF không thay đổi** | Bọc sai thanh ghi mảng chứng chỉ hoặc bỏ sót nhánh `return` | Xác định lại mảng `Certificate[]` cuối cùng ngay trước các lệnh trả về `return-object` |
-| **Log PIF/Photos hiển thị chạy nhưng thông số Build không đổi** | Các trường trong `Build.smali` vẫn còn chứa từ khóa `final` | So sánh và kiểm tra lại file `Build.smali` và `Build$VERSION.smali` sau khi đóng gói |
-| **Ẩn nhà phát triển (Hide-dev) không hoạt động** | Vá nhầm overload phương thức hoặc nhầm lẫn giữa kiểu `Boolean` và kiểu nguyên thủy `Z` | Phương thức đích trong ROM phải trả về `String`, hàm hook trả về kiểu nguyên thủy `Z` |
-| **Ẩn ứng dụng (Hide-app) làm ẩn luôn chính ứng dụng gọi** | Sử dụng mã hook phiên bản cũ hoặc truyền sai thứ tự tham số | Định danh bắt buộc phải bắt đầu bằng chữ `I`; thứ tự tham số đúng: `uid, resolver, targetPackage, userId` |
+| Bootloop ngay sau khi thay JAR | Smali sai, register sai, descriptor sai hoặc thay nhầm DEX | Disassemble lại DEX đã rebuild và xem verifier/logcat |
+| `NoClassDefFoundError` / thiếu class Kaorios | DEX Kaorios chưa được thêm đúng hoặc flash nhầm JAR | Kiểm tra `classesN.dex` mới thực sự tồn tại trong `framework.jar` cuối |
+| PIF / Photos có log hook nhưng `Build` không đổi trên Android 17 | Các field cần thiết trong `Build` vẫn còn `final` | Làm theo [`notes-a17_VI.md`](notes-a17_VI.md) và kiểm tra lại smali sau rebuild |
+| Software GEN không chạy | Hook đặt quá muộn hoặc object register tạm sai | Đặt trước luồng stock `getSecurityLevel()` và kiểm tra register |
+| Certificate chain không đổi | Truyền sai register vào `CertificateChainIfNeeded()` | Truyền đúng register đang giữ `Certificate[]` cuối |
+| Hide-dev không chạy | Patch sai overload `getStringForUser` hoặc nhầm kiểu trả về | Target overload trả `String`; hook trả primitive `Z` |
+| Hide-app ẩn sai app/caller | Dùng lại thứ tự tham số của patch cũ | Dùng `uid, resolver, targetPackageName, userId` |
 
 ---
 
-## 11. Trình tự vá khuyến nghị từng bước
+## 21. Checklist cuối
 
-1. **Bước 1**: Thêm file DEX mới vào `framework.jar`, xử lý các lớp trùng lặp (nếu có), sau đó nạp vào máy và khởi động thử.
-2. **Bước 2**: Vá điểm móc tại `SystemServer.initSystemServer` trong `services.jar`, sau đó khởi động lại kiểm tra.
-3. **Bước 3**: Vá `Instrumentation`, xóa thuộc tính `final` của các trường trong Build và vá `hasSystemFeature`, sau đó kiểm tra tính năng giả lập PIF và Google Photos.
-4. **Bước 4**: Vá hai điểm móc Keystore SPI (`generateKeyPair` và `engineGetCertificateChain`), kiểm tra tính năng hoạt động ở các chế độ `gen`, `leaf` và `auto`.
-5. **Bước 5**: Vá tính năng ẩn nhà phát triển và ẩn danh sách ứng dụng, sử dụng một ứng dụng thử nghiệm để kiểm tra.
-6. **Bước 6**: Vá tính năng giả lập nguồn cài đặt, thay thế cài đặt hệ thống và vô hiệu hóa FLAG_SECURE ở bước cuối cùng vì đây là các phần phụ thuộc nhiều nhất vào cấu trúc của từng bản ROM.
+Trước khi coi ROM đã hoàn tất, xác nhận:
 
-> [!IMPORTANT]
-> Tuyệt đối không nên vá dồn tất cả các mục rồi mới nạp vào máy một lần. Nếu xảy ra lỗi treo logo, bạn sẽ không thể khoanh vùng được điểm móc nào đang bị lỗi.
+- [ ] Bắt đầu từ `framework.jar` và `services.jar` stock sạch.
+- [ ] DEX Kaorios được thêm thành `classesN.dex` tiếp theo, không thay DEX stock.
+- [ ] `Instrumentation.newApplication()` gọi `initContext()` sau `Application.attach()`.
+- [ ] `ApplicationPackageManager.hasSystemFeature()` dùng `Ljava/lang/Boolean;`.
+- [ ] `generateKeyPair()` có thể trả về `KeyPair` từ Kaorios trước luồng hardware stock.
+- [ ] `engineGetCertificateChain()` truyền đúng `Certificate[]` vào hook.
+- [ ] Trên Android 17, các field `Build` cần thiết đã bỏ `final`, nhưng `SDK_INT` giữ nguyên.
+- [ ] `SystemServer` gọi `initSystemServer()` đúng một lần.
+- [ ] Mọi DEX đã sửa đều assemble và disassemble lại thành công.
+- [ ] Core patch boot ổn trước khi thêm optional patch.
+
+Nếu file stock sạch của ROM không khớp template tham khảo, hãy thích nghi patch theo control flow thực tế của ROM đích. Không thay nguyên class smali bằng class từ template.
