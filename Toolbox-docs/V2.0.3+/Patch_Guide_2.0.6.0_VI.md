@@ -2,9 +2,8 @@
 
 [English](Patch_Guide_2.0.6.0.md) | **Tiếng Việt**
 
-Tài liệu này mô tả chi tiết quy trình tích hợp file DEX của framework 2.0.6.0 vào các bản ROM Android từ 12 đến 17, đồng thời hướng dẫn sửa đổi các điểm móc (call site) trong mã nguồn smali. Các mẫu thanh ghi trong tài liệu này đã được đối chiếu và kiểm chứng thực tế trên HyperOS Android 17 (API 37). Đối với các bản ROM khác, người thực hiện cần tìm kiếm lớp (class) và phương thức (method) theo đúng định danh (descriptor), tuyệt đối không đoán mò số thứ tự file DEX hay số dòng mã nguồn.
-
-- Mẫu mã nguồn smali tham chiếu chuẩn trên HyperOS Android 17: [`Template/Template_V2060`](../Template/Template_V2060)
+Tài liệu này mô tả chi tiết quy trình tích hợp file DEX của framework 2.0.6.0 vào các bản ROM Android từ 12 đến 17.
+- Mẫu mã nguồn smali tham chiếu chuẩn: [`Template/Template_V2060`](../Template/Template_V2060)
 
 ---
 
@@ -12,9 +11,6 @@ Tài liệu này mô tả chi tiết quy trình tích hợp file DEX của frame
 
 - **Luôn sao lưu (backup)**: Lưu lại các file `framework.jar`, `services.jar`, các file tối ưu hóa đi kèm (VDEX/ODEX) và phân vùng khởi động (boot image) đang hoạt động ổn định trước khi chỉnh sửa.
 - **Phiên bản DEX trên Android 17**: Android 17 hỗ trợ cả định dạng DEX `039` và `040` (các bản ROM thực tế như HyperOS Android 17 dùng `039`). Bắt buộc phải sử dụng công cụ smali/baksmali phiên bản 3.x trở lên với cờ `--api 37` do các class hệ thống của Android 17 chứa các cờ `HiddenApiRestrictions` mở rộng khiến baksmali 2.5.2 bị lỗi.
-- **Quy tắc phân biệt hoa - thường**: Tên phương thức và định danh (descriptor) phân biệt chính xác chữ hoa và chữ thường. Ví dụ: `OnGetKeyEntry` có chữ `O` viết hoa; `CertificateChainIfNeeded` không phải là `getCertificateChain`.
-- **Vị trí file DEX**: Không mặc định các lớp cần vá luôn nằm ở `classes3.dex` hay `classes7.dex`; luôn luôn giải nén và tìm kiếm trực tiếp trên bản ROM mục tiêu.
-- **Tránh trùng lặp mã**: Tuyệt đối không để tồn tại đồng thời hai phiên bản của gói `Landroid/security/kaorios/*` hoặc `Lcom/kousei/framework/*` trong boot classpath của hệ thống.
 - **Quản lý thanh ghi (Registers)**: Không tự ý tăng số lượng `.registers` khi phương thức gốc vẫn tham chiếu tham số qua thanh ghi dạng `vN` mà chưa tính toán lại chỉ số. Ưu tiên sử dụng thanh ghi tham số `p0..pN`, các thanh ghi cục bộ (local) đang chưa dùng, hoặc tăng `.locals`.
 - **Quy trình thử nghiệm**: Thực hiện vá theo từng nhóm tính năng và khởi động lại thiết bị để kiểm tra (boot-test) sau mỗi nhóm. Chỉ cần sai lệch một descriptor trong `SystemServer` cũng có thể dẫn đến treo logo (bootloop).
 
@@ -47,7 +43,7 @@ rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
 
 ## 3. Thêm file DEX vào framework không tạo lớp trùng lặp
 
-Đổi tên file thành phẩm `classes.dex` của framework thành số thứ tự DEX tiếp theo chưa tồn tại trong bản ROM (ví dụ: các bản ROM có 6 file DEX gốc như HyperOS A17 sẽ đổi thành `classes7.dex`), sau đó thêm file này vào bên trong `framework.jar`. Giữ nguyên toàn bộ các file DEX gốc `classes.dex` .. `classes6.dex`.
+Đổi tên file thành phẩm `classes.dex` của framework thành số thứ tự DEX tiếp theo chưa tồn tại trong bản ROM (ví dụ: các bản ROM có 6 file DEX gốc sẽ đổi thành `classes7.dex`), sau đó thêm file này vào bên trong `framework.jar`. Giữ nguyên toàn bộ các file DEX gốc `classes.dex` .. `classes6.dex`.
 
 ---
 
@@ -178,7 +174,6 @@ Chèn ngay đầu phương thức `run()V`:
 **Cách 2: MediaTek (Trước `startOtherServices`)**
 Chèn ngay trước khi gọi đến `startOtherServices(...)`:
 ```smali
-    # [Kaorios Hook] Khởi tạo OmkService và RootOfTrust
     invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
     invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
 ```
@@ -333,7 +328,6 @@ Phương án an toàn nhất là biên dịch lại toàn bộ ảnh hệ thốn
 | Triệu chứng | Nguyên nhân thường gặp | Hướng kiểm tra & Khắc phục |
 |---|---|---|
 | **Treo logo (Bootloop)** | Sai thanh ghi, sai định danh (descriptor) hoặc file DEX bị lỗi cú pháp khi assemble | Khôi phục lại `services.jar` trước; dịch ngược lại file DEX vừa đóng gói và kiểm tra log verifier của Android |
-| **Toolbox không nhận diện được framework** | File DEX chưa được nạp vào boot classpath, trùng lặp lớp, hoặc file oat/odex chưa đồng bộ | Tìm kiếm lớp trong file JAR thành phẩm và đồng bộ lại các file VDEX/ODEX tương ứng |
 | **Tính năng GEN không chạy (không tạo key)** | Hook bị đặt sau lệnh `getSecurityLevel()`, hoặc tính năng keybox bị tắt / file keybox rỗng | Kiểm tra lại điểm chèn ở đầu phương thức `generateKeyPair`, kiểm tra cấu hình trong Settings và logcat của OMK |
 | **Chứng chỉ LEAF không thay đổi** | Bọc sai thanh ghi mảng chứng chỉ hoặc bỏ sót nhánh `return` | Xác định lại mảng `Certificate[]` cuối cùng ngay trước các lệnh trả về `return-object` |
 | **Log PIF/Photos hiển thị chạy nhưng thông số Build không đổi** | Các trường trong `Build.smali` vẫn còn chứa từ khóa `final` | So sánh và kiểm tra lại file `Build.smali` và `Build$VERSION.smali` sau khi đóng gói |
