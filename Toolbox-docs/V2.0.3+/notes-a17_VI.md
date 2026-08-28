@@ -2,7 +2,7 @@
 
 [English](notes-a17.md) | **Tiếng Việt**
 
-Tài liệu này tổng hợp các yêu cầu kỹ thuật đặc thù, định dạng tệp DEX và các bước vá smali dành riêng cho **Android 17 (SDK 37 / Baklava)**, đã được đối chiếu và kiểm chứng trực tiếp trên thiết bị thật (Xiaomi 13 Pro chạy HyperOS Android 17).
+Tài liệu này tổng hợp các yêu cầu kỹ thuật đặc thù, định dạng tệp DEX và các bước vá smali dành riêng cho **Android 17 (SDK 37 / Baklava)**
 
 ---
 
@@ -59,48 +59,3 @@ Ngoài ra, xóa `final` khỏi bất kỳ trường bổ sung nào có trong pro
   ```
 
 ---
-
-## 3. Ghép file DEX vào `framework.jar` (`classes7.dex`)
-
-Trên các bản build Android 17 thông dụng (như HyperOS), `framework.jar` gốc thường có 6 file DEX (`classes.dex` đến `classes6.dex`).
-1. Lấy file `classes.dex` từ artifact phát hành của Kaorios Framework.
-2. Đổi tên thành số thứ tự DEX tiếp theo: **`classes7.dex`**.
-3. Thêm trực tiếp `classes7.dex` vào gốc của `framework.jar`.
-4. Giữ nguyên 100% các file `classes.dex` .. `classes6.dex` gốc, tránh xung đột nhị phân.
-
----
-
-## 4. Vị trí móc SystemServer trên HyperOS / Qualcomm Android 17
-
-Trong `services.jar` -> `SystemServer.smali`, chèn lệnh khởi tạo OMK vào ngay đầu hàm `run()V`:
-```smali
-.method private run()V
-    .registers 20
-
-    .line 975
-    # [Kaorios Hook] Khởi tạo OmkService và RootOfTrust
-    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-
-    move-object/from16 v1, p0
-    const-string/jumbo v0, "persist.sys.language"
-```
-*(Đối với chip MediaTek, đặt ngay trước lệnh gọi `startOtherServices(TimingsTraceAndSlog)`).*
-
----
-
-## 5. Kiểm tra & Nạp vào thiết bị
-
-1. **Kiểm tra Header DEX**: `xxd -l 8 classes7.dex` -> `dex\n039\0` hoặc `dex\n040\0`.
-2. **Nạp vào `/system/framework/` (Root Shell)**:
-   ```sh
-   mount -o rw,remount /system
-   cp framework.jar /system/framework/framework.jar
-   cp services.jar /system/framework/services.jar
-   chmod 644 /system/framework/framework.jar /system/framework/services.jar
-   rm -rf /data/misc/apexdata/com.android.art/dalvik-cache/arm64/*
-   sync && reboot
-   ```
-3. **Xem log khởi động**:
-   ```sh
-   adb logcat -s KaoriosOmkService KaoriosCertificateGenerator OmkRootOfTrust KaoriosHook
-   ```
