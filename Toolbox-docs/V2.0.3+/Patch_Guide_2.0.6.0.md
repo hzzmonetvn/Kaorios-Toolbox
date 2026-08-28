@@ -2,17 +2,12 @@
 
 **English** | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
 
-This document describes the process of integrating the 2.0.6.0 framework DEX into Android 12–17 ROMs and patching smali call sites. Register patterns have been cross-checked with HyperOS Android 17 (API 37); on other ROMs, locate classes and methods by descriptor rather than guessing DEX numbers or line numbers.
-
 - HyperOS Android 17 smali templates: [`Template/Template_V2060`](../Template/Template_V2060)
 
 ## 1. Mandatory Warnings
 
 - Back up a bootable `framework.jar`, `services.jar`, VDEX/ODEX files, and boot image.
 - **Android 17 DEX format**: Android 17 supports both DEX `039` and `040` (production ROMs such as HyperOS Android 17 use `039`). Always use smali/baksmali 3.x+ with `--api 37` because Android 17 system classes contain extended `HiddenApiRestrictions` flags that crash baksmali 2.5.2.
-- Names and descriptors are case-sensitive. `OnGetKeyEntry` has an uppercase `O`; `CertificateChainIfNeeded` is not `getCertificateChain`.
-- Do not assume classes reside in `classes3.dex`/`classes7.dex`; always search the target ROM.
-- Do not leave two copies of `Landroid/security/kaorios/*` or `Lcom/kousei/framework/*` in the boot classpath.
 - Do not increase `.registers` while keeping parameters written as `vN` without recalculating. Prefer `p0..pN`, currently free locals, or increasing `.locals`.
 - Patch in groups and boot-test each group. A single wrong descriptor in `SystemServer` can cause a bootloop.
 
@@ -37,9 +32,9 @@ rg -l '^\.class .*Lcom/android/server/SystemServer;' work/sv*
 rg -l 'Landroid/security/kaorios/KaoriosHook;' work/fw* work/sv*
 ```
 
-## 3. Importing DEX Without Duplicate Classes
-
-Rename the framework artifact's `classes.dex` to the next unused sequential DEX number (e.g. on ROMs with 6 stock DEX files like HyperOS A17, rename to `classes7.dex`), then add it into `framework.jar`. Keep all stock DEX files `classes.dex` through `classes6.dex` intact.
+## 3. Importing DEX
+- Use dex redivision then import to the last classes.dex OR
+- Rename the framework artifact's `classes.dex` to the next unused sequential DEX number (e.g. on ROMs with 6 stock DEX files, rename to `classes7.dex`), then add it into `framework.jar`. Keep all stock DEX files `classes.dex` through `classes6.dex` intact.
 
 ## 4. Standard 2.0.6.0 Descriptors
 
@@ -62,7 +57,7 @@ Rename the framework artifact's `classes.dex` to the next unused sequential DEX 
 
 ### 5.1 `Instrumentation.newApplication`
 
-Mandatory for PIF/game props/Photos/TFT. Insert after `Application.attach()` and before return.
+Insert after `Application.attach()` and before return.
 
 Static method:
 
@@ -143,16 +138,13 @@ See: [notes-a17.md](notes-a17.md) (or Vietnamese version: [notes-a17_VI.md](note
 
 ### 6.1 `SystemServer.initSystemServer`
 
-Initializes the OMK subsystem and probes/caches real TEE `RootOfTrust`. Two placement options depending on platform:
-
-**Pattern 1: AOSP / Qualcomm / HyperOS Android 17 (Recommended)**
+**Pattern 1: AOSP / Qualcomm...**
 Insert at the beginning of `run()V`:
 ```smali
 .method private run()V
     .registers 20
 
     .line 975
-    # [Kaorios Hook] Initialize OmkService & RootOfTrust
     invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 
     move-object/from16 v1, p0
