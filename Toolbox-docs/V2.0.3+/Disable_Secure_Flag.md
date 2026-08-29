@@ -1,5 +1,7 @@
 # Kaorios Toolbox Secure Flag Guide
 
+[Tiếng Việt](Disable_Secure_Flag_VI.md)
+
 Secure Flag need Framework dex 2.0.3+
 
 ## Services.jar
@@ -9,6 +11,8 @@ Secure Flag need Framework dex 2.0.3+
 ```smali
 Lcom/android/server/devicepolicy/DevicePolicyCacheImpl;
 ```
+
+**Reference smali:** [`DevicePolicyCacheImpl.smali`](../Template/Template_V2060/service/DevicePolicyCacheImpl.smali)
 
 **Method:**
 ```smali
@@ -38,6 +42,8 @@ Lcom/android/server/wm/WindowState;
 ```smali
 Lcom/android/server/wm/WindowStateAnimator;
 ```
+
+**Reference smali:** [`WindowState.smali`](../Template/Template_V2060/service/WindowState.smali) | [`WindowStateAnimator.smali`](../Template/Template_V2060/service/WindowStateAnimator.smali)
 
 **Method:**
 ```smali
@@ -78,10 +84,13 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
 ```
 
 ### 3 
-**Class:**
+**Method:**
 ```smali
 captureDisplay(ILandroid/window/ScreenCapture$CaptureArgs;Landroid/window/ScreenCapture$ScreenCaptureListener;)V
 ```
+
+**Reference smali:** [`WindowManagerService.smali`](../Template/Template_V2060/service/WindowManagerService.smali)
+
 in method find:
 ```smali
 ->notAllowCaptureDisplay(Lcom/android/server/wm/RootWindowContainer;I)Z
@@ -112,3 +121,4 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
 For example: registers 7 -> registers 8 and vX = v3
 
 **In some ROMs, this method may not find the blocking code, so it can be skipped.**
+
