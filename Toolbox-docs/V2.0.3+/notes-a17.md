@@ -21,17 +21,22 @@ Landroid/os/Build$VERSION;
 
 **Reference smali:** [`Build.smali`](../Template/Template_V2060/framework/Build.smali)
 
-Remove `final` from this minimum set:
+Remove `final` and add `=null` at the end from this minimum set:
 
 ```text
 BRAND
+BRAND_FOR_ATTESTATION
 DEVICE
+DEVICE_FOR_ATTESTATION
 FINGERPRINT
 HARDWARE
 ID
 MANUFACTURER
+MANUFACTURER_FOR_ATTESTATION
 MODEL
+MODEL_FOR_ATTESTATION
 PRODUCT
+PRODUCT_FOR_ATTESTATION
 TAGS
 TIME
 TYPE
