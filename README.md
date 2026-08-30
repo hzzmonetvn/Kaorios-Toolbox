@@ -22,6 +22,7 @@ For **version 2.0.4.0 and below**, see:
 - 🎮 Unlock high-FPS modes in games.
 - 📊 Overlay display for FPS and CPU.
 - ⚙️ Spoof setting value per app
+- 🪪 Per-app device identity profiles (Android ID, network, SIM and MediaDrm hooks).
 
 ---
 ## 🖼️ Screenshots
@@ -43,10 +44,10 @@ For **version 2.0.4.0 and below**, see:
 
 ## 🚀 How to use
 
-## 📦 Latest release: v2.0.6.0
+## 📦 Latest release: v3.0.0
 
 > ⚡ **Auto Patcher**: *Stay tuned!.*   
-> See Patch Guide v2.0.6.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0_VI.md).  
+> See Patch Guide v3.0.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V3.0.0/Patch_Guide_3.0.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V3.0.0/Patch_Guide_3.0.0_VI.md).
 
 Follow the detailed usage guide here:  
 👉 [Kaorios-Toolbox Guide](https://github.com/hzzmonetvn/Kaorios-Toolbox/tree/main/Toolbox-docs)
