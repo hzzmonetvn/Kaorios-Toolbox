@@ -257,17 +257,69 @@ return-object vInstaller
   
 Identify the calling UID, user ID, queried package and stock installer value before adapting this block.  
   
-### Filter Settings values (Soon)  
-  
-At a ROM-specific Settings read point, pass the namespace, key and stock value through:  
-  
-```smali  
-const/4 vNull, 0x0  
-invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;  
-move-result-object vValue  
-```  
-  
-For a configured removal (`value: null`), use `shouldRemoveSetting(...)` and follow the target ROM's own representation of a missing setting.  
+### Filter Settings values per calling app
+
+This patch changes only the value returned to the app that is reading Settings;
+it never writes or changes the real setting. It supports the three exact table
+names `global`, `secure`, and `system`.
+
+**Patch location:** use the server-side `SettingsProvider` GET path while the
+incoming Binder caller identity is still active. Do **not** put this hook in a
+client cache such as `Settings$NameValueCache`, after `clearCallingIdentity()`,
+or in a method returning a `Bundle`/`Setting` object instead of the final
+`String` value.
+
+Find the point immediately before the provider returns the stock `String`.
+Here `vNamespace` is the table name, `vName` is the setting key and `vValue` is
+the original value. `vNull` is any free local register initialized to null.
+
+```smali
+# Apply a configured null/removal first. Use only when null is the ROM's
+# normal representation of a missing String setting.
+const/4 vNull, 0x0
+invoke-static {vNull, vNamespace, vName}, Landroid/security/kaorios/KaoriosHook;->shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
+move-result vRemove
+if-eqz vRemove, :cond_kaorios_setting_value
+const/4 vValue, 0x0
+return-object vValue
+
+:cond_kaorios_setting_value
+invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+move-result-object vValue
+return-object vValue
+```
+
+Adapt register names and the missing-value return to the target ROM. If the
+method must do cleanup after producing `vValue`, keep that cleanup and insert
+only the two hook calls before its real return.
+
+#### Toolbox configuration
+
+Enable **Advanced features**, then add entries in Toolbox. The stored format is
+version 2 and separates each app by table:
+
+```json
+{
+  "version": 2,
+  "apps": {
+    "com.example.app": {
+      "secure": { "android_id": "0123456789abcdef" },
+      "global": { "example_key": "1" },
+      "system": { "example_key": "value" }
+    }
+  }
+}
+```
+
+The framework fails open to the stock value when Advanced is off, the table is
+not one of the three names above, the caller is system/Toolbox, the caller UID
+maps to more than one package, or no matching entry exists. Per-app value
+spoofs are strings; a key removal is supplied only by the HMA Settings rule and
+must use the `shouldRemoveSetting(...)` branch shown above.
+
+Test one configured app, an unconfigured app, all three tables and a missing
+setting before shipping. Do not use this hook to bypass permissions or alter
+SettingsProvider's access checks.
   
 ### Disable `FLAG_SECURE`  
   
@@ -278,4 +330,3 @@ For a configured removal (`value: null`), use `shouldRemoveSetting(...)` and fol
 [CorePatch guide](CorePatch.md). (It may differ from some ROMs)  
   
 Reference smali directory: [`Template/Template_V2060`](../Template/Template_V2060)  
-  

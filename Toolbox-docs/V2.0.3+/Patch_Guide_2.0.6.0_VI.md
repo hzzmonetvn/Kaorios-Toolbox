@@ -260,17 +260,66 @@ return-object vInstaller
 
 Hãy xác định `calling UID`, `user ID`, package đang được truy vấn và giá trị installer stock trước khi điều chỉnh đoạn code này cho ROM của bạn.
 
-### Lọc giá trị Settings (Sắp có)
+### Lọc giá trị Settings theo app gọi
 
-Tại vị trí đọc Settings tương ứng của từng ROM, truyền namespace, key và giá trị stock qua:
+Patch này chỉ thay giá trị trả về cho app đang đọc Settings; không ghi hay thay
+đổi setting thật. Hỗ trợ đúng ba tên bảng: `global`, `secure` và `system`.
+
+**Vị trí patch:** dùng đường GET phía server của `SettingsProvider`, khi Binder
+vẫn giữ caller gốc. Không chèn vào cache phía client như
+`Settings$NameValueCache`, sau `clearCallingIdentity()`, hoặc method trả về
+`Bundle`/object `Setting` thay vì `String` cuối cùng.
+
+Tìm điểm ngay trước khi provider trả về `String` stock. `vNamespace` là tên
+bảng, `vName` là key và `vValue` là giá trị gốc. `vNull` là một local register
+còn trống, đã gán null.
 
 ```smali
+# Xử lý rule xóa trước. Chỉ dùng khi ROM biểu diễn setting String không tồn tại
+# bằng null.
 const/4 vNull, 0x0
+invoke-static {vNull, vNamespace, vName}, Landroid/security/kaorios/KaoriosHook;->shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
+move-result vRemove
+if-eqz vRemove, :cond_kaorios_setting_value
+const/4 vValue, 0x0
+return-object vValue
+
+:cond_kaorios_setting_value
 invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 move-result-object vValue
+return-object vValue
 ```
 
-Đối với cấu hình yêu cầu xóa (`value: null`), sử dụng `shouldRemoveSetting(...)` và tuân theo cách ROM đích biểu diễn một setting không tồn tại.
+Tự đổi tên register và cách return “không có setting” theo ROM đích. Nếu method
+còn cleanup sau khi tạo `vValue`, giữ nguyên cleanup và chỉ chèn hai hook trước
+lệnh return thật.
+
+#### Cấu hình trong Toolbox
+
+Bật **tính năng nâng cao**, sau đó thêm entry trong Toolbox. Dữ liệu dùng format
+version 2, tách từng app theo bảng:
+
+```json
+{
+  "version": 2,
+  "apps": {
+    "com.example.app": {
+      "secure": { "android_id": "0123456789abcdef" },
+      "global": { "example_key": "1" },
+      "system": { "example_key": "value" }
+    }
+  }
+}
+```
+
+Framework sẽ fail-open về giá trị stock khi Advanced tắt, tên bảng không thuộc
+ba bảng trên, caller là system/Toolbox, UID caller có nhiều package, hoặc không
+có entry khớp. Giá trị spoof theo app luôn là chuỗi; xóa key chỉ do rule Settings
+của HMA cung cấp và phải đi qua nhánh `shouldRemoveSetting(...)` ở trên.
+
+Hãy test một app có cấu hình, một app không cấu hình, cả ba bảng và setting thiếu
+trước khi phát hành. Không dùng hook này để vượt quyền hoặc thay đổi access check
+của SettingsProvider.
 
 ### Vô hiệu hóa `FLAG_SECURE`
 
