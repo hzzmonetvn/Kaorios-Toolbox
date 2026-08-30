@@ -3,12 +3,12 @@
 [English](notes-a17.md) | **Tiếng Việt**
 
 Trang này chỉ chứa các bước bổ sung dành riêng cho ROM đích chạy **Android 17 / SDK 37 (Baklava)**.
-
+Trên android 17, có tình trạng 1 số tính năng hoạt động không đúng cách (điển hình là spoof google photo), dưới đây là giải pháp
 ---
 
 ## 3. Tìm DEX stock chứa `Build`
 
-Trong `framework.jar` stock sạch, xác định hai class:
+Trong `framework.jar` tìm class:
 
 ```smali
 Landroid/os/Build;
@@ -21,22 +21,42 @@ Landroid/os/Build$VERSION;
 
 **Smali mẫu:** [`Build.smali`](../Template/Template_V2060/framework/Build.smali)
 
-Xóa `final` khỏi tập tối thiểu sau:
+Xóa `final`, thêm `= null' vào cuối của những tập tối thiểu sau:
 
 ```text
 BRAND
+BRAND_FOR_ATTESTATION
 DEVICE
+DEVICE_FOR_ATTESTATION
 FINGERPRINT
 HARDWARE
 ID
 MANUFACTURER
+MANUFACTURER_FOR_ATTESTATION
 MODEL
+MODEL_FOR_ATTESTATION
 PRODUCT
+PRODUCT_FOR_ATTESTATION
 TAGS
 TIME
 TYPE
 USER
 ```
+
+Ví dụ với `BRAND`:
+
+### Trước — stock
+
+```smali
+.field public static final whitelist BRAND:Ljava/lang/String;
+```
+
+### Sau — đã patch
+
+```smali
+.field public static whitelist BRAND:Ljava/lang/String; = null
+```
+
 
 ### `Build$VERSION.smali`
 
@@ -52,6 +72,7 @@ SECURITY_PATCH
 DEVICE_INITIAL_SDK_INT
 ```
 
+(Không cần thêm `= null` như ở class Build.smali)
 ### Field tùy chọn theo profile
 
 Nếu profile PIF / GameProps tự tạo của bạn thực sự sửa thêm các field khác, hãy xóa `final` khỏi đúng các field đó, ví dụ:
@@ -67,33 +88,7 @@ SDK
 > [!WARNING]
 > Giữ nguyên `SDK_INT`. **Không** xóa `final` khỏi `SDK_INT` trong patch này.
 
-Không xóa hàng loạt `final` khỏi mọi field trong `Build` chỉ vì làm vậy nhanh hơn. Chỉ patch đúng field Kaorios cần dùng.
-
+Không xóa hàng loạt `final` khỏi mọi field, chỉ xoá cái cần.
 ---
 
-## 5. Smali trước và sau khi sửa
-
-Ví dụ với `BRAND`:
-
-### Trước — stock
-
-```smali
-.field public static final whitelist BRAND:Ljava/lang/String;
-```
-
-### Sau — đã patch
-
-```smali
-.field public static whitelist BRAND:Ljava/lang/String;
-```
-
-Chỉ access flag `final` bị xóa.
-
-Một số tool có thể serialize field static non-final với initializer tường minh như `= null`. Điều đó hợp lệ và tự nó không phải lỗi.
-
-Lặp lại thay đổi tương tự cho các field đã liệt kê ở trên.
-
----
-
-Chỉ dùng để tham khảo: [`Build.smali`](../Template/Template_V2060/framework/Build.smali) và [`Build$VERSION.smali`](../Template/Template_V2060/framework/Build$VERSION.smali).
 

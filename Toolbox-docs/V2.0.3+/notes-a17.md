@@ -1,14 +1,16 @@
 # Android 17 (SDK 37)
 
-**English** | [Tiếng Việt](notes-a17_VI.md)
+**English** | [Tiếng Việt](notes-a17-vi.md)
 
-This page contains only the extra steps for target ROMs running **Android 17 / SDK 37 (Baklava)**.
+This page only contains additional steps specifically for target ROMs running **Android 17 / SDK 37 (Baklava)**.
+
+On Android 17, some features may not work correctly (most notably Google Photos spoofing). The following steps provide a workaround.
 
 ---
 
 ## 3. Find the stock DEX containing `Build`
 
-Inside the clean stock `framework.jar`, locate these classes:
+In `framework.jar`, locate the following classes:
 
 ```smali
 Landroid/os/Build;
@@ -19,9 +21,9 @@ Landroid/os/Build$VERSION;
 
 ### `Build.smali`
 
-**Reference smali:** [`Build.smali`](../Template/Template_V2060/framework/Build.smali)
+**Smali example:** [`Build.smali`](../Template/Template_V2060/framework/Build.smali)
 
-Remove `final` and add `=null` at the end from this minimum set:
+Remove `final` and append `= null` to at least the following fields:
 
 ```text
 BRAND
@@ -43,41 +45,6 @@ TYPE
 USER
 ```
 
-### `Build$VERSION.smali`
-
-**Reference smali:** [`Build$VERSION.smali`](../Template/Template_V2060/framework/Build$VERSION.smali)
-
-Remove `final` from:
-
-```text
-RELEASE
-RELEASE_OR_CODENAME
-RELEASE_OR_PREVIEW_DISPLAY
-SECURITY_PATCH
-DEVICE_INITIAL_SDK_INT
-```
-
-### Optional fields used by custom profiles
-
-If your custom PIF / GameProps profiles actually modify additional fields, remove `final` from those specific fields as well, for example:
-
-```text
-DISPLAY
-HOST
-INCREMENTAL
-SDK
-*_FOR_ATTESTATION
-```
-
-> [!WARNING]
-> Keep `SDK_INT` unchanged. **Do not** remove `final` from `SDK_INT` as part of this patch.
-
-Do not mass-remove `final` from every field in `Build` just because it is faster. Patch only the fields Kaorios needs.
-
----
-
-## 5. Smali before and after
-
 Example with `BRAND`:
 
 ### Before — stock
@@ -89,15 +56,40 @@ Example with `BRAND`:
 ### After — patched
 
 ```smali
-.field public static whitelist BRAND:Ljava/lang/String;
+.field public static whitelist BRAND:Ljava/lang/String; = null
 ```
 
-Only the `final` access flag is removed.
+### `Build$VERSION.smali`
 
-Some tools may serialize a non-final static field with an explicit initializer such as `= null`. That is valid and is not an error by itself.
+**Smali example:** [`Build$VERSION.smali`](../Template/Template_V2060/framework/Build$VERSION.smali)
 
-Repeat the same change for the fields listed above.
+Remove `final` from:
+
+```text
+RELEASE
+RELEASE_OR_CODENAME
+RELEASE_OR_PREVIEW_DISPLAY
+SECURITY_PATCH
+DEVICE_INITIAL_SDK_INT
+```
+
+(Unlike the fields in `Build.smali`, you do **not** need to append `= null` here.)
+
+### Optional fields depending on your profile
+
+If your custom PIF / GameProps profile actually modifies additional fields, remove `final` only from those specific fields, for example:
+
+```text
+DISPLAY
+HOST
+INCREMENTAL
+SDK
+*_FOR_ATTESTATION
+```
+
+> [!WARNING]
+> Keep `SDK_INT` unchanged. **Do not** remove `final` from `SDK_INT` in this patch.
+
+Do not blindly remove `final` from every field. Only modify the fields that are actually required.
 
 ---
-
-Reference only: [`Build.smali`](../Template/Template_V2060/framework/Build.smali) and [`Build$VERSION.smali`](../Template/Template_V2060/framework/Build$VERSION.smali).

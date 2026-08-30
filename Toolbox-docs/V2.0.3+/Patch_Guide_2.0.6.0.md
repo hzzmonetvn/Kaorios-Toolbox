@@ -1,33 +1,33 @@
 # Kaorios Toolbox Framework 2.0.6.0
 
-**English** | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
+[English](Patch_Guide_2.0.6.0.md) | **Tiếng Việt**
 
 
-> Keep the stock JARs. Do not replace a stock DEX or copy a complete template class into a different ROM.
+> Giữ nguyên các file JAR stock. Không thay thế DEX stock hoặc sao chép toàn bộ class từ template sang một ROM khác.
 
 ## 1. `framework.jar`
 
-### A. Initialize each app
+### A. Khởi tạo cho từng ứng dụng
 
 **Class:**
 ```smali
 Landroid/app/Instrumentation;
 ```
 
-**Reference smali:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
+**Smali mẫu:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
 
 **Method:**
 ```smali
  newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
 ```
 
-before line
+Trước dòng:
 ```smali
 return-object xY
     .end method
 ```
 
-Add
+Thêm:
 ```smali
 invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
 ```
@@ -37,33 +37,34 @@ invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid
  newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
 ```
 
-before line
+Trước dòng:
 ```smali
 return-object xY
     .end method
 ```
 
-add
+Thêm:
 ```smali
 invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
 ```
+
 ---
 
-### B. Hook system features
+### B. Hook các tính năng hệ thống
 
 **Class:**
 ```smali
 Landroid/app/ApplicationPackageManager;
 ```
 
-**Reference smali:** [`ApplicationPackageManager.smali`](../Template/Template_V2060/framework/ApplicationPackageManager.smali)
+**Smali mẫu:** [`ApplicationPackageManager.smali`](../Template/Template_V2060/framework/ApplicationPackageManager.smali)
 
 **Method:** 
 ```smali
  hasSystemFeature(Ljava/lang/String;I)Z
 ```
 
-Add the following code below `.registers X`:
+Thêm đoạn code sau ngay bên dưới `.registers X`:
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
 move-result-object v0
@@ -78,21 +79,21 @@ return v0
 
 ---
 
-### C. Hook software key generation
+### C. Hook quá trình tạo software key
 
 **Class:**
 ```smali
 Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
 ```
 
-**Reference smali:** [`AndroidKeyStoreKeyPairGeneratorSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreKeyPairGeneratorSpi.smali)
+**Smali mẫu:** [`AndroidKeyStoreKeyPairGeneratorSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreKeyPairGeneratorSpi.smali)
 
 **Method:**
 ```smali
  generateKeyPair()Ljava/security/KeyPair;
 ```
 
-Add the following code below `.registers X`:
+Thêm đoạn code sau ngay bên dưới `.registers X`:
 ```smali
 invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
 move-result-object vX
@@ -103,35 +104,36 @@ return-object vX
 :cond_kaorios_gen_stock
 ```
 
-In this method, pay attention to `.registers X`.
+Trong method này, cần chú ý đến `.registers X`.
 
-- Increase the current register count by `1`
-- Replace `vX` with the register number at `registers - 2`
+- Tăng số lượng register hiện tại thêm `1`
+- Thay `vX` bằng số register tại vị trí `registers - 2`
 
-Example:
+Ví dụ:
 
-- If the method originally uses `15` registers
-- Change it to `16` registers
-- Then change `vX` to `v14`
+- Nếu method ban đầu sử dụng `15` registers
+- Đổi thành `16` registers
+- Sau đó đổi `vX` thành `v14`
+
 ---
 
-### D. Hook the certificate chain
+### D. Hook chuỗi chứng chỉ
 
 **Class:**
 ```smali
 Landroid/security/keystore2/AndroidKeyStoreSpi;
 ```
 
-**Reference smali:** [`AndroidKeyStoreSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreSpi.smali)
+**Smali mẫu:** [`AndroidKeyStoreSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreSpi.smali)
 
 **Method:**
 ```smali
  engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 
-Before the final return, pass the final `Certificate[]` through Kaorios:
+Trước lệnh return cuối cùng, truyền `Certificate[]` cuối cùng qua Kaorios:
 
-Find this part:
+Tìm đoạn:
 
 ```smali
 const/4 vA, 0x0
@@ -139,12 +141,13 @@ aput-object vB, vC, vA
 return-object vD
 ```
 
-below line
+Bên dưới dòng:
 ```smali
 const/4 vA, 0x0
 aput-object vB, vC, vA
 ```
-add
+
+Thêm:
 
 ```smali
 invoke-static {vC}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
@@ -152,13 +155,13 @@ move-result-object vD
 # return-object vD
 ```
 
-#### Note
+#### Lưu ý
 
-`move-result-object vD` is the value returned by `return-object vD`.
+`move-result-object vD` là giá trị được trả về bởi `return-object vD`.
 
-Also, in `invoke-static {vC}`, the array register `vC` is the same register used by `aput-object vB, vC, vA`.
+Ngoài ra, trong `invoke-static {vC}`, register mảng `vC` phải là cùng register được sử dụng trong `aput-object vB, vC, vA`.
 
-#### Example
+#### Ví dụ
 
 ```smali
 const/4 v4, 0x0
@@ -179,35 +182,35 @@ return-object v3
 Lcom/android/server/SystemServer;
 ```
 
-**Reference smali:** [`SystemServer.smali`](../Template/Template_V2060/service/SystemServer.smali)
+**Smali mẫu:** [`SystemServer.smali`](../Template/Template_V2060/service/SystemServer.smali)
 
-before line
+Trước dòng:
 ```smali
 Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
 ```
 
-add
+Thêm:
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 ```
 
 ---
 
-## Notes
+## Ghi chú
 
-- Android 17 / SDK 37 also requires [the Build-field patch](notes-a17.md)..
+- Android 17 / SDK 37 cũng yêu cầu [patch các field của Build](notes-a17.md).
 
-## 3. Supplementary patches (test)
+## 3. Các patch bổ sung (thử nghiệm)
 
-These are optional. Add only the feature you need, after the core patch boots correctly.
+Các patch này là tùy chọn. Chỉ thêm tính năng bạn cần sau khi patch cốt lõi đã khởi động thành công.
 
-### Hide Developer options / ADB state
+### Ẩn trạng thái Tùy chọn nhà phát triển / ADB
 
 **Class:** `Landroid/provider/Settings$NameValueCache;`  
-**Reference smali:** [`Settings$NameValueCache.smali`](../Template/Template_V2060/framework/Settings$NameValueCache.smali)  
+**Smali mẫu:** [`Settings$NameValueCache.smali`](../Template/Template_V2060/framework/Settings$NameValueCache.smali)  
 **Method:** `getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;`
 
-Add the following code below `.registers X`:
+Thêm đoạn code sau ngay bên dưới `.registers X`:
 
 ```smali
 if-eqz p2, :cond_kaorios_dev_stock
@@ -220,12 +223,12 @@ return-object v0
 :cond_kaorios_dev_stock
 ```
 
-Use only the overload returning `String`; do not paste this into a `Pair`-returning overload.
+Chỉ sử dụng overload trả về `String`; không chèn đoạn này vào overload trả về `Pair`.
 
-### Hide installed apps per caller
+### Ẩn ứng dụng đã cài đặt theo caller
 
-Patch the Package Manager filter method used by the target ROM. Android 17 reference: `AppsFilterBase.shouldFilterApplication(...)`.  
-**Reference smali:** [`AppsFilterBase.smali`](../Template/Template_V2060/service/AppsFilterBase.smali)
+Patch method lọc của Package Manager được ROM đích sử dụng. Tham chiếu trên Android 17: `AppsFilterBase.shouldFilterApplication(...)`.  
+**Smali mẫu:** [`AppsFilterBase.smali`](../Template/Template_V2060/service/AppsFilterBase.smali)
 
 ```smali
 # callingUid, null resolver, target package name, userId
@@ -238,15 +241,15 @@ return v0
 :cond_kaorios_hide_stock
 ```
 
-The argument order is fixed: `callingUid, resolver, targetPackageName, userId`. Find the real registers in your ROM; the template is reference only.
+Thứ tự tham số là cố định: `callingUid, resolver, targetPackageName, userId`. Hãy xác định các register thực tế trong ROM của bạn; template chỉ dùng để tham khảo.
 
-### Spoof installer source (Soon)
+### Giả mạo nguồn cài đặt (Sắp có)
 
-**Reference class:** `Lcom/android/server/pm/ComputerEngine;`  
-**Reference smali:** [`ComputerEngine.smali`](../Template/Template_V2060/service/ComputerEngine.smali)  
+**Class tham chiếu:** `Lcom/android/server/pm/ComputerEngine;`  
+**Smali mẫu:** [`ComputerEngine.smali`](../Template/Template_V2060/service/ComputerEngine.smali)  
 **Method:** `getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;`
 
-After the stock installer value is resolved, pass it through:
+Sau khi giá trị installer stock được xác định, truyền nó qua:
 
 ```smali
 const/4 vNull, 0x0
@@ -255,11 +258,11 @@ move-result-object vInstaller
 return-object vInstaller
 ```
 
-Identify the calling UID, user ID, queried package and stock installer value before adapting this block.
+Hãy xác định `calling UID`, `user ID`, package đang được truy vấn và giá trị installer stock trước khi điều chỉnh đoạn code này cho ROM của bạn.
 
-### Filter Settings values (Soon)
+### Lọc giá trị Settings (Sắp có)
 
-At a ROM-specific Settings read point, pass the namespace, key and stock value through:
+Tại vị trí đọc Settings tương ứng của từng ROM, truyền namespace, key và giá trị stock qua:
 
 ```smali
 const/4 vNull, 0x0
@@ -267,15 +270,14 @@ invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/Kaor
 move-result-object vValue
 ```
 
-For a configured removal (`value: null`), use `shouldRemoveSetting(...)` and follow the target ROM's own representation of a missing setting.
+Đối với cấu hình yêu cầu xóa (`value: null`), sử dụng `shouldRemoveSetting(...)` và tuân theo cách ROM đích biểu diễn một setting không tồn tại.
 
-### Disable `FLAG_SECURE`
+### Vô hiệu hóa `FLAG_SECURE`
 
-[Disable Secure Flag guide](Disable_Secure_Flag.md).
+[Hướng dẫn Disable Secure Flag](Disable_Secure_Flag.md).
 
-### Disable Signature Verification
+### Vô hiệu hóa xác minh chữ ký
 
-[CorePatch guide](CorePatch.md). (It may differ from some ROMs)
+[Hướng dẫn CorePatch](CorePatch.md). (Có thể khác nhau tùy ROM)
 
-Reference smali directory: [`Template/Template_V2060`](../Template/Template_V2060)
-
+Thư mục smali tham chiếu: [`Template/Template_V2060`](../Template/Template_V2060)

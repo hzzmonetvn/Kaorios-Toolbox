@@ -1,10 +1,10 @@
-
+This is a reference example. Some values may vary depending on the ROM!
 
 ## 1. `framework.jar`
 
 ### `android.content.pm.PackageParser`
 
-**Reference smali:** [`PackageParser.smali`](../Template/Template_V2060/framework/PackageParser.smali)
+**Smali example:** [`PackageParser.smali`](../Template/Template_V2060/framework/PackageParser.smali)
 
 Find:
 
@@ -12,13 +12,13 @@ Find:
 invoke-static {v2, v0, v1}, Landroid/util/apk/ApkSignatureVerifier;->unsafeGetCertsWithoutVerification(Landroid/content/pm/parsing/result/ParseInput;Ljava/lang/String;I)Landroid/content/pm/parsing/result/ParseResult;
 ```
 
-Add above it:
+Insert above:
 
 ```smali
 const/4 v1, 0x1
 ```
 
-Find the check containing `"<manifest> specifies bad sharedUserId name \""`. Before its related `if-nez v5, :cond_x` branch, add:
+Find the section that checks for the string `"<manifest> specifies bad sharedUserId name \""`. Immediately before the related `if-nez v5, :cond_x` branch, force the value:
 
 ```smali
 const/4 v14, 0x1
@@ -26,7 +26,7 @@ const/4 v14, 0x1
 
 ### `android.content.pm.PackageParser$PackageParserException`
 
-**Reference smali:** [`PackageParser$PackageParserException.smali`](../Template/Template_V2060/framework/PackageParser$PackageParserException.smali)
+**Smali example:** [`PackageParser$PackageParserException.smali`](../Template/Template_V2060/framework/PackageParser$PackageParserException.smali)
 
 Find:
 
@@ -34,7 +34,7 @@ Find:
 iput p1, p0, Landroid/content/pm/PackageParser$PackageParserException;->error:I
 ```
 
-Add above it:
+Insert above:
 
 ```smali
 const/4 p1, 0x0
@@ -42,19 +42,21 @@ const/4 p1, 0x0
 
 ### `android.content.pm.PackageParser$SigningDetails`
 
-**Reference smali:** [`PackageParser$SigningDetails.smali`](../Template/Template_V2060/framework/PackageParser$SigningDetails.smali)
+**Smali example:** [`PackageParser$SigningDetails.smali`](../Template/Template_V2060/framework/PackageParser$SigningDetails.smali)
 
-Find all three `checkCapability` methods and make each return `1`.
+Find the three `checkCapability` methods and make each method return `1`.
 
 ### `android.content.pm.SigningDetails`
 
-**Reference smali:** [`SigningDetails.smali`](../Template/Template_V2060/framework/SigningDetails.smali)
+**Smali example:** [`SigningDetails.smali`](../Template/Template_V2060/framework/SigningDetails.smali)
 
-Find all three `checkCapability` methods and make each return `1`. In the same class, make `hasAncestorOrSelf` return `1`.
+Find the three `checkCapability` methods and make each method return `1`.
+
+In the same class, find `hasAncestorOrSelf` and make the method return `1`.
 
 ### `android.util.apk.ApkSignatureSchemeV2Verifier`
 
-**Reference smali:** [`ApkSignatureSchemeV2Verifier.smali`](../Template/Template_V2060/framework/ApkSignatureSchemeV2Verifier.smali)
+**Smali example:** [`ApkSignatureSchemeV2Verifier.smali`](../Template/Template_V2060/framework/ApkSignatureSchemeV2Verifier.smali)
 
 Find:
 
@@ -71,7 +73,7 @@ const/4 v0, 0x1
 
 ### `android.util.apk.ApkSignatureSchemeV3Verifier`
 
-**Reference smali:** [`ApkSignatureSchemeV3Verifier.smali`](../Template/Template_V2060/framework/ApkSignatureSchemeV3Verifier.smali)
+**Smali example:** [`ApkSignatureSchemeV3Verifier.smali`](../Template/Template_V2060/framework/ApkSignatureSchemeV3Verifier.smali)
 
 Find:
 
@@ -88,9 +90,9 @@ const/4 v11, 0x1
 
 ### `android.util.apk.ApkSignatureVerifier`
 
-**Reference smali:** [`ApkSignatureVerifier.smali`](../Template/Template_V2060/framework/ApkSignatureVerifier.smali)
+**Smali example:** [`ApkSignatureVerifier.smali`](../Template/Template_V2060/framework/ApkSignatureVerifier.smali)
 
-Make `getMinimumSignatureSchemeVersionForTargetSdk` return `0`.
+Find `getMinimumSignatureSchemeVersionForTargetSdk` and make the method return `0`.
 
 Find:
 
@@ -98,7 +100,7 @@ Find:
 invoke-static {p0, p1, p3}, Landroid/util/apk/ApkSignatureVerifier;->verifyV1Signature(Landroid/content/pm/parsing/result/ParseInput;Ljava/lang/String;Z)Landroid/content/pm/parsing/result/ParseResult;
 ```
 
-Add above it:
+Insert above:
 
 ```smali
 const/4 p3, 0x0
@@ -106,7 +108,7 @@ const/4 p3, 0x0
 
 ### `android.util.apk.ApkSigningBlockUtils`
 
-**Reference smali:** [`ApkSigningBlockUtils.smali`](../Template/Template_V2060/framework/ApkSigningBlockUtils.smali)
+**Smali example:** [`ApkSigningBlockUtils.smali`](../Template/Template_V2060/framework/ApkSigningBlockUtils.smali)
 
 Find:
 
@@ -123,27 +125,27 @@ const/4 v7, 0x1
 
 ### `android.util.jar.StrictJarVerifier`
 
-**Reference smali:** [`StrictJarVerifier.smali`](../Template/Template_V2060/framework/StrictJarVerifier.smali)
+**Smali example:** [`StrictJarVerifier.smali`](../Template/Template_V2060/framework/StrictJarVerifier.smali)
 
-Make `verifyMessageDigest` return `1`.
+Find `verifyMessageDigest` and make the method return `1`.
 
 ### `android.util.jar.StrictJarFile`
 
-**Reference smali:** [`StrictJarFile.smali`](../Template/Template_V2060/framework/StrictJarFile.smali)
+**Smali example:** [`StrictJarFile.smali`](../Template/Template_V2060/framework/StrictJarFile.smali)
 
-After:
+After the following call:
 
 ```smali
 invoke-virtual {p0, v5}, Landroid/util/jar/StrictJarFile;->findEntry(Ljava/lang/String;)Ljava/util/zip/ZipEntry;
 ```
 
-Remove the associated `if-eqz v6, :cond_x` branch and its `:cond_x` label that reject the non-matching entry.
+Remove the `if-eqz v6, :cond_x` branch and its corresponding `:cond_x` label that block the mismatched entry.
 
 ### `com.android.internal.pm.pkg.parsing.ParsingPackageUtils`
 
-**Reference smali:** [`ParsingPackageUtils.smali`](../Template/Template_V2060/framework/ParsingPackageUtils.smali)
+**Smali example:** [`ParsingPackageUtils.smali`](../Template/Template_V2060/framework/ParsingPackageUtils.smali)
 
-Find the check containing `"<manifest> specifies bad sharedUserId name \""`. Before its related `if-eqz v4, :cond_x` branch, add:
+Find the section that checks for the string `"<manifest> specifies bad sharedUserId name \""`. Immediately before the related `if-eqz v4, :cond_x` branch, insert:
 
 ```smali
 const/4 v4, 0x0
@@ -151,9 +153,9 @@ const/4 v4, 0x0
 
 ## 2. `services.jar`
 
-**Reference smali:** [`PackageManagerServiceUtils.smali`](../Template/Template_V2060/service/PackageManagerServiceUtils.smali) | [`KeySetManagerService.smali`](../Template/Template_V2060/service/KeySetManagerService.smali)
+**Smali examples:** [`PackageManagerServiceUtils.smali`](../Template/Template_V2060/service/PackageManagerServiceUtils.smali) | [`KeySetManagerService.smali`](../Template/Template_V2060/service/KeySetManagerService.smali)
 
-Patch these methods to return the stated result:
+Patch the following methods according to the specified return values:
 
 | Method | Return |
 |---|---:|
@@ -165,7 +167,7 @@ Patch these methods to return the stated result:
 
 ### `com.android.server.pm.InstallPackageHelper`
 
-**Reference smali:** [`InstallPackageHelper.smali`](../Template/Template_V2060/service/InstallPackageHelper.smali)
+**Smali example:** [`InstallPackageHelper.smali`](../Template/Template_V2060/service/InstallPackageHelper.smali)
 
 Find:
 
@@ -173,7 +175,7 @@ Find:
 invoke-interface {p1}, Lcom/android/server/pm/pkg/AndroidPackage;->isLeavingSharedUser()Z
 ```
 
-At the related `if-eqz v12, :cond_x` branch, force the reference-ROM condition:
+At the `if-eqz v12, :cond_x` branch immediately following this section, force the condition to allow it using the appropriate register for the ROM as reference:
 
 ```smali
 const/4 v0, 0x1
@@ -181,9 +183,9 @@ const/4 v0, 0x1
 
 ### `com.android.server.pm.ReconcilePackageUtils`
 
-**Reference smali:** [`ReconcilePackageUtils.smali`](../Template/Template_V2060/service/ReconcilePackageUtils.smali)
+**Smali example:** [`ReconcilePackageUtils.smali`](../Template/Template_V2060/service/ReconcilePackageUtils.smali)
 
-In `.method static constructor <clinit>()V`, change:
+Inside `.method static constructor <clinit>()V`, change:
 
 ```smali
 const/4 v0, 0x0
@@ -195,16 +197,9 @@ to:
 const/4 v0, 0x1
 ```
 
-## 3. `miui-services.jar` (if present)
+## 3. `miui-services.jar` (if present in the ROM)
 
-To allow third-party updates of system applications:
+To allow system apps to be updated using third-party APKs:
 
-- Make `verifyIsolationViolation` return `void`.
-- Make `canBeUpdate` return `void`.
-
-## Verify
-
-1. Rebuild each modified DEX/JAR without replacing or deleting stock DEX files.
-2. Preserve the original JAR structure, compression, and required DEX names.
-3. Boot-test before installing an APK. On bootloop, restore the stock JARs and review one patch group at a time.
-
+- Method `verifyIsolationViolation` -> `return-void`.
+- Method `canBeUpdate` -> `return-void`.
