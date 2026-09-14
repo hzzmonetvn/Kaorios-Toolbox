@@ -23,7 +23,7 @@ Landroid/os/Build$VERSION;
 
 **Smali example:** [`Build.smali`](../Template/Template_V2060/framework/Build.smali)
 
-Remove `final` and append `= null` to at least the following fields:
+For the String fields below, remove `final` and append `= null`:
 
 ```text
 BRAND
@@ -40,10 +40,11 @@ MODEL_FOR_ATTESTATION
 PRODUCT
 PRODUCT_FOR_ATTESTATION
 TAGS
-TIME
 TYPE
 USER
 ```
+
+For `TIME:J`, only remove `final`; do **not** append `= null`.
 
 Example with `BRAND`:
 
@@ -57,6 +58,20 @@ Example with `BRAND`:
 
 ```smali
 .field public static whitelist BRAND:Ljava/lang/String; = null
+```
+
+Example with `TIME`:
+
+### Before — stock
+
+```smali
+.field public static final whitelist TIME:J
+```
+
+### After — patched
+
+```smali
+.field public static whitelist TIME:J
 ```
 
 ### `Build$VERSION.smali`
@@ -73,7 +88,7 @@ SECURITY_PATCH
 DEVICE_INITIAL_SDK_INT
 ```
 
-(Unlike the fields in `Build.smali`, you do **not** need to append `= null` here.)
+(Unlike the String fields in `Build.smali`, you do **not** need to append `= null` here.)
 
 ### Optional fields depending on your profile
 
