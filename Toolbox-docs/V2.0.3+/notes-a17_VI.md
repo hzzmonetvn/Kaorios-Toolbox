@@ -21,7 +21,7 @@ Landroid/os/Build$VERSION;
 
 **Smali mẫu:** [`Build.smali`](../Template/Template_V2060/framework/Build.smali)
 
-Xóa `final`, thêm `= null' vào cuối của những tập tối thiểu sau:
+Với các field String bên dưới, xóa `final` và thêm `= null` ở cuối:
 
 ```text
 BRAND
@@ -38,10 +38,11 @@ MODEL_FOR_ATTESTATION
 PRODUCT
 PRODUCT_FOR_ATTESTATION
 TAGS
-TIME
 TYPE
 USER
 ```
+
+Riêng `TIME:J`, chỉ xóa `final`; **không** thêm `= null`.
 
 Ví dụ với `BRAND`:
 
@@ -57,6 +58,19 @@ Ví dụ với `BRAND`:
 .field public static whitelist BRAND:Ljava/lang/String; = null
 ```
 
+Ví dụ với `TIME`:
+
+### Trước — stock
+
+```smali
+.field public static final whitelist TIME:J
+```
+
+### Sau — đã patch
+
+```smali
+.field public static whitelist TIME:J
+```
 
 ### `Build$VERSION.smali`
 
@@ -72,7 +86,8 @@ SECURITY_PATCH
 DEVICE_INITIAL_SDK_INT
 ```
 
-(Không cần thêm `= null` như ở class Build.smali)
+(Không cần thêm `= null` như ở các field String trong `Build.smali`)
+
 ### Field tùy chọn theo profile
 
 Nếu profile PIF / GameProps tự tạo của bạn thực sự sửa thêm các field khác, hãy xóa `final` khỏi đúng các field đó, ví dụ:
