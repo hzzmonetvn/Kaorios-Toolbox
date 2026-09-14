@@ -70,11 +70,16 @@ def patch_keystore_generator(content):
     if "KaoriosHook;->initGenerateSoftwareKeyPair" in method_body:
         return content
 
-    match = re.search(r'(\.(?:registers|locals)\s+)(\d+)', method_body)
+    match = re.search(r'\.(registers|locals)\s+(\d+)', method_body)
     if match:
+        directive = match.group(1)
         old_reg = int(match.group(2))
         new_reg = old_reg + 1
-        v_target = f"v{new_reg - 2}"
+
+        if directive == "registers":
+            v_target = f"v{new_reg - 2}"
+        else:
+            v_target = f"v{old_reg}"
         
         inject = f"""
     invoke-static {{p0}}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
@@ -85,7 +90,7 @@ def patch_keystore_generator(content):
 
     :cond_kaorios_gen_stock
 """
-        new_body = method_body[:match.start()] + match.group(1) + str(new_reg) + "\n" + inject + method_body[match.end():]
+        new_body = method_body[:match.start()] + f".{directive} {new_reg}" + inject + method_body[match.end():]
         return content[:start] + new_body + content[end:]
     return content
 
@@ -99,9 +104,10 @@ def patch_keystore_spi(content):
     if "KaoriosHook;->CertificateChainIfNeeded" in method_body:
         return content
     
-    return_matches = list(re.finditer(r'(return-object\s+[vp]\d+)', method_body))
+    return_matches = list(re.finditer(r'return-object\s+([vp]\d+)', method_body))
     if not return_matches: return content
     last_return = return_matches[-1]
+    v_return = last_return.group(1)
     
     block_before = method_body[:last_return.start()]
     aput_matches = list(re.finditer(r'(aput-object\s+[vp]\d+,\s*([vp]\d+),\s*[vp]\d+)', block_before))
@@ -109,7 +115,7 @@ def patch_keystore_spi(content):
     if aput_matches:
         last_aput = aput_matches[-1]
         vC = last_aput.group(2)
-        inject = f"\n\n    invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;\n    move-result-object {vC}\n\n    "
+        inject = f"\n\n    invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;\n    move-result-object {v_return}\n\n    "
         new_body = method_body[:last_aput.end()] + inject + method_body[last_aput.end():]
         return content[:start] + new_body + content[end:]
     return content
