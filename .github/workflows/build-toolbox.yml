@@ -46,6 +46,8 @@ jobs:
 
     steps:
       - name: Check PRIVATE_REPO_TOKEN
+        # Chạy TRƯỚC khi clone nên phải override working-directory mặc định.
+        working-directory: ${{ github.workspace }}
         env:
           TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
         run: |
