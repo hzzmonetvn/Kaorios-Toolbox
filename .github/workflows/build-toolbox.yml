@@ -100,11 +100,13 @@ jobs:
           cache-on-failure: true
 
       # Cache binary cargo-ndk + codegen (cargo install biên dịch lại từ source rất lâu).
+      # Bump key (v1 -> v2) khi đổi major/minor FRB để binary codegen luôn khớp version
+      # với flutter_rust_bridge trong Cargo.toml / pubspec.
       - name: Cache cargo binaries
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin
-          key: cargo-bin-v1-${{ runner.os }}
+          key: cargo-bin-v2-${{ runner.os }}
 
       - name: Install cargo-ndk
         run: command -v cargo-ndk >/dev/null || cargo install cargo-ndk --locked
