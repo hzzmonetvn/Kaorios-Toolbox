@@ -29,6 +29,10 @@ on:
 permissions:
   contents: read
 
+env:
+  ANDROID_ALL_VERSION: 17-robolectric-15733970
+  ANDROID_ALL_SHA256: f6a41ad548bb45cccd3b1d4774cb50d57826dd319b6e5accd6b6269876e12d71
+
 concurrency:
   group: build-toolbox-${{ github.ref }}
   cancel-in-progress: true
@@ -87,14 +91,36 @@ jobs:
         with:
           targets: aarch64-linux-android
 
+      # Cache cargo registry + target dir của Rust crate → lần build sau
+      # không phải biên dịch lại reqwest/tokio/prost/...
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: private-src/flutter_app/rust
+          cache-on-failure: true
+
+      # Cache binary cargo-ndk + codegen (cargo install biên dịch lại từ source rất lâu).
+      - name: Cache cargo binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: cargo-bin-v1-${{ runner.os }}
+
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
+        run: command -v cargo-ndk >/dev/null || cargo install cargo-ndk --locked
 
       - name: Install protoc
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+        run: command -v protoc >/dev/null || (sudo apt-get update && sudo apt-get install -y protobuf-compiler)
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
+
+      - name: Restore merged android.jar cache
+        id: cache-merged-jar
+        uses: actions/cache@v4
+        with:
+          path: ~/merged-android-cache/android-37-merged.jar
+          key: android-merged-37-${{ env.ANDROID_ALL_VERSION }}-${{ runner.os }}
 
       - name: Install Android SDK 37, NDK and CMake
         shell: bash
@@ -113,36 +139,45 @@ jobs:
 
       - name: Install full AOSP API 37 compile stubs
         shell: bash
-        env:
-          ANDROID_ALL_VERSION: 17-robolectric-15733970
-          ANDROID_ALL_SHA256: f6a41ad548bb45cccd3b1d4774cb50d57826dd319b6e5accd6b6269876e12d71
         run: |
-          android_all="$RUNNER_TEMP/android-all-${ANDROID_ALL_VERSION}.jar"
-          merged_dir="$RUNNER_TEMP/android-api-37-merged"
-          merged_android="$RUNNER_TEMP/android-api-37-merged.jar"
           public_android="$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar"
           core_modules="$ANDROID_SDK_ROOT/platforms/android-37.0/core-for-system-modules.jar"
+          cached_jar="$HOME/merged-android-cache/android-37-merged.jar"
 
-          curl --fail --location --retry 3 \
-            --output "$android_all" \
-            "https://repo.maven.apache.org/maven2/org/robolectric/android-all/${ANDROID_ALL_VERSION}/android-all-${ANDROID_ALL_VERSION}.jar"
-          echo "${ANDROID_ALL_SHA256}  ${android_all}" | sha256sum --check --strict
-          unzip -tq "$android_all"
+          if [ -f "$cached_jar" ]; then
+            echo "Cache hit — dùng merged android.jar có sẵn, bỏ qua download ~1GB."
+            test -f "$public_android"
+            install -m 0644 "$cached_jar" "$public_android"
+          else
+            echo "Cache miss — download + merge AOSP stubs (chỉ chậm lần đầu)."
+            android_all="$RUNNER_TEMP/android-all-${ANDROID_ALL_VERSION}.jar"
+            merged_dir="$RUNNER_TEMP/android-api-37-merged"
+            merged_android="$RUNNER_TEMP/android-api-37-merged.jar"
 
-          test -f "$public_android"
-          test -f "$core_modules"
-          mkdir -p "$merged_dir"
-          unzip -q "$public_android" -d "$merged_dir"
-          unzip -oq "$core_modules" -d "$merged_dir"
-          unzip -oq "$android_all" -d "$merged_dir"
-          jar --create --file "$merged_android" --no-manifest -C "$merged_dir" .
+            curl --fail --location --retry 3 \
+              --output "$android_all" \
+              "https://repo.maven.apache.org/maven2/org/robolectric/android-all/${ANDROID_ALL_VERSION}/android-all-${ANDROID_ALL_VERSION}.jar"
+            echo "${ANDROID_ALL_SHA256}  ${android_all}" | sha256sum --check --strict
+            unzip -tq "$android_all"
 
-          unzip -Z1 "$merged_android" > "$RUNNER_TEMP/android-api-37-merged.entries"
+            test -f "$public_android"
+            test -f "$core_modules"
+            mkdir -p "$merged_dir"
+            unzip -q "$public_android" -d "$merged_dir"
+            unzip -oq "$core_modules" -d "$merged_dir"
+            unzip -oq "$android_all" -d "$merged_dir"
+            jar --create --file "$merged_android" --no-manifest -C "$merged_dir" .
+
+            mkdir -p "$HOME/merged-android-cache"
+            cp "$merged_android" "$cached_jar"
+            install -m 0644 "$merged_android" "$public_android"
+          fi
+
+          unzip -Z1 "$public_android" > "$RUNNER_TEMP/android-api-37-merged.entries"
           grep -Fx "java/lang/Object.class" "$RUNNER_TEMP/android-api-37-merged.entries"
           grep -Fx "android/app/ActivityThread.class" "$RUNNER_TEMP/android-api-37-merged.entries"
           grep -Fx "android/hardware/security/keymint/KeyParameter.class" "$RUNNER_TEMP/android-api-37-merged.entries"
-          unzip -tq "$merged_android"
-          install -m 0644 "$merged_android" "$public_android"
+          unzip -tq "$public_android"
 
       - name: Add Kaorios framework API to compile boot classpath
         shell: bash
@@ -190,7 +225,8 @@ jobs:
       - name: flutter_rust_bridge codegen
         shell: bash
         run: |
-          cargo install flutter_rust_bridge_codegen --locked
+          command -v flutter_rust_bridge_codegen >/dev/null || cargo install flutter_rust_bridge_codegen --locked
+          flutter_rust_bridge_codegen --version
           cd flutter_app
           flutter_rust_bridge_codegen generate
           # Codegen ghi đè rust/src/frb_generated.rs + sinh Dart bindings.
