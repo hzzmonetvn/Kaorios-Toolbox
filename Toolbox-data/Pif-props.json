@@ -1,9 +1,9 @@
 {
   "MANUFACTURER": "Google",
   "MODEL": "Pixel 6",
-  "FINGERPRINT": "google/oriole_beta/oriole:16/BP31.250610.009/13905196:user/release-keys",
+  "FINGERPRINT": "google/oriole_beta/oriole:17/CP31.260623.012/16064790:user/release-keys",
   "PRODUCT": "oriole_beta",
   "DEVICE": "oriole",
-  "SECURITY_PATCH": "2025-07-05",
+  "SECURITY_PATCH": "2026-07-05",
   "DEVICE_INITIAL_SDK_INT": "21"
 }
