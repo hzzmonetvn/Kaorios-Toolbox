@@ -31,15 +31,16 @@ def slow_print(text, delay=0.01):
 
 def _load_sibling(filename, module_name):
     target = SCRIPT_DIR / filename
-    if target.is_file():
-        try:
-            spec = importlib.util.spec_from_file_location(module_name, target)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            return mod
-        except Exception:
-            return None
-    return None
+    if not target.is_file():
+        return None
+
+    spec = importlib.util.spec_from_file_location(module_name, target)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load required patcher: {target}")
+
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 mod_at = _load_sibling("patch-activitythread-a17.py", "at_patcher")
@@ -54,11 +55,8 @@ mod_sp = _load_sibling("patch-settingsprovider-a17.py", "sp_patcher")
 
 def patch_activity_thread(content):
     if mod_at is not None:
-        try:
-            patched, changed = mod_at.patch(content)
-            return patched
-        except Exception:
-            pass
+        patched, _ = mod_at.patch(content)
+        return patched
 
     if "KaoriosHook;->initActivityThread" in content:
         return content
@@ -77,20 +75,14 @@ def patch_activity_thread(content):
 
 def patch_computer_engine(content):
     if mod_ce is not None:
-        try:
-            patched, changed = mod_ce.patch(content)
-            return patched
-        except Exception:
-            pass
+        patched, _ = mod_ce.patch(content)
+        return patched
     return content
 
 
 def patch_system_server(content):
     if mod_ss is not None:
-        try:
-            return mod_ss.patch(content)
-        except Exception:
-            pass
+        return mod_ss.patch(content)
 
     if "KaoriosHook;->initSystemServer" in content:
         return content
@@ -111,11 +103,8 @@ def patch_system_server(content):
 
 def patch_settings_provider(content):
     if mod_sp is not None:
-        try:
-            patched, changed = mod_sp.patch(content)
-            return patched
-        except Exception:
-            pass
+        patched, _ = mod_sp.patch(content)
+        return patched
     return content
 
 
@@ -393,7 +382,8 @@ def main():
 
         process_files(target_dir, mode, slow=not args.no_delay)
     except Exception as e:
-        print(f"\n[!] LỖI TOOL: {e}")
+        print(f"\n[!] LỖI TOOL: {e}", file=sys.stderr)
+        raise
 
     print("\n" + "="*40)
     if sys.stdin.isatty():

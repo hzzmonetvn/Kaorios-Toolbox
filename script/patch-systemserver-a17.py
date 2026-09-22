@@ -9,7 +9,9 @@ HOOK_CALL = "invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSyste
 ANCHOR_CALL = "invoke-static {}, Landroid/os/Looper;->loop()V"
 
 CLASS_RE = re.compile(r"(?m)^\.class\s+.*Lcom/android/server/SystemServer;\s*$")
-METHOD_RUN_RE = re.compile(r"(?m)^\.method\s+(?:public\s+)?run\(\)V\s*$")
+METHOD_RUN_RE = re.compile(
+    r"(?m)^\.method[^\r\n]*[ \t]run\(\)V[ \t]*(?:\r?\n|$)"
+)
 METHOD_END_RE = re.compile(r"(?m)^[ \t]*\.end method[ \t]*(?:\r?\n|$)")
 
 
@@ -74,7 +76,8 @@ def patch(text: str) -> str:
     indent = match.group("indent")
     anchor_pos = match.start()
 
-    injection = f"{indent}{HOOK_CALL}\n\n"
+    newline = "\r\n" if "\r\n" in text else "\n"
+    injection = f"{indent}{HOOK_CALL}{newline}{newline}"
     new_body = body[:anchor_pos] + injection + body[anchor_pos:]
     new_text = text[:start] + new_body + text[end:]
 

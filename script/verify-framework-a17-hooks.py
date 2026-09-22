@@ -7,9 +7,16 @@ import importlib.util
 import re
 from pathlib import Path
 
-EXACT_HOOK_METHOD_RE = re.compile(
-    r"(?m)^\.method[^\r\n]*[ \t]initActivityThread\(Ljava/lang/Object;\)V[ \t]*(?:\r?\n|$)"
-)
+REQUIRED_HOOK_METHODS = [
+    "initActivityThread(Ljava/lang/Object;)V",
+    "initSystemServer()V",
+    "shouldHideAppListForCaller(ILjava/lang/String;I)Z",
+    "filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;",
+    "initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;",
+    "CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;",
+    "initContext(Landroid/content/Context;)V",
+    "hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;",
+]
 
 REQUIRED_ADVANCED_POLICY_CLASSES = [
     "android/security/kaorios/settings/IAdvancedPolicyService.smali",
@@ -54,17 +61,20 @@ def find_kaorios_hook(smali_root: Path) -> Path:
 def verify_kaorios_hook(smali_root: Path) -> Path:
     hook_file = find_kaorios_hook(smali_root)
     text = hook_file.read_bytes().decode("utf-8")
-    matches = list(EXACT_HOOK_METHOD_RE.finditer(text))
-    if len(matches) == 0:
-        raise ValueError(
-            "expected exactly one exact Object overload initActivityThread(Ljava/lang/Object;)V in KaoriosHook; found 0"
-        )
-    if len(matches) > 1:
-        raise ValueError(
-            f"expected exactly one exact Object overload initActivityThread(Ljava/lang/Object;)V in KaoriosHook; found {len(matches)}"
-        )
-    return hook_file
 
+    for signature in REQUIRED_HOOK_METHODS:
+        pattern = re.compile(
+            r"(?m)^\.method[^\r\n]*[ \t]"
+            + re.escape(signature)
+            + r"[ \t]*(?:\r?\n|$)"
+        )
+        matches = list(pattern.finditer(text))
+        if len(matches) != 1:
+            raise ValueError(
+                f"expected exactly one KaoriosHook method {signature}; found {len(matches)}"
+            )
+
+    return hook_file
 
 def verify_advanced_policy_classes(smali_root: Path) -> list[Path]:
     verified = []

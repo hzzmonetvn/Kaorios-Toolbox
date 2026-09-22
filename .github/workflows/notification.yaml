@@ -1,1 +1,14 @@
-#soon
+name: Notification (placeholder)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Status
+        run: echo "Notification workflow is not implemented yet."

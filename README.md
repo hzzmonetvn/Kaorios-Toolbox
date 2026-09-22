@@ -45,7 +45,7 @@ For **version 2.0.4.0 and below**, see:
 
 ## 📦 Latest release: v2.0.6.0
 
-> ⚡ **Auto Patcher**: *Stay tuned!.*   
+> ⚡ **Android 17 Auto Patcher**: available in [`script/`](script). Use the patch guide below for manual anchors and artifact pipelines.   
 > See Patch Guide v2.0.6.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0_VI.md).  
 
 Follow the detailed usage guide here:  
@@ -56,23 +56,16 @@ Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-To
 
 ### Advanced features: framework patch required
 
-For builds with the Advanced patch check, use a matching Toolbox APK and framework
-DEX with probe support. Advanced unlocks only after a live check reaches **both
-SettingsProvider hooks** for Global, Secure and System, including missing keys.
-Installing only the APK, loading only the DEX, or enabling root fallback is not
-enough. Apply the ROM call-site patches and reboot.
+Android 17 builds require the matching framework DEX plus the ROM call-site patches documented in the patch guide. The current A17 patcher targets `ActivityThread`, `ComputerEngine`, `SystemServer`, and `SettingsProvider.call(...)`; the all-in-one Smali patcher also handles the legacy framework, KeyStore, and Build-field hooks.
 
-See the setup and troubleshooting steps in the [English patch guide](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md#advanced-features-patch-check)
-or [hướng dẫn tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md#kiểm-tra-patch-cho-tính-năng-nâng-cao).
-This check does not certify AppsFilter/installer-source patches or replace testing
-on the target ROM; a framework version string alone is not proof of hook coverage.
+Use the [English patch guide](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [hướng dẫn tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md), then reboot and validate the target ROM. A version string alone is not proof that every call site is patched.
 
 ---
 
 ## 📋 Todo List / Roadmap
 
-- [ ] ⚡ **Automated Patcher Tool 2.0.6+**
-- [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Verify the documented `filterSettingValue` / `shouldRemoveSetting` patches and Advanced capability check on each target ROM.
+- [x] ⚡ **Android 17 automated patcher suite**
+- [ ] ⚙️ **Expand ROM compatibility tests** for A17 patch anchors across AOSP/OEM variants.
 - [ ] 📦 **Spoof Installer Source Package**: Spoof package installer origin per-app (`filterInstallerPackageName`, e.g. masquerade as Google Play Store `com.android.vending`).
 
 ---

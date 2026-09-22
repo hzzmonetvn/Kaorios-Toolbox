@@ -60,9 +60,18 @@ done
 # Require exactly one signing mode:
 # MODE A: --unsigned-output
 # MODE B: --platform-key <pk8> --platform-cert <x509.pem>
+if [[ "$TASK_VERIFY_ORIG_CERT" -eq 1 && "$TASK_ALLOW_MISMATCHED_CERT" -eq 1 ]]; then
+    echo "Error: --verify-original-cert cannot be combined with --allow-mismatched-cert" >&2
+    exit 2
+fi
+
 if [[ "$TASK_UNSIGNED" -eq 1 ]]; then
     if [[ -n "$TASK_PLATFORM_KEY" || -n "$TASK_PLATFORM_CERT" ]]; then
         echo "Error: Cannot combine --unsigned-output with --platform-key or --platform-cert" >&2
+        exit 2
+    fi
+    if [[ "$TASK_VERIFY_ORIG_CERT" -eq 1 ]]; then
+        echo "Error: --verify-original-cert requires signed output mode" >&2
         exit 2
     fi
 else
@@ -142,7 +151,9 @@ mv "$TASK_NEW_OWNER_DEX" "$TASK_UNPACKED/$TASK_OWNER_DEX"
 # 6. Assert all untouched DEX files are byte-for-byte identical
 python "$TASK_DIR/patch-dex-artifact-plan.py" verify-untouched "$TASK_HASHES_JSON" "$TASK_UNPACKED" "$TASK_OWNER_DEX"
 
-# 7. Pack candidate patched SettingsProvider APK in temporary workspace
+# 7. Pack candidate patched SettingsProvider APK in temporary workspace.
+# Strip stale v1/JAR signature metadata before repacking.
+rm -rf -- "$TASK_UNPACKED/META-INF"
 TASK_CANDIDATE="$TASK_WORK/settingsprovider-candidate.apk"
 (cd "$TASK_UNPACKED" && zip -q -0 -r "$TASK_CANDIDATE" .)
 unzip -tq "$TASK_CANDIDATE"
@@ -200,7 +211,10 @@ if [[ -n "$TASK_PLATFORM_KEY" && -n "$TASK_PLATFORM_CERT" ]]; then
     else
         echo "PLATFORM CERTIFICATE MATCH = NO"
         echo "DEPLOYABLE SIGNED APK = NO"
-        if [[ "$TASK_ALLOW_MISMATCHED_CERT" -eq 1 ]]; then
+        if [[ "$TASK_VERIFY_ORIG_CERT" -eq 1 ]]; then
+            echo "Error: --verify-original-cert requested but signer certificates do not match." >&2
+            exit 1
+        elif [[ "$TASK_ALLOW_MISMATCHED_CERT" -eq 1 ]]; then
             echo "NOTICE: --allow-mismatched-cert specified; publishing signed artifact with mismatched signer."
         else
             echo "Error: Direct deployment signed mode requires matching original ROM platform certificate!" >&2

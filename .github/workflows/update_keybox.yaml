@@ -1,1 +1,14 @@
-#soon
+name: Update Keybox (placeholder)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Status
+        run: echo "Keybox updater is not implemented yet."

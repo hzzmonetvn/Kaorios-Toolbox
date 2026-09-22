@@ -1,6 +1,6 @@
 # Android 17 (SDK 37)
 
-**English** | [Tiếng Việt](notes-a17-vi.md)
+**English** | [Tiếng Việt](notes-a17_VI.md)
 
 This page only contains additional steps specifically for target ROMs running **Android 17 / SDK 37 (Baklava)**.
 
