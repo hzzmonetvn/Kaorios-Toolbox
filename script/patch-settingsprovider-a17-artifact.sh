@@ -152,8 +152,13 @@ mv "$TASK_NEW_OWNER_DEX" "$TASK_UNPACKED/$TASK_OWNER_DEX"
 python "$TASK_DIR/patch-dex-artifact-plan.py" verify-untouched "$TASK_HASHES_JSON" "$TASK_UNPACKED" "$TASK_OWNER_DEX"
 
 # 7. Pack candidate patched SettingsProvider APK in temporary workspace.
-# Strip stale v1/JAR signature metadata before repacking.
-rm -rf -- "$TASK_UNPACKED/META-INF"
+# Strip only stale v1/JAR signature files; preserve unrelated META-INF entries.
+if [[ -d "$TASK_UNPACKED/META-INF" ]]; then
+    find "$TASK_UNPACKED/META-INF" -maxdepth 1 -type f \
+        \( -name 'MANIFEST.MF' -o -name '*.SF' -o -name '*.RSA' -o -name '*.DSA' -o -name '*.EC' \) \
+        -delete
+    rmdir "$TASK_UNPACKED/META-INF" 2>/dev/null || true
+fi
 TASK_CANDIDATE="$TASK_WORK/settingsprovider-candidate.apk"
 (cd "$TASK_UNPACKED" && zip -q -0 -r "$TASK_CANDIDATE" .)
 unzip -tq "$TASK_CANDIDATE"
