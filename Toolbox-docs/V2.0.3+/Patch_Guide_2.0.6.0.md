@@ -1,72 +1,57 @@
-# Kaorios Toolbox Framework 2.0.6.0 — Manual Android 17 / SDK 37 patch guide
+# Kaorios Toolbox Framework 2.0.6.0 — Android 13–17
 
-[**English**](Patch_Guide_2.0.6.0.md) | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
+**English** | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
 
-This document describes the **manual Smali patching** flow and is synchronized with the Android 17 Python patchers under `script/`.
+> Keep the stock JAR/APK files from the target ROM. Do not replace a stock DEX or copy an entire template class from another ROM.
 
-> Always patch the stock JAR/APK from the target ROM. Do not copy complete stock classes from another ROM/template because registers, labels, overloads and DEX layout can differ.
+This guide is shared across Android 13, 14, 15, 16 and 17. Class/method layout can differ between AOSP and OEM ROMs, so templates are references for equivalent logic only. Android 17 differences are called out where needed.
 
-## 1. Preparation
+## 1. `framework.jar`
 
-Artifacts involved:
+### A. Initialize each app
 
-- `framework.jar`
-- `services.jar`
-- `SettingsProvider.apk`
-- a Kaorios framework DEX matching the Toolbox APK
-
-For every JAR/APK:
-
-1. Unpack the artifact.
-2. Identify which `classes*.dex` owns the target class.
-3. Disassemble only that DEX.
-4. Patch the exact method described below.
-5. Reassemble the modified DEX.
-6. Keep all untouched stock DEXes unchanged.
-7. Repack the artifact.
-
-Do not assume the class is always in `classes.dex` or `classes2.dex`.
-
-### Add the Kaorios DEX to framework.jar
-
-The Kaorios DEX must be present in `framework.jar` so the call sites below can resolve `Landroid/security/kaorios/KaoriosHook;`.
-
-If the ROM does not already contain a Kaorios DEX:
-
-- keep every stock DEX;
-- choose the next unused `classesN.dex` slot;
-- add the Kaorios DEX there.
-
-Example:
-
-```text
-classes.dex
-classes2.dex
-classes3.dex
-classes4.dex
+**Class:**
+```smali
+Landroid/app/Instrumentation;
 ```
 
-Add Kaorios as:
+**Reference smali:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
 
-```text
-classes5.dex
+Patch both methods:
+
+```smali
+newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
 ```
 
-Do not overwrite a stock DEX that contains `ActivityThread`, `Build` or other framework classes.
+Before the final `return-object`:
 
----
+```smali
+invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+```
 
-# 2. framework.jar
+And:
 
-## 2.1 ActivityThread — process initialization
+```smali
+newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
+```
 
-**Class**
+Before the final `return-object`:
+
+```smali
+invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+```
+
+No extra register is required.
+
+#### Android 17
+
+Some Android 17 builds also use a process hook in:
 
 ```smali
 Landroid/app/ActivityThread;
 ```
 
-**Method**
+Method:
 
 ```smali
 handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V
@@ -84,180 +69,105 @@ Insert immediately after it:
 invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
 ```
 
-No extra register is required.
-
-The method must contain exactly one `initActivityThread(Ljava/lang/Object;)V` call after patching.
+Only add this when the Kaorios DEX being used exposes `initActivityThread(Ljava/lang/Object;)V`.
 
 ---
 
-## 2.2 Instrumentation — Context initialization
+### B. Hook system features
 
-**Class**
-
-```smali
-Landroid/app/Instrumentation;
-```
-
-Patch both overloads.
-
-### Overload 1
-
-```smali
-newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
-```
-
-Before the final `return-object`:
-
-```smali
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
-```
-
-### Overload 2
-
-```smali
-newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
-```
-
-Before the final `return-object`:
-
-```smali
-invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
-```
-
-No register increase is required.
-
----
-
-## 2.3 ApplicationPackageManager — system feature spoof
-
-**Class**
-
+**Class:**
 ```smali
 Landroid/app/ApplicationPackageManager;
 ```
 
-**Method**
+**Reference smali:** [`ApplicationPackageManager.smali`](../Template/Template_V2060/framework/ApplicationPackageManager.smali)
 
+**Method:**
 ```smali
 hasSystemFeature(Ljava/lang/String;I)Z
 ```
 
-Immediately after `.registers X` or `.locals X`, insert:
+Immediately below `.registers X` or `.locals X`, add:
 
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
 move-result-object v0
 
 if-eqz v0, :cond_kaorios_feature_stock
-
 invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
 move-result v0
-
 return v0
 
 :cond_kaorios_feature_stock
 ```
 
-When the hook returns `null`, stock logic continues.
+When the hook returns `null`, stock code continues.
 
-If the ROM already contains the label `:cond_kaorios_feature_stock`, use another unique label.
+Use a different label if the target method already contains `:cond_kaorios_feature_stock`.
 
 ---
 
-## 2.4 AndroidKeyStoreKeyPairGeneratorSpi — software key pair
+### C. Hook software key generation
 
-**Class**
-
+**Class:**
 ```smali
 Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
 ```
 
-**Method**
+**Reference smali:** [`AndroidKeyStoreKeyPairGeneratorSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreKeyPairGeneratorSpi.smali)
 
+**Method:**
 ```smali
 generateKeyPair()Ljava/security/KeyPair;
 ```
 
-### Method using .registers
-
-If stock has:
-
-```smali
-.registers 15
-```
-
-increase it to:
-
-```smali
-.registers 16
-```
-
-This instance method only has `p0`, so the new local is:
-
-```text
-vX = v(new_register_count - 2)
-```
-
-With `.registers 16`, use `v14`.
-
-Insert after the register directive:
+Below the register/local directive add:
 
 ```smali
 invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-move-result-object v14
+move-result-object vX
 
-if-eqz v14, :cond_kaorios_gen_stock
-
-return-object v14
+if-eqz vX, :cond_kaorios_gen_stock
+return-object vX
 
 :cond_kaorios_gen_stock
 ```
 
-### Method using .locals
+If the method uses `.registers X`:
 
-If stock has:
+- increase the register count by 1;
+- this instance method only has `p0`, so the new local is `v(new_register_count - 2)`.
 
-```smali
-.locals 14
-```
+Example: `.registers 15` becomes `.registers 16`, then use `v14`.
 
-change it to:
-
-```smali
-.locals 15
-```
-
-and use the new local `v14`.
-
-Use another unique label if `:cond_kaorios_gen_stock` already exists.
+If the method uses `.locals X`, increase locals by one and use the new local.
 
 ---
 
-## 2.5 AndroidKeyStoreSpi — certificate chain filter
+### D. Hook the certificate chain
 
-**Class**
-
+**Class:**
 ```smali
 Landroid/security/keystore2/AndroidKeyStoreSpi;
 ```
 
-**Method**
+**Reference smali:** [`AndroidKeyStoreSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreSpi.smali)
 
+**Method:**
 ```smali
 engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 
-Find the final `return-object`, then find the last `aput-object` before it which populates the Certificate array.
+Before the final `return-object`, find the last `aput-object` that writes the Certificate array.
 
 Example:
 
 ```smali
+const/4 v4, 0x0
 aput-object v2, v3, v4
 
 return-object v3
 ```
-
-Here `v3` is both the array register and final return register.
 
 Insert:
 
@@ -266,222 +176,50 @@ invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNe
 move-result-object v3
 ```
 
-Result:
-
-```smali
-aput-object v2, v3, v4
-
-invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
-move-result-object v3
-
-return-object v3
-```
-
-If the array register differs from the final return register, pass the array register to the hook and move the result into the register used by the final `return-object`.
+The register passed to the hook must hold the Certificate array. The result must be moved into the register used by the final `return-object`.
 
 ---
 
-## 2.6 Build.smali — Android 17
+## 2. `services.jar`
 
-**Class**
+### A. Initialize SystemServer
 
-```smali
-Landroid/os/Build;
-```
-
-For these String fields, remove `final` and append `= null`:
-
-```text
-BRAND
-BRAND_FOR_ATTESTATION
-DEVICE
-DEVICE_FOR_ATTESTATION
-FINGERPRINT
-HARDWARE
-ID
-MANUFACTURER
-MANUFACTURER_FOR_ATTESTATION
-MODEL
-MODEL_FOR_ATTESTATION
-PRODUCT
-PRODUCT_FOR_ATTESTATION
-TAGS
-TYPE
-USER
-```
-
-Example:
-
-**Before**
-
-```smali
-.field public static final whitelist BRAND:Ljava/lang/String;
-```
-
-**After**
-
-```smali
-.field public static whitelist BRAND:Ljava/lang/String; = null
-```
-
-For `TIME:J`, remove only `final`.
-
-Do not append `= null` to the long field.
-
----
-
-## 2.7 Build$VERSION.smali — Android 17
-
-**Class**
-
-```smali
-Landroid/os/Build$VERSION;
-```
-
-Remove `final` from:
-
-```text
-RELEASE
-RELEASE_OR_CODENAME
-RELEASE_OR_PREVIEW_DISPLAY
-SECURITY_PATCH
-DEVICE_INITIAL_SDK_INT
-```
-
-Do not append `= null`.
-
-Keep `SDK_INT` unchanged.
-
-See [notes-a17.md](notes-a17.md).
-
----
-
-# 3. services.jar
-
-## 3.1 ComputerEngine — caller-aware app hiding
-
-**Class**
-
-```smali
-Lcom/android/server/pm/ComputerEngine;
-```
-
-The current patcher prefers:
-
-```smali
-shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z
-```
-
-and falls back to:
-
-```smali
-shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
-```
-
-### Step 1 — allocate one extra local
-
-For the `IIZZ` overload, parameter width is 8 registers:
-
-```text
-p0 this
-p1 PackageStateInternal
-p2 int
-p3 ComponentName
-p4 int
-p5 int
-p6 boolean
-p7 boolean
-```
-
-If the method uses `.locals N`, change it to `.locals N+1` and use `vN` as `vHook`.
-
-If it uses `.registers R`:
-
-```text
-stock locals = R - 8
-new .locals = R - 8 + 1
-vHook = v(R - 8)
-```
-
-For the `II` overload, parameter width is 4:
-
-```text
-stock locals = R - 4
-new .locals = R - 4 + 1
-vHook = v(R - 4)
-```
-
-### Step 2 — inject at the beginning of the method
-
-Insert after the register/local declaration, parameters and leading annotations.
-
-#### IIZZ overload
-
-```smali
-if-eqz p1, :cond_kaorios_ps_null
-
-invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
-move-result-object vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-invoke-static {p2, vHook, p5}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
-move-result vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-const/4 vHook, 0x1
-return vHook
-
-:cond_kaorios_ps_null
-```
-
-#### II overload
-
-Use `p3` as the user id:
-
-```smali
-if-eqz p1, :cond_kaorios_ps_null
-
-invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
-move-result-object vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-invoke-static {p2, vHook, p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
-move-result vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-const/4 vHook, 0x1
-return vHook
-
-:cond_kaorios_ps_null
-```
-
-Replace every `vHook` with the real new local register.
-
-The current script targets one overload according to the priority above; do not blindly patch every overload.
-
----
-
-## 3.2 SystemServer — initialization hook
-
-**Class**
-
+**Class:**
 ```smali
 Lcom/android/server/SystemServer;
 ```
 
-**Method**
+**Reference smali:** [`SystemServer.smali`](../Template/Template_V2060/service/SystemServer.smali)
+
+The goal is to call:
 
 ```smali
-run()V
+invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 ```
 
-Visibility may be `private`, `public`, or another valid modifier combination.
+once inside `SystemServer.run()V`, after core services are initialized but before the main loop runs forever.
 
-Find the single:
+### Android 13–16
+
+On many builds, a suitable anchor is immediately before:
+
+```smali
+Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+```
+
+Example:
+
+```smali
+invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+
+invoke-direct {p0, vX}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+```
+
+Opcode/registers may differ by ROM; match the actual `startOtherServices(...)` call.
+
+### Android 17
+
+The current A17 patcher uses the safer `run()V` anchor:
 
 ```smali
 invoke-static {}, Landroid/os/Looper;->loop()V
@@ -495,164 +233,267 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
-No register increase is required.
-
-> Older documentation used the `startOtherServices(...)` call as the anchor. The current Android 17 patcher uses the `Looper.loop()` anchor.
+No extra register is required.
 
 ---
 
-# 4. SettingsProvider.apk
+## 3. Android 17-only patch
 
-## 4.1 SettingsProvider.call — caller-aware Settings Bundle filter
+Android 17 / SDK 37 additionally requires the `Build.smali` and `Build$VERSION.smali` field patch.
 
-**Class**
+See [notes-a17.md](notes-a17.md).
+
+Do not apply this section to Android 13–16 unless your framework explicitly requires it.
+
+---
+
+## 4. Supplementary patches
+
+Add only the features you need after the core patch boots correctly.
+
+### A. Hide Developer options / ADB state
+
+**Class:** `Landroid/provider/Settings$NameValueCache;`
+
+**Reference smali:** [`Settings$NameValueCache.smali`](../Template/Template_V2060/framework/Settings$NameValueCache.smali)
+
+**Reference method:**
+```smali
+getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;
+```
+
+Below `.registers X` / `.locals X`, add:
+
+```smali
+if-eqz p2, :cond_kaorios_dev_stock
+invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
+move-result v0
+if-eqz v0, :cond_kaorios_dev_stock
+const-string v0, "0"
+return-object v0
+
+:cond_kaorios_dev_stock
+```
+
+Use only the overload returning `String`, not one returning `Pair`.
+
+---
+
+### B. Hide installed apps per caller
+
+The filtering path changes between Android versions and OEM implementations. Patch the Package Manager method that actually decides whether a package is filtered from the caller.
+
+#### Android 13–16 / AppsFilter-based ROMs
+
+Common classes:
+
+```smali
+Lcom/android/server/pm/AppsFilterBase;
+Lcom/android/server/pm/AppsFilterImpl;
+```
+
+Older ABI reference:
+
+```smali
+invoke-static {vCallingUid, vResolver, vTargetPackage, vUserId}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
+move-result vResult
+
+if-eqz vResult, :cond_kaorios_hide_stock
+const/4 v0, 0x1
+return v0
+
+:cond_kaorios_hide_stock
+```
+
+Resolve the real registers on the target ROM.
+
+#### Current Android 17 path
+
+Class:
+
+```smali
+Lcom/android/server/pm/ComputerEngine;
+```
+
+The A17 patcher prefers:
+
+```smali
+shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z
+```
+
+and falls back to:
+
+```smali
+shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
+```
+
+Current A17 ABI:
+
+```smali
+shouldHideAppListForCaller(ILjava/lang/String;I)Z
+```
+
+Arguments are:
+
+```text
+callingUid, targetPackageName, userId
+```
+
+Example for the IIZZ overload:
+
+```smali
+if-eqz p1, :cond_kaorios_ps_null
+
+invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
+move-result-object vHook
+if-eqz vHook, :cond_kaorios_ps_null
+
+invoke-static {p2, vHook, p5}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
+move-result vHook
+
+if-eqz vHook, :cond_kaorios_ps_null
+const/4 vHook, 0x1
+return vHook
+
+:cond_kaorios_ps_null
+```
+
+Allocate one extra local for `vHook`.
+
+Do not mix the Android 13–16 ABI with the current Android 17 ABI. Verify the actual KaoriosHook signature in the DEX you are shipping.
+
+---
+
+### C. Spoof installer source
+
+The class/method varies across Android versions and OEM ROMs. Patch after Package Manager resolves the stock installer and before the value is returned to the caller.
+
+Reference hook:
+
+```smali
+invoke-static {vResolver, vCallingUid, vUserId, vPackageName, vInstaller}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+move-result-object vInstaller
+```
+
+Identify the resolver/null value, calling UID, user ID, queried package and stock installer register on the target ROM.
+
+---
+
+### D. Filter / spoof Settings per calling app
+
+This differs between older framework implementations and the current Android 17 patch.
+
+#### Android 13–16 / String-based hook
+
+Patch the server-side SettingsProvider GET path while the original Binder caller identity is still active.
+
+Do not place the hook:
+
+- in a client cache such as `Settings$NameValueCache`;
+- after `Binder.clearCallingIdentity()`;
+- in a method that does not return the real Settings value to the caller.
+
+For frameworks using:
+
+```smali
+shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
+filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+```
+
+reference logic:
+
+```smali
+const/4 vNull, 0x0
+
+invoke-static {vNull, vNamespace, vName}, Landroid/security/kaorios/KaoriosHook;->shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
+move-result vRemove
+
+if-eqz vRemove, :cond_kaorios_setting_value
+const/4 vValue, 0x0
+return-object vValue
+
+:cond_kaorios_setting_value
+invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+move-result-object vValue
+```
+
+Preserve required stock cleanup and return flow.
+
+#### Current Android 17 patch
+
+Class:
 
 ```smali
 Lcom/android/providers/settings/SettingsProvider;
 ```
 
-**Method**
+Method:
 
 ```smali
 call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
 ```
 
-The current patcher patches this Binder-facing Bundle method. It does not patch a String-returning GET helper.
-
-### Step 1 — allocate one extra local
-
-Parameter width is 4:
-
-```text
-p0 this
-p1 method
-p2 name
-p3 args
-```
-
-If the method uses `.locals N`, change it to `.locals N+1` and use `vN`.
-
-If it uses `.registers R`:
-
-```text
-stock locals = R - 4
-new .locals = R - 4 + 1
-vHook = v(R - 4)
-```
-
-### Step 2 — find getDeviceId()
-
-Inside the same `call(...)` method find:
+Current hook ABI:
 
 ```smali
-invoke-virtual {...}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 ```
 
-If a `move-result` follows it, inject after that `move-result`.
+Inside `call(...)`, find the `getDeviceId()I` call. If a `move-result` follows it, inject after that line but before any later `Binder.clearCallingIdentity()`.
 
-Then add:
+Allocate one extra local `vHook`, then add:
 
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 move-result-object vHook
 
 if-eqz vHook, :cond_kaorios_settings_stock
-
 return-object vHook
 
 :cond_kaorios_settings_stock
 ```
 
-Replace `vHook` with the local allocated above.
+If the hook returns `null`, stock logic continues.
 
-The hook must remain before a later `Binder.clearCallingIdentity()`, if present.
-
-If the hook returns `null`, stock SettingsProvider logic continues.
-
-### Register example
-
-Stock:
-
-```smali
-.registers 12
-```
-
-There are four parameter registers, therefore eight stock locals. Change to:
-
-```smali
-.locals 9
-```
-
-and use `v8` for the hook result.
-
----
-
-## 4.2 Repack and sign SettingsProvider.apk
-
-After reassembling the modified DEX:
-
-1. Replace only that DEX in the APK.
-2. Remove stale v1/JAR signing files if present:
-   - `META-INF/MANIFEST.MF`
-   - `META-INF/*.SF`
-   - `META-INF/*.RSA`
-   - `META-INF/*.DSA`
-   - `META-INF/*.EC`
-3. Preserve unrelated `META-INF` entries.
-4. Repack.
-5. Zipalign.
-6. For direct ROM deployment, sign with the target ROM platform key/certificate.
-
-Do not use a different certificate when the ROM requires SettingsProvider to retain the platform signature.
-
----
-
-# 5. Post-patch verification
-
-## framework.jar
-
-The Kaorios DEX should expose exactly one of each required signature:
+For `.registers R`, this method has four parameter registers (`p0..p3`):
 
 ```text
-initActivityThread(Ljava/lang/Object;)V
-initSystemServer()V
-shouldHideAppListForCaller(ILjava/lang/String;I)Z
-filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
-initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
-initContext(Landroid/content/Context;)V
-hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+stock locals = R - 4
+vHook = v(R - 4)
+new .locals = R - 4 + 1
 ```
 
-## services.jar
-
-- one `shouldHideAppListForCaller(...)` call in the selected ComputerEngine method;
-- one `initSystemServer()V` call in `SystemServer.run()V`;
-- `initSystemServer()V` is before `Looper.loop()V`.
-
-## SettingsProvider.apk
-
-- one `filterSettingsCall(...)` call in `call(...): Bundle`;
-- the hook is after `getDeviceId()I`;
-- the hook is before `Binder.clearCallingIdentity()`, when present;
-- the new local does not overlap a stock register.
-
-## Build
-
-Only the documented fields should lose `final`. Keep `SDK_INT` unchanged.
-
-A successful Smali assemble only proves the bytecode is structurally valid. Boot and runtime-test the patched ROM before release.
+Do not apply this A17 block to a framework that still exposes the `filterSettingValue/shouldRemoveSetting` ABI.
 
 ---
 
-# 6. Reference templates
+## 5. Post-patch verification
 
-Use these only to compare patch placement. Do not replace target-ROM classes with the template classes.
+Before building/flashing:
 
-- [Framework template](../Template/Template_V2060/framework)
-- [Services template](../Template/Template_V2060/service)
-- [Android 17 Build notes](notes-a17.md)
-- [Disable FLAG_SECURE](Disable_Secure_Flag.md)
+- each hook appears only once in the target method;
+- new labels do not collide with stock labels;
+- new locals do not overlap stock locals/parameters;
+- every invoked signature exists in the Kaorios DEX being shipped;
+- unrelated stock DEXes remain unchanged;
+- Settings hooks run while the correct Binder caller identity is still available;
+- `initSystemServer()` is called once.
+
+After building:
+
+1. reassemble the Smali;
+2. disassemble the rebuilt artifact and verify the hook is still present;
+3. boot the ROM;
+4. check logcat/crashes;
+5. test each feature separately.
+
+Android 13–17 and OEM updates can move methods/registers, so follow the equivalent logic instead of copying hard-coded registers.
+
+---
+
+## 6. Other documentation
+
+- [Android 17 Build patch](notes-a17.md)
+- [Disable Secure Flag](Disable_Secure_Flag.md)
 - [CorePatch](CorePatch.md)
-
-The scripts under `script/` remain the reference for exact anchors and register-allocation logic.
+- [Smali templates](../Template/Template_V2060)
