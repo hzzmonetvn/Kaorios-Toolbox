@@ -1,298 +1,187 @@
-# Kaorios Toolbox Framework 2.0.6.0 — Hướng dẫn patch tay Android 17 / SDK 37
+# Kaorios Toolbox Framework 2.0.6.0 — Android 13–17
 
 [English](Patch_Guide_2.0.6.0.md) | **Tiếng Việt**
 
-Tài liệu này mô tả cách patch **thủ công bằng Smali** và được đồng bộ theo logic của các patcher Python trong thư mục `script/`.
+> Giữ nguyên các file JAR/APK stock của ROM đích. Không thay DEX stock hoặc copy nguyên class từ template của ROM khác sang.
 
-> Luôn patch từ file stock của chính ROM đích. Không copy nguyên class từ template của ROM khác sang vì register, label, method overload và DEX layout có thể khác.
+Guide này dùng chung cho Android 13, 14, 15, 16 và 17. Tên class/method có thể thay đổi giữa AOSP và ROM OEM, nên template chỉ dùng để tìm logic tương đương. Những điểm riêng của Android 17 được ghi chú ngay tại mục liên quan.
 
-## 1. Chuẩn bị
+## 1. `framework.jar`
 
-Các artifact cần xử lý:
+### A. Khởi tạo cho từng ứng dụng
 
-- `framework.jar`
-- `services.jar`
-- `SettingsProvider.apk`
-- DEX framework Kaorios tương thích với APK Toolbox đang dùng
-
-Với mỗi JAR/APK:
-
-1. Giải nén artifact.
-2. Xác định `classes*.dex` nào chứa class cần patch.
-3. Chỉ baksmali DEX đó.
-4. Sửa đúng method được ghi bên dưới.
-5. Assemble lại đúng DEX đã sửa.
-6. Giữ nguyên các DEX stock còn lại.
-7. Repack artifact.
-
-Không hardcode rằng class nằm trong `classes.dex` hoặc `classes2.dex`; layout có thể khác giữa ROM.
-
-### Thêm DEX Kaorios vào framework.jar
-
-DEX Kaorios phải tồn tại trong `framework.jar` để các call site bên dưới resolve được `Landroid/security/kaorios/KaoriosHook;`.
-
-Nếu ROM chưa có Kaorios DEX:
-
-- giữ nguyên tất cả DEX stock;
-- chọn slot `classesN.dex` tiếp theo chưa dùng;
-- thêm DEX Kaorios vào slot đó.
-
-Ví dụ nếu framework đang có:
-
-```text
-classes.dex
-classes2.dex
-classes3.dex
-classes4.dex
-```
-
-thì thêm Kaorios DEX thành:
-
-```text
-classes5.dex
-```
-
-Không dùng DEX Kaorios để ghi đè DEX stock đang chứa `ActivityThread`, `Build` hoặc class hệ thống khác.
-
----
-
-# 2. framework.jar
-
-## 2.1 ActivityThread — hook khởi tạo process
-
-**Class**
-
-```smali
-Landroid/app/ActivityThread;
-```
-
-**Method**
-
-```smali
-handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V
-```
-
-Trong method này tìm đúng dòng:
-
-```smali
-iput-object p1, p0, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
-```
-
-Chèn ngay **sau** dòng đó:
-
-```smali
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
-```
-
-Ví dụ:
-
-```smali
-iput-object p1, p0, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
-
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
-```
-
-Không cần tăng register vì chỉ dùng `p1`.
-
-Sau patch phải chỉ có **một** call `initActivityThread(Ljava/lang/Object;)V` trong method này.
-
----
-
-## 2.2 Instrumentation — hook Context
-
-**Class**
-
+**Class:**
 ```smali
 Landroid/app/Instrumentation;
 ```
 
-Patch hai overload.
+**Smali mẫu:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
 
-### Overload 1
+Patch hai method:
 
 ```smali
 newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
 ```
 
-Tìm `return-object` cuối method và chèn ngay phía trước:
+Trước `return-object` cuối, thêm:
 
 ```smali
 invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
 ```
 
-Ví dụ:
-
-```smali
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
-
-return-object v0
-```
-
-### Overload 2
+Và:
 
 ```smali
 newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
 ```
 
-Tìm `return-object` cuối method và chèn:
+Trước `return-object` cuối, thêm:
 
 ```smali
 invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
 ```
 
-Không cần tăng register cho hai patch này.
+Không cần tăng register vì chỉ dùng parameter register.
+
+#### Android 17
+
+Một số build Android 17 dùng thêm hook theo process trong:
+
+```smali
+Landroid/app/ActivityThread;
+```
+
+Method:
+
+```smali
+handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V
+```
+
+Tìm:
+
+```smali
+iput-object p1, p0, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+```
+
+Chèn ngay sau:
+
+```smali
+invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
+```
+
+Chỉ thêm hook này nếu DEX Kaorios đang dùng có method `initActivityThread(Ljava/lang/Object;)V`.
 
 ---
 
-## 2.3 ApplicationPackageManager — spoof system feature
+### B. Hook các tính năng hệ thống
 
-**Class**
-
+**Class:**
 ```smali
 Landroid/app/ApplicationPackageManager;
 ```
 
-**Method**
+**Smali mẫu:** [`ApplicationPackageManager.smali`](../Template/Template_V2060/framework/ApplicationPackageManager.smali)
 
+**Method:**
 ```smali
 hasSystemFeature(Ljava/lang/String;I)Z
 ```
 
-Ngay sau `.registers X` hoặc `.locals X`, chèn:
+Ngay dưới `.registers X` hoặc `.locals X`, thêm:
 
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
 move-result-object v0
 
 if-eqz v0, :cond_kaorios_feature_stock
-
 invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
 move-result v0
-
 return v0
 
 :cond_kaorios_feature_stock
 ```
 
-Nếu hook trả `null`, code stock chạy tiếp từ label `:cond_kaorios_feature_stock`.
+Nếu hook trả `null`, code stock tiếp tục chạy.
 
-Patcher hiện dùng `v0`; không cần tăng register nếu method stock đã có ít nhất `v0`, như template hiện tại.
-
-Nếu ROM của bạn đã dùng label `:cond_kaorios_feature_stock`, đổi tên label mới thành một tên chưa tồn tại trong method.
+Nếu label trên đã tồn tại trong method, đổi sang label khác chưa dùng.
 
 ---
 
-## 2.4 AndroidKeyStoreKeyPairGeneratorSpi — software key pair
+### C. Hook quá trình tạo software key
 
-**Class**
-
+**Class:**
 ```smali
 Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
 ```
 
-**Method**
+**Smali mẫu:** [`AndroidKeyStoreKeyPairGeneratorSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreKeyPairGeneratorSpi.smali)
 
+**Method:**
 ```smali
 generateKeyPair()Ljava/security/KeyPair;
 ```
 
-### Nếu method dùng .registers
+Thêm ngay sau directive register/local:
 
-Ví dụ stock:
+```smali
+invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+move-result-object vX
+
+if-eqz vX, :cond_kaorios_gen_stock
+return-object vX
+
+:cond_kaorios_gen_stock
+```
+
+Nếu method dùng `.registers X`:
+
+- tăng register thêm `1`;
+- method này là instance method chỉ có `p0`, nên local mới là `v(registers_mới - 2)`.
+
+Ví dụ:
 
 ```smali
 .registers 15
 ```
 
-Tăng thêm 1:
+đổi thành:
 
 ```smali
 .registers 16
 ```
 
-Với instance method này chỉ có `p0`, register local mới sẽ là:
+và dùng `v14`.
 
-```text
-vX = v(registers_mới - 2)
-```
-
-Ví dụ `.registers 16` thì dùng `v14`.
-
-Chèn ngay sau directive register:
-
-```smali
-invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-move-result-object v14
-
-if-eqz v14, :cond_kaorios_gen_stock
-
-return-object v14
-
-:cond_kaorios_gen_stock
-```
-
-### Nếu method dùng .locals
-
-Ví dụ:
-
-```smali
-.locals 14
-```
-
-Đổi thành:
-
-```smali
-.locals 15
-```
-
-Local mới là `v14`.
-
-Sau đó chèn cùng logic:
-
-```smali
-invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-move-result-object v14
-
-if-eqz v14, :cond_kaorios_gen_stock
-return-object v14
-
-:cond_kaorios_gen_stock
-```
-
-Nếu label trên đã tồn tại, đổi sang label chưa dùng.
+Nếu method dùng `.locals X`, tăng `.locals` thêm 1 và dùng local mới `vX`.
 
 ---
 
-## 2.5 AndroidKeyStoreSpi — lọc certificate chain
+### D. Hook chuỗi chứng chỉ
 
-**Class**
-
+**Class:**
 ```smali
 Landroid/security/keystore2/AndroidKeyStoreSpi;
 ```
 
-**Method**
+**Smali mẫu:** [`AndroidKeyStoreSpi.smali`](../Template/Template_V2060/framework/AndroidKeyStoreSpi.smali)
 
+**Method:**
 ```smali
 engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 
-Tìm `return-object` cuối method.
+Trước `return-object` cuối, tìm lệnh `aput-object` cuối ghi vào mảng Certificate.
 
-Ngay trước nó, tìm lệnh `aput-object` cuối cùng tạo/ghi vào mảng certificate, ví dụ:
+Ví dụ:
 
 ```smali
+const/4 v4, 0x0
 aput-object v2, v3, v4
 
 return-object v3
 ```
 
-Trong ví dụ này:
-
-- mảng Certificate[] là `v3`;
-- register return cuối là `v3`.
-
-Chèn sau `aput-object` và trước `return-object`:
+Chèn:
 
 ```smali
 invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
@@ -302,6 +191,7 @@ move-result-object v3
 Kết quả:
 
 ```smali
+const/4 v4, 0x0
 aput-object v2, v3, v4
 
 invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
@@ -310,280 +200,56 @@ move-result-object v3
 return-object v3
 ```
 
-Nếu register chứa mảng và register return khác nhau, truyền register mảng vào hook nhưng `move-result-object` vào register mà `return-object` cuối đang dùng.
+Register truyền vào hook phải là register chứa mảng Certificate[]. `move-result-object` phải ghi vào register được return cuối.
 
 ---
 
-## 2.6 Build.smali — Android 17
+## 2. `services.jar`
 
-**Class**
+### A. Khởi tạo SystemServer
 
-```smali
-Landroid/os/Build;
-```
-
-Với các String field sau, bỏ `final` và thêm `= null`:
-
-```text
-BRAND
-BRAND_FOR_ATTESTATION
-DEVICE
-DEVICE_FOR_ATTESTATION
-FINGERPRINT
-HARDWARE
-ID
-MANUFACTURER
-MANUFACTURER_FOR_ATTESTATION
-MODEL
-MODEL_FOR_ATTESTATION
-PRODUCT
-PRODUCT_FOR_ATTESTATION
-TAGS
-TYPE
-USER
-```
-
-Ví dụ:
-
-**Trước**
-
-```smali
-.field public static final whitelist BRAND:Ljava/lang/String;
-```
-
-**Sau**
-
-```smali
-.field public static whitelist BRAND:Ljava/lang/String; = null
-```
-
-Với:
-
-```smali
-TIME:J
-```
-
-chỉ bỏ `final`, không thêm `= null`.
-
-**Trước**
-
-```smali
-.field public static final whitelist TIME:J
-```
-
-**Sau**
-
-```smali
-.field public static whitelist TIME:J
-```
-
----
-
-## 2.7 Build$VERSION.smali — Android 17
-
-**Class**
-
-```smali
-Landroid/os/Build$VERSION;
-```
-
-Bỏ `final` khỏi đúng các field:
-
-```text
-RELEASE
-RELEASE_OR_CODENAME
-RELEASE_OR_PREVIEW_DISPLAY
-SECURITY_PATCH
-DEVICE_INITIAL_SDK_INT
-```
-
-Không thêm `= null`.
-
-Không sửa `SDK_INT`.
-
-Xem thêm: [notes-a17_VI.md](notes-a17_VI.md).
-
----
-
-# 3. services.jar
-
-## 3.1 ComputerEngine — ẩn app theo caller
-
-**Class**
-
-```smali
-Lcom/android/server/pm/ComputerEngine;
-```
-
-Patcher hiện ưu tiên overload:
-
-```smali
-shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z
-```
-
-Nếu không có overload trên, fallback sang:
-
-```smali
-shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
-```
-
-### Bước 1 — cấp thêm một local register
-
-#### Với overload IIZZ
-
-Method là instance method và tổng parameter width là 8 register:
-
-```text
-p0 = this
-p1 = PackageStateInternal
-p2 = int
-p3 = ComponentName
-p4 = int
-p5 = int
-p6 = boolean
-p7 = boolean
-```
-
-Nếu method dùng:
-
-```smali
-.locals N
-```
-
-đổi thành:
-
-```smali
-.locals N+1
-```
-
-và dùng local mới `vN` làm `vHook`.
-
-Nếu method dùng:
-
-```smali
-.registers R
-```
-
-số local stock là:
-
-```text
-R - 8
-```
-
-Có thể đổi sang:
-
-```text
-.locals (R - 8 + 1)
-```
-
-và dùng:
-
-```text
-vHook = v(R - 8)
-```
-
-#### Với overload II
-
-Parameter width là 4:
-
-```text
-p0 = this
-p1 = PackageStateInternal
-p2 = int
-p3 = int
-```
-
-Nếu dùng `.registers R`:
-
-```text
-local stock = R - 4
-vHook = v(R - 4)
-.locals mới = R - 4 + 1
-```
-
-### Bước 2 — chèn hook ở đầu method
-
-Sau phần `.registers/.locals`, `.param` và annotation đầu method, chèn:
-
-#### Overload IIZZ
-
-```smali
-if-eqz p1, :cond_kaorios_ps_null
-
-invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
-move-result-object vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-invoke-static {p2, vHook, p5}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
-move-result vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-const/4 vHook, 0x1
-return vHook
-
-:cond_kaorios_ps_null
-```
-
-#### Overload II
-
-Giống trên nhưng user id là `p3`:
-
-```smali
-if-eqz p1, :cond_kaorios_ps_null
-
-invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
-move-result-object vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-invoke-static {p2, vHook, p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
-move-result vHook
-
-if-eqz vHook, :cond_kaorios_ps_null
-
-const/4 vHook, 0x1
-return vHook
-
-:cond_kaorios_ps_null
-```
-
-Thay toàn bộ `vHook` bằng local register thật đã cấp ở bước 1.
-
-Không patch đồng thời cả hai overload nếu ROM đã có đúng overload IIZZ mà logic PackageManager thực tế đi qua; script chỉ chọn một target theo thứ tự ưu tiên trên.
-
----
-
-## 3.2 SystemServer — init SystemServer hook
-
-**Class**
-
+**Class:**
 ```smali
 Lcom/android/server/SystemServer;
 ```
 
-**Method**
+**Smali mẫu:** [`SystemServer.smali`](../Template/Template_V2060/service/SystemServer.smali)
+
+Mục tiêu là gọi:
 
 ```smali
-run()V
+invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 ```
 
-Visibility có thể là:
+một lần trong `SystemServer.run()V`, sau khi các service nền tảng đã được dựng nhưng trước khi main loop chạy vĩnh viễn.
+
+### Android 13–16
+
+Trên nhiều ROM, anchor phù hợp là ngay trước:
 
 ```smali
-.method private run()V
+Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
 ```
 
-hoặc modifier khác. Chỉ cần đúng tên/signature `run()V`.
+Ví dụ:
 
-Trong method tìm đúng một call:
+```smali
+invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+
+invoke-direct {p0, vX}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
+```
+
+Tên opcode/register có thể khác giữa ROM; quan trọng là đúng call `startOtherServices(...)`.
+
+### Android 17
+
+Patcher A17 hiện tại dùng anchor an toàn hơn trong `run()V`:
 
 ```smali
 invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
-Chèn ngay trước call đó:
+Chèn ngay trước:
 
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
@@ -593,229 +259,280 @@ invoke-static {}, Landroid/os/Looper;->loop()V
 
 Không cần tăng register.
 
-> Guide cũ từng đặt hook trước `startOtherServices(...)`. Guide hiện tại theo đúng `patch-systemserver-a17.py`: đặt ngay trước `Looper.loop()`.
+---
+
+## 3. Patch riêng Android 17
+
+Android 17 / SDK 37 cần patch thêm các field trong `Build.smali` và `Build$VERSION.smali`.
+
+Xem: [notes-a17_VI.md](notes-a17_VI.md).
+
+Không áp dụng phần này cho Android 13–16 nếu framework của bạn không yêu cầu.
 
 ---
 
-# 4. SettingsProvider.apk
+## 4. Các patch bổ sung
 
-## 4.1 SettingsProvider.call — spoof/filter Settings theo caller
+Chỉ thêm tính năng cần dùng sau khi patch cốt lõi đã boot ổn.
 
-**Class**
+### A. Ẩn trạng thái Tùy chọn nhà phát triển / ADB
+
+**Class:** `Landroid/provider/Settings$NameValueCache;`
+
+**Smali mẫu:** [`Settings$NameValueCache.smali`](../Template/Template_V2060/framework/Settings$NameValueCache.smali)
+
+**Method tham chiếu:**
+```smali
+getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;
+```
+
+Ngay dưới `.registers X` / `.locals X`, thêm:
+
+```smali
+if-eqz p2, :cond_kaorios_dev_stock
+invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
+move-result v0
+if-eqz v0, :cond_kaorios_dev_stock
+const-string v0, "0"
+return-object v0
+
+:cond_kaorios_dev_stock
+```
+
+Chỉ patch overload trả về `String`; không chèn vào overload trả về `Pair`.
+
+---
+
+### B. Ẩn ứng dụng đã cài đặt theo caller
+
+Vị trí lọc app thay đổi theo Android version và ROM. Hãy patch method Package Manager thực sự quyết định package có bị filter khỏi caller hay không.
+
+#### Android 13–16 / ROM dùng AppsFilter
+
+Class thường gặp:
+
+```smali
+Lcom/android/server/pm/AppsFilterBase;
+Lcom/android/server/pm/AppsFilterImpl;
+```
+
+Logic hook kiểu cũ:
+
+```smali
+# callingUid, resolver/null, targetPackageName, userId
+invoke-static {vCallingUid, vResolver, vTargetPackage, vUserId}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILandroid/content/ContentResolver;Ljava/lang/String;I)Z
+move-result vResult
+
+if-eqz vResult, :cond_kaorios_hide_stock
+const/4 v0, 0x1
+return v0
+
+:cond_kaorios_hide_stock
+```
+
+Phải xác định đúng register thật trên ROM đích.
+
+#### Android 17 hiện tại
+
+Class:
+
+```smali
+Lcom/android/server/pm/ComputerEngine;
+```
+
+Patcher A17 ưu tiên:
+
+```smali
+shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z
+```
+
+và fallback sang:
+
+```smali
+shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
+```
+
+Hook A17 hiện dùng ABI:
+
+```smali
+shouldHideAppListForCaller(ILjava/lang/String;I)Z
+```
+
+Tức là truyền:
+
+```text
+callingUid, targetPackageName, userId
+```
+
+Ví dụ với overload IIZZ:
+
+```smali
+if-eqz p1, :cond_kaorios_ps_null
+
+invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
+move-result-object vHook
+if-eqz vHook, :cond_kaorios_ps_null
+
+invoke-static {p2, vHook, p5}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
+move-result vHook
+
+if-eqz vHook, :cond_kaorios_ps_null
+const/4 vHook, 0x1
+return vHook
+
+:cond_kaorios_ps_null
+```
+
+Cần cấp thêm một local register cho `vHook`.
+
+Không trộn ABI A13–16 và ABI A17. Kiểm tra đúng signature tồn tại trong DEX Kaorios đang dùng trước khi patch.
+
+---
+
+### C. Giả mạo nguồn cài đặt
+
+Class/method thay đổi theo Android version và ROM. Điểm patch phải nằm sau khi Package Manager đã xác định installer stock nhưng trước khi trả giá trị cho caller.
+
+Hook tham chiếu:
+
+```smali
+invoke-static {vResolver, vCallingUid, vUserId, vPackageName, vInstaller}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+move-result-object vInstaller
+```
+
+Tự xác định:
+
+- ContentResolver hoặc `null`;
+- calling UID;
+- user ID;
+- package đang được query;
+- installer stock.
+
+Không copy register từ template sang ROM khác.
+
+---
+
+### D. Lọc / spoof Settings theo app gọi
+
+Phần này khác rõ giữa implementation/framework cũ và patch A17 hiện tại.
+
+#### Android 13–16 / framework dùng String hook
+
+Patch đường GET phía server của `SettingsProvider` khi Binder caller identity vẫn còn nguyên.
+
+Không đặt hook:
+
+- trong client cache như `Settings$NameValueCache`;
+- sau `Binder.clearCallingIdentity()`;
+- ở method không trả giá trị Settings thật cho caller.
+
+Với framework dùng hai hook:
+
+```smali
+shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
+filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+```
+
+logic tham chiếu:
+
+```smali
+const/4 vNull, 0x0
+
+invoke-static {vNull, vNamespace, vName}, Landroid/security/kaorios/KaoriosHook;->shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
+move-result vRemove
+
+if-eqz vRemove, :cond_kaorios_setting_value
+const/4 vValue, 0x0
+return-object vValue
+
+:cond_kaorios_setting_value
+invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+move-result-object vValue
+```
+
+Sau đó giữ nguyên cleanup/return stock của ROM.
+
+#### Android 17 hiện tại
+
+Patcher A17 hiện patch:
 
 ```smali
 Lcom/android/providers/settings/SettingsProvider;
 ```
 
-**Method**
+Method:
 
 ```smali
 call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
 ```
 
-Patcher hiện tại patch method trả về **Bundle**, không patch helper GET trả String.
-
-### Bước 1 — cấp thêm một local register
-
-Method này có parameter width = 4:
-
-```text
-p0 = this
-p1 = method
-p2 = name
-p3 = args
-```
-
-Nếu dùng:
+ABI hook:
 
 ```smali
-.locals N
+filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 ```
 
-đổi thành:
+Trong method `call(...)`, tìm:
 
 ```smali
-.locals N+1
+Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
 ```
 
-và dùng local mới `vN` làm `vHook`.
+Nếu có `move-result`, đặt hook sau `move-result` đó nhưng trước `Binder.clearCallingIdentity()`.
 
-Nếu dùng:
-
-```smali
-.registers R
-```
-
-thì:
-
-```text
-local stock = R - 4
-vHook = v(R - 4)
-.locals mới = R - 4 + 1
-```
-
-Có thể đổi directive từ `.registers R` sang `.locals ...` như patcher Python.
-
-### Bước 2 — tìm anchor getDeviceId()
-
-Trong chính method `call(...)`, tìm:
-
-```smali
-invoke-virtual {...}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
-```
-
-Nếu ngay sau có:
-
-```smali
-move-result vX
-```
-
-thì hook phải đặt **sau cả dòng move-result**.
-
-Ví dụ stock:
-
-```smali
-invoke-virtual {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
-move-result v5
-```
-
-Chèn sau đó:
+Cấp thêm một local register `vHook`, rồi chèn:
 
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 move-result-object vHook
 
 if-eqz vHook, :cond_kaorios_settings_stock
-
 return-object vHook
 
 :cond_kaorios_settings_stock
 ```
 
-Thay `vHook` bằng local mới ở bước 1.
+Nếu hook trả `null`, code stock chạy tiếp.
 
-Hook phải nằm trước `Binder.clearCallingIdentity()` nếu call này xuất hiện về sau trong method.
-
-Nếu hook trả `null`, code stock tiếp tục chạy.
-
-### Ví dụ register
-
-Nếu stock là:
-
-```smali
-.registers 12
-```
-
-vì method có 4 parameter register nên stock có 8 local:
+Nếu method dùng `.registers R`, method này có 4 parameter register (`p0..p3`):
 
 ```text
-v0 ... v7
+stock locals = R - 4
+vHook = v(R - 4)
+.locals mới = R - 4 + 1
 ```
 
-Đổi thành:
-
-```smali
-.locals 9
-```
-
-và dùng:
-
-```text
-vHook = v8
-```
-
-Sau patch:
-
-```smali
-.locals 9
-
-...
-
-invoke-virtual {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
-move-result v5
-
-invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
-move-result-object v8
-
-if-eqz v8, :cond_kaorios_settings_stock
-return-object v8
-
-:cond_kaorios_settings_stock
-
-# code stock tiếp tục
-```
+Không dùng đoạn A17 này cho ROM/framework còn dùng ABI `filterSettingValue/shouldRemoveSetting`.
 
 ---
 
-## 4.2 Repack và chữ ký SettingsProvider.apk
+## 5. Kiểm tra sau patch
 
-Sau khi assemble lại DEX:
+Trước khi build/flash:
 
-1. Thay đúng DEX đã sửa vào APK.
-2. Xóa metadata chữ ký v1 cũ nếu có:
-   - `META-INF/MANIFEST.MF`
-   - `META-INF/*.SF`
-   - `META-INF/*.RSA`
-   - `META-INF/*.DSA`
-   - `META-INF/*.EC`
-3. Giữ các file `META-INF` khác không liên quan chữ ký.
-4. Repack APK.
-5. Zipalign.
-6. Nếu flash trực tiếp vào ROM, ký lại bằng đúng platform key/cert của ROM.
+- mỗi hook chỉ được chèn một lần trong method target;
+- label mới không trùng label stock;
+- register mới không đè parameter/local stock;
+- signature gọi từ Smali phải tồn tại đúng trong DEX Kaorios;
+- không đổi DEX stock không liên quan;
+- Settings hook phải chạy khi Binder caller identity vẫn còn đúng;
+- `SystemServer.initSystemServer()` chỉ gọi một lần.
 
-Không dùng cert khác nếu ROM yêu cầu package này giữ platform signature.
+Sau khi build:
 
----
+1. assemble lại Smali;
+2. decompile artifact vừa build để kiểm tra hook vẫn còn đúng;
+3. boot ROM;
+4. kiểm tra logcat/crash;
+5. test riêng từng tính năng trước khi phát hành.
 
-# 5. Kiểm tra sau patch
-
-## framework.jar
-
-Kiểm tra `KaoriosHook.smali`/DEX Kaorios có đúng các method mà call site đang gọi:
-
-```text
-initActivityThread(Ljava/lang/Object;)V
-initSystemServer()V
-shouldHideAppListForCaller(ILjava/lang/String;I)Z
-filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
-initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
-initContext(Landroid/content/Context;)V
-hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-```
-
-Mỗi signature phải tồn tại đúng một lần.
-
-## services.jar
-
-- `ComputerEngine` chỉ có một call `shouldHideAppListForCaller(...)` trong method target.
-- `SystemServer.run()V` chỉ có một call `initSystemServer()V`.
-- call `initSystemServer()V` nằm trước `Looper.loop()V`.
-
-## SettingsProvider.apk
-
-- method `call(...): Bundle` chỉ có một call `filterSettingsCall(...)`;
-- hook nằm sau `getDeviceId()I`;
-- nếu có `Binder.clearCallingIdentity()`, hook nằm trước nó;
-- local register mới không đè register stock.
-
-## Build
-
-- chỉ các field trong danh sách ở trên bị bỏ `final`;
-- `SDK_INT` giữ nguyên.
-
-Sau khi repack, cần boot thử ROM và test runtime. Assemble thành công chỉ chứng minh Smali hợp lệ, không chứng minh mọi hook phù hợp với OEM implementation.
+Android 13–17 và ROM OEM có thể thay đổi method/register giữa các bản cập nhật, nên luôn đối chiếu logic chứ không copy register cứng.
 
 ---
 
-# 6. Template tham khảo
+## 6. Tài liệu khác
 
-Chỉ dùng để đối chiếu vị trí/ý tưởng patch, không copy nguyên class sang ROM khác:
-
-- [Framework template](../Template/Template_V2060/framework)
-- [Services template](../Template/Template_V2060/service)
-- [Android 17 Build notes](notes-a17_VI.md)
-- [Disable FLAG_SECURE](Disable_Secure_Flag_VI.md)
+- [Android 17 Build patch](notes-a17_VI.md)
+- [Disable Secure Flag](Disable_Secure_Flag_VI.md)
 - [CorePatch](CorePatch_VI.md)
-
-Các script trong `script/` là nguồn tham chiếu cho anchor và register logic nếu cần đối chiếu thêm.
+- [Template Smali](../Template/Template_V2060)
