@@ -7,7 +7,6 @@ import hashlib
 import json
 import re
 import struct
-import sys
 from pathlib import Path
 
 ACTIVITY_THREAD_DESC = "Landroid/app/ActivityThread;"

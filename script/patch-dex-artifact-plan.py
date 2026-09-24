@@ -6,7 +6,6 @@ import argparse
 import hashlib
 import json
 import struct
-import sys
 from pathlib import Path
 
 
