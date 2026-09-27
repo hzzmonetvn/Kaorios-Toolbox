@@ -134,6 +134,8 @@ def patch(text: str) -> tuple[str, bool]:
         return text, False
     if count > 1:
         raise ValueError("multiple shouldHideAppListForCaller hooks already present")
+    if ":cond_kaorios_ps_null" in body:
+        raise ValueError("reserved Kaorios label already exists in target method")
 
     newline = "\r\n" if "\r\n" in text else "\n"
     user_param = "p5" if param_count == 7 else "p3"
@@ -159,6 +161,16 @@ def patch(text: str) -> tuple[str, bool]:
         existing_locals = current_regs - param_width
         if existing_locals < 0:
             raise ValueError(f".registers {current_regs} is less than parameter count {param_width}")
+        # .registers may reference parameter slots numerically as vN. Adding a
+        # local shifts the physical parameter registers, so canonicalize those aliases
+        # to stable pN names before converting the directive to .locals.
+        for register_index in range(current_regs - 1, existing_locals - 1, -1):
+            parameter_index = register_index - existing_locals
+            updated_body = re.sub(
+                rf"(?<![A-Za-z0-9_])v{register_index}(?![0-9])",
+                f"p{parameter_index}",
+                updated_body,
+            )
         new_locs = existing_locals + 1
         hook_reg = f"v{existing_locals}"
         indent = reg_match.group("indent")

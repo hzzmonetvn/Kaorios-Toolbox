@@ -32,13 +32,11 @@ def slow_print(text, delay=0.01):
 def _load_sibling(filename, module_name):
     target = SCRIPT_DIR / filename
     if target.is_file():
-        try:
-            spec = importlib.util.spec_from_file_location(module_name, target)
+        spec = importlib.util.spec_from_file_location(module_name, target)
+        if spec and spec.loader:
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
             return mod
-        except Exception:
-            return None
     return None
 
 
@@ -54,11 +52,8 @@ mod_sp = _load_sibling("patch-settingsprovider-a17.py", "sp_patcher")
 
 def patch_activity_thread(content):
     if mod_at is not None:
-        try:
-            patched, changed = mod_at.patch(content)
-            return patched
-        except Exception:
-            pass
+        patched, _ = mod_at.patch(content)
+        return patched
 
     if "KaoriosHook;->initActivityThread" in content:
         return content
@@ -72,25 +67,19 @@ def patch_activity_thread(content):
         newline = "\r\n" if "\r\n" in content else "\n"
         inject = f"{indent}invoke-static {{p1}}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V{newline}"
         return content[:target_assign.end()] + inject + content[target_assign.end():]
-    return content
+    raise ValueError("ActivityThread: target anchor not found and hook missing")
 
 
 def patch_computer_engine(content):
     if mod_ce is not None:
-        try:
-            patched, changed = mod_ce.patch(content)
-            return patched
-        except Exception:
-            pass
-    return content
+        patched, _ = mod_ce.patch(content)
+        return patched
+    raise ValueError("patch-services-a17.py required for ComputerEngine patch but unavailable")
 
 
 def patch_system_server(content):
     if mod_ss is not None:
-        try:
-            return mod_ss.patch(content)
-        except Exception:
-            pass
+        return mod_ss.patch(content)
 
     if "KaoriosHook;->initSystemServer" in content:
         return content
@@ -106,17 +95,17 @@ def patch_system_server(content):
     pattern = r'([ \t]*invoke-[^\n]*?Lcom/android/server/SystemServer;->startOtherServices\(Lcom/android/server/utils/TimingsTraceAndSlog;\)V)'
     def replacer(match):
         return "    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V\n\n" + match.group(1)
-    return re.sub(pattern, replacer, content)
+    patched = re.sub(pattern, replacer, content)
+    if patched == content:
+        raise ValueError("SystemServer: target anchor not found and hook missing")
+    return patched
 
 
 def patch_settings_provider(content):
     if mod_sp is not None:
-        try:
-            patched, changed = mod_sp.patch(content)
-            return patched
-        except Exception:
-            pass
-    return content
+        patched, _ = mod_sp.patch(content)
+        return patched
+    raise ValueError("patch-settingsprovider-a17.py required for SettingsProvider patch but unavailable")
 
 
 def patch_keystore_generator(content):
@@ -383,7 +372,7 @@ def main():
             mode = input("\n-> Nhập lựa chọn (1/2/3): ").strip()
         if mode not in ['1', '2', '3']:
             print("Lựa chọn không hợp lệ!")
-            return
+            sys.exit(1)
 
         target_dir = args.path
         if target_dir is None:
@@ -394,6 +383,7 @@ def main():
         process_files(target_dir, mode, slow=not args.no_delay)
     except Exception as e:
         print(f"\n[!] LỖI TOOL: {e}")
+        sys.exit(1)
 
     print("\n" + "="*40)
     if sys.stdin.isatty():
