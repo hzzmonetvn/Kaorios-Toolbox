@@ -12,7 +12,7 @@ name: Build APK and framework DEX (private source)
 #              → chọn KaoriosToolbox-Frameowrk, quyền Contents = Read-only
 #
 # Chạy: Actions → Build Toolbox (private source) → Run workflow
-#       → chọn nhánh repo private cần build (mặc định: flutter-port).
+#       → chọn nhánh repo private cần build (mặc định: Toolbox-Framework).
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ on:
       private_branch:
         description: "Nhánh repo private cần build"
         required: true
-        default: "flutter-port"
+        default: "Toolbox-Framework"
       private_ref:
         description: "Commit SHA cụ thể (để trống = HEAD của nhánh trên)"
         required: false

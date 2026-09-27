@@ -1,0 +1,46 @@
+name: Test patcher
+
+on:
+  push:
+    paths:
+      - 'script/kaorios_patcher_a17.py'
+      - 'script/kaorios_patcher_a17_test.py'
+      - 'script/patch-*.py'
+      - 'script/verify-*.py'
+  pull_request:
+    paths:
+      - 'script/kaorios_patcher_a17.py'
+      - 'script/kaorios_patcher_a17_test.py'
+      - 'script/patch-*.py'
+      - 'script/verify-*.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Syntax check all Python scripts
+        run: |
+          python -m py_compile script/kaorios_patcher_a17.py
+          for f in script/patch-*.py script/verify-*.py; do
+            [ -f "$f" ] && python -m py_compile "$f"
+          done
+
+      - name: Syntax check shell scripts
+        run: |
+          for f in script/*.sh Toolbox-Update/scripts/*.sh; do
+            [ -f "$f" ] && bash -n "$f"
+          done
+
+      - name: Run patcher unit tests
+        run: python -m unittest discover -s script -p 'kaorios_patcher_a17_test.py' -v

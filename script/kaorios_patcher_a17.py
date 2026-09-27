@@ -120,6 +120,17 @@ def patch_settings_provider(content: str) -> tuple[str, bool]:
     raise ValueError("patch-settingsprovider-a17.py required for SettingsProvider patch but unavailable")
 
 
+def _canonicalize_param_aliases(method_body: str, registers: int, param_count: int) -> str:
+    """Replace v(R-P+N) aliases with pN so .registers bump doesn't corrupt them."""
+    first_param_v = registers - param_count
+    for n in range(param_count):
+        vN = f"v{first_param_v + n}"
+        pN = f"p{n}"
+        # Replace only whole-word occurrences — e.g. v5 but not v50
+        method_body = re.sub(rf'\b{re.escape(vN)}\b', pN, method_body)
+    return method_body
+
+
 def patch_keystore_generator(content: str) -> tuple[str, bool]:
     start = content.find("generateKeyPair()Ljava/security/KeyPair;")
     if start == -1:
@@ -141,6 +152,8 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
     new_reg = old_reg + 1
 
     if directive == "registers":
+        # generateKeyPair() is a virtual (non-static) method with 1 implicit param (p0=this)
+        method_body = _canonicalize_param_aliases(method_body, old_reg, 1)
         v_target = f"v{new_reg - 2}"
     else:
         v_target = f"v{old_reg}"
@@ -309,6 +322,24 @@ def verify_target_content(filename: str, content: str) -> None:
     elif filename == "SettingsProvider.smali":
         if mod_sp is not None:
             mod_sp.verify(content)
+    elif filename == "AndroidKeyStoreKeyPairGeneratorSpi.smali":
+        if "KaoriosHook;->initGenerateSoftwareKeyPair" not in content:
+            raise ValueError("AndroidKeyStoreKeyPairGeneratorSpi: KaoriosHook initGenerateSoftwareKeyPair hook not found after patch")
+        if "generateKeyPair()Ljava/security/KeyPair;" not in content:
+            raise ValueError("AndroidKeyStoreKeyPairGeneratorSpi: generateKeyPair method not found")
+    elif filename == "AndroidKeyStoreSpi.smali":
+        if "KaoriosHook;->CertificateChainIfNeeded" not in content:
+            raise ValueError("AndroidKeyStoreSpi: KaoriosHook CertificateChainIfNeeded hook not found after patch")
+        if "engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;" not in content:
+            raise ValueError("AndroidKeyStoreSpi: engineGetCertificateChain method not found")
+    elif filename == "Instrumentation.smali":
+        if "KaoriosHook;->initContext" not in content:
+            raise ValueError("Instrumentation: KaoriosHook initContext hook not found after patch")
+    elif filename == "ApplicationPackageManager.smali":
+        if "KaoriosHook;->hasSystemFeature" not in content:
+            raise ValueError("ApplicationPackageManager: KaoriosHook hasSystemFeature hook not found after patch")
+        if "hasSystemFeature(Ljava/lang/String;I)Z" not in content:
+            raise ValueError("ApplicationPackageManager: hasSystemFeature method not found")
 
 
 def apply_target_patch(filename: str, content: str, targets: dict) -> tuple[str, str, str | None]:
@@ -460,7 +491,7 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
     total_processed = patched_count + already_patched_count + unsupported_count + failed_count
     if total_processed == 0:
         print("[-] Không tìm thấy file mục tiêu nào trong thư mục.")
-        return True
+        return False
 
     # If any target encountered error or unsupported layout, fail closed
     if failed_count > 0 or unsupported_count > 0:

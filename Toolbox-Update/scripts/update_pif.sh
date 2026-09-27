@@ -150,6 +150,7 @@ echo "Downloading OTA metadata prefix..."
 
 FINGERPRINT=""
 SECURITY_PATCH=""
+SDK_INT=""
 
 # META-INF/com/android/metadata is normally near the beginning of Pixel OTA
 # packages. Grow the range progressively instead of assuming it is always
@@ -167,6 +168,9 @@ for RANGE_END in 65535 262143 1048575 4194303; do
   )"
   SECURITY_PATCH="$(
     grep -aom1 'security-patch-level=[^[:space:]]*' metadata.bin       | sed 's/^security-patch-level=//'       | tr -d '\r'       || true
+  )"
+  SDK_INT="$(
+    grep -aom1 'post-sdk-level=[^[:space:]]*' metadata.bin       | sed 's/^post-sdk-level=//'       | tr -d '\r'       || true
   )"
 
   if [ -n "$FINGERPRINT" ] && [ -n "$SECURITY_PATCH" ]; then
@@ -191,14 +195,14 @@ echo "Parsed PRODUCT=$PRODUCT, DEVICE=$DEVICE"
 echo "Security patch: $SECURITY_PATCH"
 echo "Writing output to $TARGET_FILE..."
 
-jq -n   --arg manufacturer "Google"   --arg model "$TARGET_MODEL"   --arg fingerprint "$FINGERPRINT"   --arg product "$PRODUCT"   --arg device "$DEVICE"   --arg security_patch "$SECURITY_PATCH"   '{
+jq -n   --arg manufacturer "Google"   --arg model "$TARGET_MODEL"   --arg fingerprint "$FINGERPRINT"   --arg product "$PRODUCT"   --arg device "$DEVICE"   --arg security_patch "$SECURITY_PATCH"   --argjson sdk_int "${SDK_INT:-0}"   '{
     MANUFACTURER: $manufacturer,
     MODEL: $model,
     FINGERPRINT: $fingerprint,
     PRODUCT: $product,
     DEVICE: $device,
     SECURITY_PATCH: $security_patch,
-    DEVICE_INITIAL_SDK_INT: "21"
+    DEVICE_INITIAL_SDK_INT: ($sdk_int | tostring)
   }' > "$TARGET_FILE"
 
 echo "Done. Output written to: $TARGET_FILE"
