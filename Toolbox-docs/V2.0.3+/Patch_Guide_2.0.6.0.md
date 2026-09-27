@@ -427,11 +427,7 @@ Class:
 Lcom/android/providers/settings/SettingsProvider;
 ```
 
-Method:
-
-```smali
-call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-```
+#### 1. Method: `call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;`
 
 Current hook ABI:
 
@@ -439,7 +435,7 @@ Current hook ABI:
 filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 ```
 
-Inside `call(...)`, find the `getDeviceId()I` call. If a `move-result` follows it, inject after that line but before any later `Binder.clearCallingIdentity()`.
+Inside `call(...)`, find the `getDeviceId()I` call. If a `move-result` follows it, inject after that line but strictly BEFORE any later `Binder.clearCallingIdentity()`. The hook relies on Binder calling UID/PID to determine the true calling package identity.
 
 Allocate one extra local `vHook`, then add:
 
@@ -455,7 +451,10 @@ return-object vHook
 
 If the hook returns `null`, stock logic continues.
 
-For `.registers R`, this method has four parameter registers (`p0..p3`):
+**Warning on `.registers` Parameter Alias Hazard:**
+For methods using `.registers R` instead of `.locals L`, parameter registers (`p0..pN`) are physically mapped to `v(R-P)..v(R-1)`. When expanding locals or registers, any stock instruction referencing parameters via physical register aliases (`vN`) will be clobbered unless all parameter aliases are canonicalized to `pN` before the register/local directive is expanded. The patcher canonicalizes all parameter aliases (`vN -> pN`) before register expansion.
+
+For `.registers R`, `call` has four parameter registers (`p0..p3`):
 
 ```text
 stock locals = R - 4
@@ -463,7 +462,46 @@ vHook = v(R - 4)
 new .locals = R - 4 + 1
 ```
 
-Do not apply this A17 block to a framework that still exposes the `filterSettingValue/shouldRemoveSetting` ABI.
+#### 2. Method: `query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;`
+
+Current query hook ABI:
+
+```smali
+filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+```
+
+To support cursor-based settings queries per calling app, `SettingsProvider.query(...)` requires post-processing hook insertion at every `return-object` exit site.
+
+Before each `return-object <cursor_reg>`, insert:
+
+```smali
+invoke-static {<cursor_reg>, p1, p3, p4}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+move-result-object <cursor_reg>
+return-object <cursor_reg>
+```
+
+Stock cursor semantics and nullity are preserved if the hook returns the original cursor or null.
+
+#### 3. AdvancedPolicy SELinux Requirements
+
+The `AdvancedPolicyService` operates as a registered system Binder service (`kaorios_advanced_policy`). For SettingsProvider and system_server to interact properly, the ROM SELinux policy must satisfy:
+1. **Service Type**: `kaorios_advanced_policy_service` declared as `service_manager_type`.
+2. **service_contexts**: Exactly mapped as `kaorios_advanced_policy u:object_r:kaorios_advanced_policy_service:s0` without conflicts.
+3. **system_server**: Allowed `service_manager { add find }` for `kaorios_advanced_policy_service`.
+4. **SettingsProvider Domain** (e.g. `system_app`): Allowed `service_manager { find }` for `kaorios_advanced_policy_service`.
+5. **Binder Call**: Allowed `binder { call }` between the SettingsProvider domain and `system_server`.
+
+Inspect compliance with `script/check-advanced-policy-sepolicy.sh` or `script/check-advanced-policy-sepolicy.py`.
+
+#### 4. Post-Patch Verification Requirement
+
+All patched smali artifacts must pass their corresponding fail-closed verifiers before repacking:
+- Framework: `verify-framework-a17-hooks.py`
+- Services (`ComputerEngine`): `verify-services-a17-hooks.py`
+- SystemServer: `verify-systemserver-a17-hooks.py`
+- SettingsProvider: `verify-settingsprovider-a17-hooks.py`
+
+Do not flash or ship modified DEXes if any verifier exits non-zero.
 
 ---
 

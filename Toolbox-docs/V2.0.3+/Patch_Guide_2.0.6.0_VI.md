@@ -460,11 +460,7 @@ Patcher A17 hiện patch:
 Lcom/android/providers/settings/SettingsProvider;
 ```
 
-Method:
-
-```smali
-call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-```
+#### 1. Method: `call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;`
 
 ABI hook:
 
@@ -478,7 +474,7 @@ Trong method `call(...)`, tìm:
 Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
 ```
 
-Nếu có `move-result`, đặt hook sau `move-result` đó nhưng trước `Binder.clearCallingIdentity()`.
+Nếu có `move-result`, đặt hook ngay sau `move-result` đó nhưng bắt buộc TRƯỚC mọi lời gọi `Binder.clearCallingIdentity()`. Hook phụ thuộc vào Binder calling UID/PID để xác định chính xác danh tính app gọi.
 
 Cấp thêm một local register `vHook`, rồi chèn:
 
@@ -494,6 +490,9 @@ return-object vHook
 
 Nếu hook trả `null`, code stock chạy tiếp.
 
+**Cảnh báo nguy cơ Parameter Alias trong `.registers`:**
+Đối với method dùng `.registers R` thay vì `.locals L`, các parameter register (`p0..pN`) được ánh xạ vật lý vào các register cuối `v(R-P)..v(R-1)`. Khi tăng số register hoặc locals, các lệnh gốc sử dụng tên bí danh vật lý `vN` sẽ bị lệch (trỏ vào local thay vì parameter). Patcher tự động chuẩn hóa toàn bộ bí danh parameter `vN -> pN` trước khi mở rộng directive registers.
+
 Nếu method dùng `.registers R`, method này có 4 parameter register (`p0..p3`):
 
 ```text
@@ -502,7 +501,44 @@ vHook = v(R - 4)
 .locals mới = R - 4 + 1
 ```
 
-Không dùng đoạn A17 này cho ROM/framework còn dùng ABI `filterSettingValue/shouldRemoveSetting`.
+#### 2. Method: `query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;`
+
+ABI hook query:
+
+```smali
+filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+```
+
+Để hỗ trợ spoof giá trị settings khi app gọi qua đường cursor query, `SettingsProvider.query(...)` yêu cầu chèn post-processing hook tại toàn bộ các điểm thoát `return-object`.
+
+Trước mỗi `return-object <cursor_reg>`, chèn:
+
+```smali
+invoke-static {<cursor_reg>, p1, p3, p4}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+move-result-object <cursor_reg>
+return-object <cursor_reg>
+```
+
+#### 3. Yêu cầu SELinux cho AdvancedPolicy Service
+
+Service `AdvancedPolicyService` hoạt động như một system Binder service có tên `kaorios_advanced_policy`. Để SettingsProvider và system_server tương tác thông suốt, SELinux policy của ROM cần thỏa mãn:
+1. **Service Type**: `kaorios_advanced_policy_service` được khai báo là `service_manager_type`.
+2. **service_contexts**: Ánh xạ chính xác `kaorios_advanced_policy u:object_r:kaorios_advanced_policy_service:s0` không bị trùng lặp xung đột.
+3. **system_server**: Cho phép `service_manager { add find }` đối với `kaorios_advanced_policy_service`.
+4. **Domain của SettingsProvider** (thường là `system_app`): Cho phép `service_manager { find }` đối với `kaorios_advanced_policy_service`.
+5. **Binder Call**: Cho phép `binder { call }` giữa domain của SettingsProvider và `system_server`.
+
+Sử dụng tool kiểm tra: `script/check-advanced-policy-sepolicy.sh` hoặc `script/check-advanced-policy-sepolicy.py`.
+
+#### 4. Bắt buộc chạy Verifier sau patch
+
+Toàn bộ file smali sau khi patch phải vượt qua verifier tương ứng trước khi đóng gói DEX:
+- Framework: `verify-framework-a17-hooks.py`
+- Services (`ComputerEngine`): `verify-services-a17-hooks.py`
+- SystemServer: `verify-systemserver-a17-hooks.py`
+- SettingsProvider: `verify-settingsprovider-a17-hooks.py`
+
+Không build hoặc flash artifact nếu bất kỳ verifier nào trả về mã lỗi non-zero.
 
 ---
 

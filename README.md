@@ -56,16 +56,15 @@ Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-To
 
 ### Advanced features: framework patch required
 
-For builds with the Advanced patch check, use a matching Toolbox APK and framework
-DEX with probe support. Advanced unlocks only after a live check reaches **both
-SettingsProvider hooks** for Global, Secure and System, including missing keys.
-Installing only the APK, loading only the DEX, or enabling root fallback is not
-enough. Apply the ROM call-site patches and reboot.
+Advanced Features are controlled by the `kaorios_advanced_features` setting in the app. When enabled, the framework switches HMA package visibility isolation from global hide-all to granular, caller-aware policy enforcement (`kaorios_hma_config`) and enables per-app Settings value spoofing (`kaorios_setting_spoof_json`).
 
-See the setup and troubleshooting steps in the [English patch guide](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md#advanced-features-patch-check)
-or [hướng dẫn tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md#kiểm-tra-patch-cho-tính-năng-nâng-cao).
-This check does not certify AppsFilter/installer-source patches or replace testing
-on the target ROM; a framework version string alone is not proof of hook coverage.
+For Advanced Features to take effect at runtime, the target ROM requires:
+1. **SystemServer Lifecycle Hook**: `initSystemServer()` in `SystemServer.smali` to bootstrap `AdvancedPolicyService`.
+2. **Package Visibility Filter Hook**: `shouldHideAppListForCaller` in `ComputerEngine.smali` (`services.jar`) for caller-aware isolation.
+3. **SettingsProvider Hooks**: Both `call()` (`filterSettingsCall`) and `query()` (`filterSettingsQueryResult`) in `SettingsProvider.smali` (`SettingsProvider.apk`) to spoof settings per calling package.
+4. **SELinux Policy**: Policy allowing `system_server` to add `kaorios_advanced_policy` and allowing the SettingsProvider domain to find and communicate with `AdvancedPolicyService`.
+
+If a ROM lacks these hooks or policy rules, toggling the feature will not take effect on that ROM. See the [English patch guide](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [hướng dẫn tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md) for smali patching and verification procedures.
 
 ---
 
