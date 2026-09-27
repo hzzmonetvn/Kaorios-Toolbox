@@ -1,0 +1,273 @@
+# ===== BANKS / DIGITAL BANKS =====
+
+# Vietcombank
+com.VCB
+com.vcb.sme
+
+# BIDV
+com.vnpay.bidv
+
+# VietinBank
+com.vietinbank.ipay
+
+# Agribank
+com.vnpay.Agribank3g
+
+# MB Bank
+com.mbmobile
+
+# Techcombank
+vn.com.techcombank.bb.app
+
+# VPBank
+com.vnpay.vpbankonline
+
+# ACB
+mobile.acb.com.vn
+
+# Sacombank
+com.sacombank.ewallet
+
+# TPBank
+com.tpb.mb.gprsandroid
+
+# VIB
+com.vib.myvib2
+
+# SHB - current
+vn.shb.saha.mbanking
+
+# SHB - legacy
+vn.shb.mbanking
+
+# SHB corporate
+vn.shb.dn
+
+# SeABank
+vn.com.seabank.mb1
+
+# MSB
+vn.com.msb.smartBanking
+
+# OCB
+vn.com.ocb.awe
+com.ocb.omnicib
+
+# Eximbank
+com.vnpay.EximBankOmni
+vn.com.eximbank.business
+
+# LPBank
+vn.com.lpb.lienviet24h
+
+# HDBank
+com.hdbank.dihdbank
+com.vnpay.hdbank
+
+# Nam A Bank
+ops.namabank.com.vn
+
+# KienlongBank
+com.sunshine.ksbank
+
+# BVBank
+vn.banvietbank.mobilebanking
+
+# NCB
+com.ncb.bank
+com.ncb.bank.biz
+
+# PVcomBank
+com.pvcombank.retail
+
+# VietABank
+com.vn.vietaomni
+
+# Vietbank
+com.vn.vietbankomni
+com.vn.vietbanksmeomni
+
+# ABBank
+vn.abbank.retail
+
+# GPBank
+com.gpbank.app
+com.gpbank.cmbapp
+
+# PGBank
+pgbankApp.pgbank.com.vn
+
+# BAC A BANK
+com.bab.retailUAT
+com.bab.corp
+
+# SAIGONBANK
+com.vnpay.sgbank
+
+# Co-opBank
+com.vnpay.coopbank
+
+# BAOVIET Bank
+com.vnpay.bvbank
+
+# CIMB Vietnam
+vn.cimbbank.octo
+
+# HSBC Vietnam
+vn.hsbc.hsbcvietnam
+
+# Shinhan Vietnam
+com.shinhan.global.vn.bank
+
+# Woori Vietnam
+vn.com.woori.smart
+
+# Hong Leong Bank Vietnam
+vn.com.hongleongconnect.mobile
+
+# Public Bank Vietnam
+com.vnpay.publicbank
+
+# Indovina Bank
+com.vnpay.ivb
+
+# Cake by VPBank
+xyz.be.cake
+
+# Timo
+io.lifestyle.plus
+
+# Vikki Digital Bank
+com.finx.vikki
+
+# Vikki / DongA migration apps
+com.vn.dongabank
+com.dongabank.mobilenternet
+com.dongabank.softotp
+
+# ===== EWALLETS / PAYMENTS =====
+
+# MoMo
+com.mservice.momotransfer
+
+# ZaloPay
+vn.com.vng.zalopay
+
+# Viettel Money
+com.bplus.vtpay
+
+# VNPAY
+vnpay.smartacccount
+
+# ShopeePay
+com.beeasy.toppay
+
+# Payoo
+vn.payoo
+
+# VNPT Money
+vnptpay.vnptmedia.vnpt.com.vnptpay
+
+
+# ===== SECURITIES / INVESTMENT =====
+
+# SSI
+org.ssi.iBoardSSI.Pro
+com.ssi.ibroker
+
+# VPS
+vn.com.vpbs.smartone
+
+# VNDIRECT
+vn.com.vndirect.stocks
+vn.com.vndirect.protrade
+
+# TCBS / TCInvest
+com.fss.tcbs.mobiletrading
+
+# HSC
+vn.com.hsc.lotus.trading
+
+# MBS
+vn.com.mbs.m24np
+
+# VCBS
+com.vcbs2.mobiletrading
+
+# BSC
+com.bsc.mobiletrading
+
+# Vietcap
+com.vcsc.vietcap
+
+# Mirae Asset Vietnam
+com.masvn.mts.pro
+
+# KIS Vietnam
+com.koreainvestment.vietnam
+
+# Pinetree
+com.pinetree.alphatrading
+
+# Kafi
+vn.kafi.tradeapp
+
+# DNSE
+vn.com.encapital.arrow
+
+# Yuanta Vietnam
+com.yuanta.android.nexus.vn
+vn.ysvn.ysflex
+com.fss.yuanta
+com.innotech.MTS.yswinner
+
+# ASEAN Securities
+vn.com.asean.mobiletrading
+
+# Phu Hung Securities
+com.phs.app
+
+# ASAM Securities
+vn.asam.mts
+
+# Hai Phong Securities
+vn.innotech.haseco.mts
+
+# VikkiBankS
+vn.goline.das
+
+# ===== GOVERNMENT / PUBLIC SERVICES =====
+
+# Bộ Công an - VNeID
+com.vnid
+
+# Cục CSGT - VNeTraffic
+com.ots.c08.vnetraffic
+
+# BHXH Việt Nam - VssID
+com.bhxhapp
+
+# Thuế - eTax Mobile
+com.etax.icanhan
+
+# VNNIC - i-SPEED
+vn.vnnic.ispeed
+
+# ===== TELECOM =====
+
+# Viettel - current
+com.viettel.appviettel
+
+# Viettel - legacy My Viettel
+com.vttm.vietteldiscovery
+
+# VNPT / Vinaphone
+com.vnp.myvinaphone
+
+# MobiFone
+vms.com.vn.mymobifone
+
+# FPT Telecom
+com.rad.hifpt
+
+
