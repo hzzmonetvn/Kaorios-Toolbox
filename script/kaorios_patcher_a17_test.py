@@ -477,5 +477,51 @@ class UniqueLabelTest(unittest.TestCase):
             self.assertEqual(labels.count(lbl), 1, f"Duplicate label {lbl} in output")
 
 
+SAMPLE_KEYSTORE_SPI_PARTIAL = """\
+.class public Landroid/security/AndroidKeyStoreSpi;
+.super Ljava/lang/Object;
+
+.method public engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    .locals 4
+
+    if-eqz p1, :cond_null
+
+    aput-object v0, v1, v2
+    invoke-static {v1}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+    move-result-object v1
+    return-object v1
+
+    :cond_null
+    aput-object v0, v3, v2
+    return-object v3
+.end method
+"""
+
+
+class PartialPatchFailClosedTest(unittest.TestCase):
+    """Bug #13: partial-patch state must route to FAILED, not ALREADY_PATCHED."""
+
+    def _load_patcher(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("patcher", str(PATCHER_PY))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_keystore_spi_partial_patch_routes_to_failed(self):
+        mod = self._load_patcher()
+        targets = {"AndroidKeyStoreSpi.smali": mod.patch_keystore_spi}
+        status, _, msg = mod.apply_target_patch(
+            "AndroidKeyStoreSpi.smali",
+            SAMPLE_KEYSTORE_SPI_PARTIAL,
+            targets,
+        )
+        self.assertEqual(
+            status, mod.PatchStatus.FAILED,
+            f"Partial-patch must be FAILED not {status!r}; msg={msg!r}",
+        )
+        self.assertIsNotNone(msg)
+
+
 if __name__ == "__main__":
     unittest.main()
