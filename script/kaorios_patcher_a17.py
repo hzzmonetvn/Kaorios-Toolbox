@@ -393,16 +393,25 @@ def verify_target_content(filename: str, content: str) -> None:
             "generateKeyPair()Ljava/security/KeyPair;",
             "AndroidKeyStoreKeyPairGeneratorSpi"
         )
-        if "KaoriosHook;->initGenerateSoftwareKeyPair" not in body:
-            raise ValueError("AndroidKeyStoreKeyPairGeneratorSpi: KaoriosHook initGenerateSoftwareKeyPair hook not found in generateKeyPair method")
+        count = len(re.findall(r'KaoriosHook;->initGenerateSoftwareKeyPair', body))
+        if count != 1:
+            raise ValueError(
+                f"AndroidKeyStoreKeyPairGeneratorSpi: expected exactly 1 initGenerateSoftwareKeyPair hook in generateKeyPair, found {count}"
+            )
     elif filename == "AndroidKeyStoreSpi.smali":
         body = _extract_method_body(
             content,
             "engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;",
             "AndroidKeyStoreSpi"
         )
-        if "KaoriosHook;->CertificateChainIfNeeded" not in body:
-            raise ValueError("AndroidKeyStoreSpi: KaoriosHook CertificateChainIfNeeded hook not found in engineGetCertificateChain method")
+        return_count = len(re.findall(r'return-object\s+[vp]\d+', body))
+        hook_count = len(re.findall(r'KaoriosHook;->CertificateChainIfNeeded', body))
+        if return_count == 0:
+            raise ValueError("AndroidKeyStoreSpi: no return-object found in engineGetCertificateChain")
+        if hook_count != return_count:
+            raise ValueError(
+                f"AndroidKeyStoreSpi: expected {return_count} CertificateChainIfNeeded hooks (one per return-object), found {hook_count}"
+            )
     elif filename == "Instrumentation.smali":
         body1 = _extract_method_body(
             content,
@@ -414,14 +423,29 @@ def verify_target_content(filename: str, content: str) -> None:
             "newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;",
             "Instrumentation"
         )
-        if "KaoriosHook;->initContext" not in body1 and "KaoriosHook;->initContext" not in body2:
+        returns1 = len(re.findall(r'return-object\s+[vp]\d+', body1))
+        returns2 = len(re.findall(r'return-object\s+[vp]\d+', body2))
+        hooks1 = len(re.findall(r'KaoriosHook;->initContext', body1))
+        hooks2 = len(re.findall(r'KaoriosHook;->initContext', body2))
+        if returns1 > 0 and hooks1 != returns1:
+            raise ValueError(
+                f"Instrumentation: newApplication(Class,Context) expected {returns1} initContext hooks, found {hooks1}"
+            )
+        if returns2 > 0 and hooks2 != returns2:
+            raise ValueError(
+                f"Instrumentation: newApplication(ClassLoader,String,Context) expected {returns2} initContext hooks, found {hooks2}"
+            )
+        if hooks1 == 0 and hooks2 == 0:
             raise ValueError("Instrumentation: KaoriosHook initContext hook not found in either newApplication method")
     elif filename == "ApplicationPackageManager.smali":
         pat = re.search(r'(\.method[^\n]*?hasSystemFeature\(Ljava/lang/String;I\)Z.*?\.end method)', content, flags=re.DOTALL)
         if pat is None:
             raise ValueError("ApplicationPackageManager: hasSystemFeature(Ljava/lang/String;I)Z method not found")
-        if "KaoriosHook;->hasSystemFeature" not in pat.group(1):
-            raise ValueError("ApplicationPackageManager: KaoriosHook hasSystemFeature hook not found in hasSystemFeature method")
+        count = len(re.findall(r'KaoriosHook;->hasSystemFeature', pat.group(1)))
+        if count != 1:
+            raise ValueError(
+                f"ApplicationPackageManager: expected exactly 1 hasSystemFeature hook, found {count}"
+            )
     elif filename == "Build.smali":
         fields_null = [
             "BRAND", "BRAND_FOR_ATTESTATION", "DEVICE", "DEVICE_FOR_ATTESTATION",
