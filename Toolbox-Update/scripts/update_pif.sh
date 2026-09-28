@@ -52,9 +52,11 @@ fi
 
 CURRENT_DEVICE=""
 CURRENT_MODEL=""
+CURRENT_DEVICE_INITIAL_SDK=""
 if [ -f "$TARGET_FILE" ]; then
   CURRENT_DEVICE="$(jq -r '.DEVICE // empty' "$TARGET_FILE" 2>/dev/null || true)"
   CURRENT_MODEL="$(jq -r '.MODEL // empty' "$TARGET_FILE" 2>/dev/null || true)"
+  CURRENT_DEVICE_INITIAL_SDK="$(jq -r '.DEVICE_INITIAL_SDK_INT // empty' "$TARGET_FILE" 2>/dev/null || true)"
 fi
 
 # Historical fallback: the old updater always selected the first Pixel OTA,
@@ -217,18 +219,18 @@ device_initial_sdk() {
     tokay|caiman|komodo|comet)   echo 34 ;;
     # Pixel 9 Pro Fold — Android 14 launch
     gts9|eos)                    echo 34 ;;
-    # Default: use post-sdk-level from OTA if device unknown
+    # Unknown device: caller falls back to preserving existing value or fails.
     *)                           echo "" ;;
   esac
 }
 
 DEVICE_INITIAL_SDK="$(device_initial_sdk "$DEVICE")"
 if [ -z "$DEVICE_INITIAL_SDK" ]; then
-  if [ -n "$SDK_INT" ] && [ "$SDK_INT" -gt 0 ] 2>/dev/null; then
-    DEVICE_INITIAL_SDK="$SDK_INT"
-    echo "Warning: device '$DEVICE' not in launch-SDK map; using post-sdk-level=$SDK_INT as fallback."
+  if [ -n "$CURRENT_DEVICE_INITIAL_SDK" ] && [ "$DEVICE" = "$CURRENT_DEVICE" ]; then
+    DEVICE_INITIAL_SDK="$CURRENT_DEVICE_INITIAL_SDK"
+    echo "Warning: device '$DEVICE' not in launch-SDK map; preserving existing DEVICE_INITIAL_SDK_INT=$CURRENT_DEVICE_INITIAL_SDK."
   else
-    echo "Failed to determine DEVICE_INITIAL_SDK_INT for device '$DEVICE' (post-sdk-level='$SDK_INT')."
+    echo "Failed to determine DEVICE_INITIAL_SDK_INT for device '$DEVICE' (not in map, no existing value to preserve)."
     exit 1
   fi
 fi
