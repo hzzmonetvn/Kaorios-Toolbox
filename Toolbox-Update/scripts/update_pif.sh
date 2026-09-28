@@ -191,18 +191,69 @@ if [ -z "$PRODUCT" ] || [ -z "$DEVICE" ]; then
   exit 1
 fi
 
+# Resolve DEVICE_INITIAL_SDK_INT: use a static device-launch-API map because
+# post-sdk-level from OTA metadata is the OTA's target API, not the device's
+# initial release API. These values are stable once a device ships.
+device_initial_sdk() {
+  local dev="$1"
+  case "$dev" in
+    # Pixel 6 family — Android 12 launch
+    oriole|raven)                echo 31 ;;
+    # Pixel 6a — Android 12L launch
+    bluejay)                     echo 32 ;;
+    # Pixel 7 family — Android 13 launch
+    cheetah|panther)             echo 33 ;;
+    # Pixel 7a — Android 13 launch
+    lynx)                        echo 33 ;;
+    # Pixel Fold — Android 13 launch
+    felix)                       echo 33 ;;
+    # Pixel Tablet — Android 13 launch
+    tangorpro)                   echo 33 ;;
+    # Pixel 8 family — Android 14 launch
+    shiba|husky)                 echo 34 ;;
+    # Pixel 8a — Android 14 launch
+    akita)                       echo 34 ;;
+    # Pixel 9 family — Android 14 launch
+    tokay|caiman|komodo|comet)   echo 34 ;;
+    # Pixel 9 Pro Fold — Android 14 launch
+    gts9|eos)                    echo 34 ;;
+    # Default: use post-sdk-level from OTA if device unknown
+    *)                           echo "" ;;
+  esac
+}
+
+DEVICE_INITIAL_SDK="$(device_initial_sdk "$DEVICE")"
+if [ -z "$DEVICE_INITIAL_SDK" ]; then
+  if [ -n "$SDK_INT" ] && [ "$SDK_INT" -gt 0 ] 2>/dev/null; then
+    DEVICE_INITIAL_SDK="$SDK_INT"
+    echo "Warning: device '$DEVICE' not in launch-SDK map; using post-sdk-level=$SDK_INT as fallback."
+  else
+    echo "Failed to determine DEVICE_INITIAL_SDK_INT for device '$DEVICE' (post-sdk-level='$SDK_INT')."
+    exit 1
+  fi
+fi
+
 echo "Parsed PRODUCT=$PRODUCT, DEVICE=$DEVICE"
 echo "Security patch: $SECURITY_PATCH"
+echo "DEVICE_INITIAL_SDK_INT: $DEVICE_INITIAL_SDK"
 echo "Writing output to $TARGET_FILE..."
 
-jq -n   --arg manufacturer "Google"   --arg model "$TARGET_MODEL"   --arg fingerprint "$FINGERPRINT"   --arg product "$PRODUCT"   --arg device "$DEVICE"   --arg security_patch "$SECURITY_PATCH"   --argjson sdk_int "${SDK_INT:-0}"   '{
+jq -n \
+  --arg manufacturer "Google" \
+  --arg model "$TARGET_MODEL" \
+  --arg fingerprint "$FINGERPRINT" \
+  --arg product "$PRODUCT" \
+  --arg device "$DEVICE" \
+  --arg security_patch "$SECURITY_PATCH" \
+  --arg sdk_int "$DEVICE_INITIAL_SDK" \
+  '{
     MANUFACTURER: $manufacturer,
     MODEL: $model,
     FINGERPRINT: $fingerprint,
     PRODUCT: $product,
     DEVICE: $device,
     SECURITY_PATCH: $security_patch,
-    DEVICE_INITIAL_SDK_INT: ($sdk_int | tostring)
+    DEVICE_INITIAL_SDK_INT: $sdk_int
   }' > "$TARGET_FILE"
 
 echo "Done. Output written to: $TARGET_FILE"
