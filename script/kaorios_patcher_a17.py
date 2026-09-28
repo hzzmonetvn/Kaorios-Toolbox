@@ -271,7 +271,15 @@ def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
         # .registers N: total = locals + params; params for instance method with (String;I) = p0,p1,p2 = 3
         # locals = N - 3; new scratch local after bump = v{N - 3} (was v{N-4} before bump)
         param_count = 3  # p0=this, p1=String, p2=int
+        method_body = _canonicalize_param_aliases(method_body, old_count, param_count)
         scratch = f"v{new_count - param_count - 1}"
+
+    scratch_num = int(scratch[1:])
+    if scratch_num > 15:
+        raise ValueError(
+            f"Scratch register {scratch} exceeds v15 limit for non-range invoke in hasSystemFeature; "
+            "cannot safely patch this layout"
+        )
 
     new_directive = f".{directive} {new_count}{reg_match.group(3)}"
     lbl = _unique_label(":cond_kaorios_feature_stock", method_body)
@@ -414,6 +422,30 @@ def verify_target_content(filename: str, content: str) -> None:
             raise ValueError("ApplicationPackageManager: hasSystemFeature(Ljava/lang/String;I)Z method not found")
         if "KaoriosHook;->hasSystemFeature" not in pat.group(1):
             raise ValueError("ApplicationPackageManager: KaoriosHook hasSystemFeature hook not found in hasSystemFeature method")
+    elif filename == "Build.smali":
+        fields_null = [
+            "BRAND", "BRAND_FOR_ATTESTATION", "DEVICE", "DEVICE_FOR_ATTESTATION",
+            "FINGERPRINT", "HARDWARE", "ID", "MANUFACTURER", "MANUFACTURER_FOR_ATTESTATION",
+            "MODEL", "MODEL_FOR_ATTESTATION", "PRODUCT", "PRODUCT_FOR_ATTESTATION",
+            "TAGS", "TYPE", "USER"
+        ]
+        for f in fields_null:
+            m = re.search(rf'\.field public static[^\n]* {f}:Ljava/lang/String;', content)
+            if not m:
+                raise ValueError(f"Build.smali post-patch: field {f} not found")
+            if "final" in m.group(0):
+                raise ValueError(f"Build.smali post-patch: field {f} still has 'final' modifier — patch did not apply")
+    elif filename == "Build$VERSION.smali":
+        fields_version = [
+            "RELEASE", "RELEASE_OR_CODENAME", "RELEASE_OR_PREVIEW_DISPLAY",
+            "SECURITY_PATCH", "DEVICE_INITIAL_SDK_INT"
+        ]
+        for f in fields_version:
+            m = re.search(rf'\.field public static[^\n]* {f}:[^\s]+', content)
+            if not m:
+                raise ValueError(f"Build$VERSION.smali post-patch: field {f} not found")
+            if "final" in m.group(0):
+                raise ValueError(f"Build$VERSION.smali post-patch: field {f} still has 'final' modifier — patch did not apply")
 
 
 def apply_target_patch(filename: str, content: str, targets: dict) -> tuple[str, str, str | None]:
