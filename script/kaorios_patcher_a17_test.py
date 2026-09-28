@@ -434,5 +434,48 @@ class PatchMultiReturnPathTest(unittest.TestCase):
         self.assertFalse(changed)
 
 
+class UniqueLabelTest(unittest.TestCase):
+    def _load_patcher(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("patcher", str(PATCHER_PY))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_label_unchanged_when_no_collision(self):
+        mod = self._load_patcher()
+        body = "    .locals 2\n    return-object v0\n"
+        result = mod._unique_label(":cond_kaorios_gen_stock", body)
+        self.assertEqual(result, ":cond_kaorios_gen_stock")
+
+    def test_label_suffixed_when_collision(self):
+        mod = self._load_patcher()
+        # Method body already contains the base label on its own line
+        body = "    .locals 2\n    :cond_kaorios_gen_stock\n    return-object v0\n"
+        result = mod._unique_label(":cond_kaorios_gen_stock", body)
+        self.assertNotEqual(result, ":cond_kaorios_gen_stock")
+        # Suffix must be alphanumeric hex
+        self.assertRegex(result, r'^:cond_kaorios_gen_stock_[0-9a-f]+$')
+
+    def test_keystore_gen_label_unique_in_output(self):
+        mod = self._load_patcher()
+        # Stock method with a pre-existing label that matches our base name
+        content = (
+            ".method public generateKeyPair()Ljava/security/KeyPair;\n"
+            "    .locals 2\n"
+            "    :cond_kaorios_gen_stock\n"
+            "    const/4 v0, 0x0\n"
+            "    return-object v0\n"
+            ".end method\n"
+        )
+        patched, changed = mod.patch_keystore_generator(content)
+        self.assertTrue(changed)
+        # No duplicate labels: each label that appears on its own line must appear exactly once
+        import re
+        labels = re.findall(r'(?m)^\s*(:cond_kaorios_gen_stock\S*)\s*$', patched)
+        for lbl in set(labels):
+            self.assertEqual(labels.count(lbl), 1, f"Duplicate label {lbl} in output")
+
+
 if __name__ == "__main__":
     unittest.main()

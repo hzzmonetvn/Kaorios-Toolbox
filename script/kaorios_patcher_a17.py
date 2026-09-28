@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import importlib.util
 import os
 import re
@@ -23,6 +24,16 @@ import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+
+
+def _unique_label(base: str, method_body: str) -> str:
+    """Return base if not already a label in method_body, else base + _<hex4>."""
+    candidate = base
+    suffix = hashlib.sha256(method_body.encode()).hexdigest()[:4]
+    while re.search(rf'(?m)^\s*{re.escape(candidate)}\s*$', method_body):
+        candidate = f"{base}_{suffix}"
+        suffix = hashlib.sha256((method_body + suffix).encode()).hexdigest()[:4]
+    return candidate
 
 
 def slow_print(text: str, delay: float = 0.01) -> None:
@@ -158,14 +169,15 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
     else:
         v_target = f"v{old_reg}"
 
+    lbl = _unique_label(":cond_kaorios_gen_stock", method_body)
     inject = f"""
     invoke-static {{p0}}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
     move-result-object {v_target}
 
-    if-eqz {v_target}, :cond_kaorios_gen_stock
+    if-eqz {v_target}, {lbl}
     return-object {v_target}
 
-    :cond_kaorios_gen_stock
+    {lbl}
 """
     new_body = method_body[:match.start()] + f".{directive} {new_reg}" + inject + method_body[match.end():]
     return content[:start] + new_body + content[end:], True
@@ -262,16 +274,17 @@ def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
         scratch = f"v{new_count - param_count - 1}"
 
     new_directive = f".{directive} {new_count}{reg_match.group(3)}"
+    lbl = _unique_label(":cond_kaorios_feature_stock", method_body)
     inject = f"""
     invoke-static {{p1, p2}}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
     move-result-object {scratch}
 
-    if-eqz {scratch}, :cond_kaorios_feature_stock
+    if-eqz {scratch}, {lbl}
     invoke-virtual {{{scratch}}}, Ljava/lang/Boolean;->booleanValue()Z
     move-result {scratch}
     return {scratch}
 
-    :cond_kaorios_feature_stock"""
+    {lbl}"""
     new_method = (
         method_body[:reg_match.start()]
         + new_directive
