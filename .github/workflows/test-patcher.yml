@@ -7,12 +7,16 @@ on:
       - 'script/kaorios_patcher_a17_test.py'
       - 'script/patch-*.py'
       - 'script/verify-*.py'
+      - 'Toolbox-Update/scripts/**'
+      - 'Toolbox-data/Pif-props.json'
   pull_request:
     paths:
       - 'script/kaorios_patcher_a17.py'
       - 'script/kaorios_patcher_a17_test.py'
       - 'script/patch-*.py'
       - 'script/verify-*.py'
+      - 'Toolbox-Update/scripts/**'
+      - 'Toolbox-data/Pif-props.json'
   workflow_dispatch:
 
 permissions:
@@ -40,6 +44,12 @@ jobs:
         run: |
           for f in script/*.sh Toolbox-Update/scripts/*.sh; do
             [ -f "$f" ] && bash -n "$f"
+          done
+
+      - name: Validate Toolbox-data JSON
+        run: |
+          for f in Toolbox-data/*.json; do
+            [ -f "$f" ] && python -m json.tool "$f" > /dev/null
           done
 
       - name: Run patcher unit tests
