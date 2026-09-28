@@ -44,3 +44,12 @@ jobs:
 
       - name: Run patcher unit tests
         run: python -m unittest discover -s script -p 'kaorios_patcher_a17_test.py' -v
+
+      - name: Run services patcher tests
+        run: python script/patch-services-a17-test.py -v
+
+      - name: Run settings provider patcher tests
+        run: python script/patch-settingsprovider-a17-test.py -v
+
+      - name: Run SELinux policy tests
+        run: python script/check-advanced-policy-sepolicy-test.py -v
