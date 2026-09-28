@@ -286,6 +286,10 @@ def patch_build(content: str) -> tuple[str, bool]:
         "MODEL", "MODEL_FOR_ATTESTATION", "PRODUCT", "PRODUCT_FOR_ATTESTATION",
         "TAGS", "TYPE", "USER"
     ]
+    anchor = fields_null[0]
+    if not re.search(rf'\.field public static[^\n]*? {anchor}:Ljava/lang/String;', content):
+        raise ValueError(f"Build.smali: expected field {anchor} not found — unsupported layout")
+
     patched = content
     for f in fields_null:
         patched = re.sub(rf'(\.field public static[^\n]*?)final([^\n]*? {f}:Ljava/lang/String;)', r'\1\2 = null', patched)
@@ -299,6 +303,10 @@ def patch_build_version(content: str) -> tuple[str, bool]:
         "RELEASE", "RELEASE_OR_CODENAME", "RELEASE_OR_PREVIEW_DISPLAY",
         "SECURITY_PATCH", "DEVICE_INITIAL_SDK_INT"
     ]
+    anchor = fields_version[0]
+    if not re.search(rf'\.field public static[^\n]*? {anchor}:[^\s]+', content):
+        raise ValueError(f"Build$VERSION.smali: expected field {anchor} not found — unsupported layout")
+
     patched = content
     for f in fields_version:
         patched = re.sub(rf'(\.field public static[^\n]*?)final([^\n]*? {f}:[^\s]+)', r'\1\2', patched)

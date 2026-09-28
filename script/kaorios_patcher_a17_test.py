@@ -184,5 +184,88 @@ class PatchAppPkgManagerRegisterTest(unittest.TestCase):
             self._patch_and_get(".class public Landroid/app/ActivityThread;\n")
 
 
+SAMPLE_BUILD_STOCK = """\
+.class public final Landroid/os/Build;
+.super Ljava/lang/Object;
+
+.field public static final BRAND:Ljava/lang/String;
+.field public static final DEVICE:Ljava/lang/String;
+.field public static final MODEL:Ljava/lang/String;
+.field public static final TYPE:Ljava/lang/String;
+.field public static final TIME:J
+"""
+
+SAMPLE_BUILD_ALREADY_PATCHED = """\
+.class public final Landroid/os/Build;
+.super Ljava/lang/Object;
+
+.field public static BRAND:Ljava/lang/String; = null
+.field public static DEVICE:Ljava/lang/String; = null
+.field public static MODEL:Ljava/lang/String; = null
+.field public static TYPE:Ljava/lang/String; = null
+.field public static TIME:J
+"""
+
+SAMPLE_BUILD_VERSION_STOCK = """\
+.class public static final Landroid/os/Build$VERSION;
+.super Ljava/lang/Object;
+
+.field public static final RELEASE:Ljava/lang/String;
+.field public static final SECURITY_PATCH:Ljava/lang/String;
+"""
+
+SAMPLE_BUILD_VERSION_ALREADY_PATCHED = """\
+.class public static final Landroid/os/Build$VERSION;
+.super Ljava/lang/Object;
+
+.field public static RELEASE:Ljava/lang/String;
+.field public static SECURITY_PATCH:Ljava/lang/String;
+"""
+
+
+class PatchBuildTest(unittest.TestCase):
+    def _load_patcher(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("patcher", str(PATCHER_PY))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_patch_build_removes_final_and_sets_null(self):
+        mod = self._load_patcher()
+        out, changed = mod.patch_build(SAMPLE_BUILD_STOCK)
+        self.assertTrue(changed)
+        self.assertNotIn("final BRAND", out)
+        self.assertIn("= null", out)
+        self.assertNotIn("final TIME", out)
+
+    def test_patch_build_already_patched_returns_false(self):
+        mod = self._load_patcher()
+        out, changed = mod.patch_build(SAMPLE_BUILD_ALREADY_PATCHED)
+        self.assertFalse(changed, "Already-patched Build.smali must return changed=False, not ALREADY_PATCHED falsely")
+
+    def test_patch_build_unknown_layout_raises(self):
+        mod = self._load_patcher()
+        with self.assertRaises(ValueError):
+            mod.patch_build(".class public final Landroid/os/Build;\n.field public static SOMETHING:I\n")
+
+    def test_patch_build_version_removes_final(self):
+        mod = self._load_patcher()
+        out, changed = mod.patch_build_version(SAMPLE_BUILD_VERSION_STOCK)
+        self.assertTrue(changed)
+        self.assertNotIn("final RELEASE", out)
+        self.assertNotIn("final SECURITY_PATCH", out)
+
+    def test_patch_build_version_already_patched_returns_false(self):
+        mod = self._load_patcher()
+        out, changed = mod.patch_build_version(SAMPLE_BUILD_VERSION_ALREADY_PATCHED)
+        self.assertFalse(changed)
+
+    def test_patch_build_version_unknown_layout_raises(self):
+        mod = self._load_patcher()
+        with self.assertRaises(ValueError):
+            mod.patch_build_version(".class public static final Landroid/os/Build$VERSION;\n.field public static SOMETHING:I\n")
+
+
 if __name__ == "__main__":
     unittest.main()
