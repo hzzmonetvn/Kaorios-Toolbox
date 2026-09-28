@@ -9,6 +9,8 @@ on:
       - 'script/verify-*.py'
       - 'Toolbox-Update/scripts/**'
       - 'Toolbox-data/Pif-props.json'
+      - 'Toolbox-data/app-props.json'
+      - 'Toolbox-data/device-model.json'
   pull_request:
     paths:
       - 'script/kaorios_patcher_a17.py'
@@ -17,6 +19,8 @@ on:
       - 'script/verify-*.py'
       - 'Toolbox-Update/scripts/**'
       - 'Toolbox-data/Pif-props.json'
+      - 'Toolbox-data/app-props.json'
+      - 'Toolbox-data/device-model.json'
   workflow_dispatch:
 
 permissions:
@@ -51,6 +55,40 @@ jobs:
           for f in Toolbox-data/*.json; do
             [ -f "$f" ] && python -m json.tool "$f" > /dev/null
           done
+          python - <<'EOF'
+          import json, sys
+
+          STRING_FIELDS = {"MANUFACTURER", "MODEL", "BRAND", "DEVICE", "PRODUCT",
+                           "FINGERPRINT", "SECURITY_PATCH"}
+
+          def check_props(obj, path):
+              for k, v in obj.items():
+                  if k in STRING_FIELDS and not isinstance(v, str):
+                      print(f"ERROR {path}: field '{k}' must be a string, got {type(v).__name__}", file=sys.stderr)
+                      sys.exit(1)
+
+          with open("Toolbox-data/app-props.json") as f:
+              data = json.load(f)
+          if not isinstance(data, dict):
+              print("ERROR app-props.json: root must be an object", file=sys.stderr); sys.exit(1)
+          for pkg, props in data.items():
+              if not isinstance(props, dict):
+                  print(f"ERROR app-props.json: entry '{pkg}' must be an object", file=sys.stderr); sys.exit(1)
+              check_props(props, f"app-props.json[{pkg}]")
+
+          with open("Toolbox-data/device-model.json") as f:
+              data = json.load(f)
+          if not isinstance(data, dict) or not isinstance(data.get("devices"), list):
+              print("ERROR device-model.json: root must be {\"devices\": [...]}", file=sys.stderr); sys.exit(1)
+          for i, entry in enumerate(data["devices"]):
+              if not isinstance(entry, dict):
+                  print(f"ERROR device-model.json: devices[{i}] must be an object", file=sys.stderr); sys.exit(1)
+              if "name" not in entry or not isinstance(entry["name"], str):
+                  print(f"ERROR device-model.json: devices[{i}] missing string 'name'", file=sys.stderr); sys.exit(1)
+              check_props(entry, f"device-model.json[{i}]")
+
+          print("Toolbox-data field-type validation passed.")
+          EOF
 
       - name: Run patcher unit tests
         run: python -m unittest discover -s script -p 'kaorios_patcher_a17_test.py' -v
