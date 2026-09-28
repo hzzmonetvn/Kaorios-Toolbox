@@ -3,6 +3,7 @@ name: Test patcher
 on:
   push:
     paths:
+      - '.github/workflows/test-patcher.yml'
       - 'script/kaorios_patcher_a17.py'
       - 'script/kaorios_patcher_a17_test.py'
       - 'script/patch-*.py'
@@ -13,6 +14,7 @@ on:
       - 'Toolbox-data/device-model.json'
   pull_request:
     paths:
+      - '.github/workflows/test-patcher.yml'
       - 'script/kaorios_patcher_a17.py'
       - 'script/kaorios_patcher_a17_test.py'
       - 'script/patch-*.py'
