@@ -121,5 +121,68 @@ class KaoriosPatcherA17Test(unittest.TestCase):
             self.assertIn("THẤT BẠI", res.stdout)
 
 
+SAMPLE_APP_PKG_MANAGER_STOCK_LOCALS = """\
+.class public Landroid/app/ApplicationPackageManager;
+.super Ljava/lang/Object;
+
+.method public hasSystemFeature(Ljava/lang/String;I)Z
+    .locals 2
+    const/4 v0, 0x0
+    const/4 v1, 0x1
+    return v0
+.end method
+"""
+
+SAMPLE_APP_PKG_MANAGER_STOCK_REGISTERS = """\
+.class public Landroid/app/ApplicationPackageManager;
+.super Ljava/lang/Object;
+
+.method public hasSystemFeature(Ljava/lang/String;I)Z
+    .registers 5
+    const/4 v0, 0x0
+    const/4 v1, 0x1
+    return v0
+.end method
+"""
+
+
+class PatchAppPkgManagerRegisterTest(unittest.TestCase):
+    def _patch_and_get(self, smali_in):
+        import importlib.util, sys as _sys
+        spec = importlib.util.spec_from_file_location("patcher", str(PATCHER_PY))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        out, changed = mod.patch_app_pkg_manager(smali_in)
+        return out, changed
+
+    def test_locals_count_bumped_and_scratch_is_new_slot(self):
+        out, changed = self._patch_and_get(SAMPLE_APP_PKG_MANAGER_STOCK_LOCALS)
+        self.assertTrue(changed)
+        self.assertIn(".locals 3", out)
+        # new slot is v2 (old locals=2 → v{2})
+        self.assertIn("move-result-object v2", out)
+        self.assertIn("if-eqz v2", out)
+        self.assertIn("{v2}", out)
+        self.assertIn("move-result v2", out)
+        self.assertIn("return v2", out)
+
+    def test_registers_count_bumped_and_scratch_is_new_local(self):
+        # .registers 5, params=3 (p0,p1,p2) → locals=2, new local after bump = v{6-3-1}=v2
+        out, changed = self._patch_and_get(SAMPLE_APP_PKG_MANAGER_STOCK_REGISTERS)
+        self.assertTrue(changed)
+        self.assertIn(".registers 6", out)
+        self.assertIn("move-result-object v2", out)
+
+    def test_idempotent_already_patched(self):
+        out1, _ = self._patch_and_get(SAMPLE_APP_PKG_MANAGER_STOCK_LOCALS)
+        out2, changed2 = self._patch_and_get(out1)
+        self.assertFalse(changed2)
+        self.assertEqual(out1, out2)
+
+    def test_raises_if_method_missing(self):
+        with self.assertRaises(ValueError):
+            self._patch_and_get(".class public Landroid/app/ActivityThread;\n")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -238,21 +238,40 @@ def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
     if "KaoriosHook;->hasSystemFeature" in method_body:
         return content, False
 
-    reg_match = re.search(r'(\.(?:registers|locals)\s+\d+[^\n]*)', method_body)
+    reg_match = re.search(r'\.(registers|locals)\s+(\d+)([^\n]*)', method_body)
     if not reg_match:
         raise ValueError(".registers or .locals directive not found in hasSystemFeature")
 
-    inject = """\n
-    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-    move-result-object v0
+    directive = reg_match.group(1)
+    old_count = int(reg_match.group(2))
+    new_count = old_count + 1
 
-    if-eqz v0, :cond_kaorios_feature_stock
-    invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
-    move-result v0
-    return v0
+    if directive == "locals":
+        # .locals N: locals are v0..v{N-1}; new slot is v{N} (= v{old_count})
+        scratch = f"v{old_count}"
+    else:
+        # .registers N: total = locals + params; params for instance method with (String;I) = p0,p1,p2 = 3
+        # locals = N - 3; new scratch local after bump = v{N - 3} (was v{N-4} before bump)
+        param_count = 3  # p0=this, p1=String, p2=int
+        scratch = f"v{new_count - param_count - 1}"
+
+    new_directive = f".{directive} {new_count}{reg_match.group(3)}"
+    inject = f"""
+    invoke-static {{p1, p2}}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    move-result-object {scratch}
+
+    if-eqz {scratch}, :cond_kaorios_feature_stock
+    invoke-virtual {{{scratch}}}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result {scratch}
+    return {scratch}
 
     :cond_kaorios_feature_stock"""
-    new_method = method_body[:reg_match.end()] + inject + method_body[reg_match.end():]
+    new_method = (
+        method_body[:reg_match.start()]
+        + new_directive
+        + inject
+        + method_body[reg_match.end():]
+    )
     return content[:match.start()] + new_method + content[match.end():], True
 
 
