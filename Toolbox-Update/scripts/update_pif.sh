@@ -235,6 +235,11 @@ if [ -z "$DEVICE_INITIAL_SDK" ]; then
   fi
 fi
 
+if ! printf '%s' "$DEVICE_INITIAL_SDK" | grep -qE '^[0-9]+$' || [ "$DEVICE_INITIAL_SDK" -le 0 ]; then
+  echo "Failed: DEVICE_INITIAL_SDK_INT='$DEVICE_INITIAL_SDK' is not a positive integer."
+  exit 1
+fi
+
 echo "Parsed PRODUCT=$PRODUCT, DEVICE=$DEVICE"
 echo "Security patch: $SECURITY_PATCH"
 echo "DEVICE_INITIAL_SDK_INT: $DEVICE_INITIAL_SDK"
