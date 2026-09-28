@@ -340,5 +340,99 @@ class VerifyTargetContentMethodBodyTest(unittest.TestCase):
             mod.verify_target_content("ApplicationPackageManager.smali", content)
 
 
+SAMPLE_KEYSTORE_SPI_TWO_RETURNS = """\
+.method public engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    .locals 4
+
+    if-eqz p1, :cond_null
+
+    aput-object v0, v1, v2
+    return-object v1
+
+    :cond_null
+    aput-object v0, v3, v2
+    return-object v3
+.end method
+"""
+
+SAMPLE_INSTRUMENTATION_TWO_RETURNS = """\
+.method public newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
+    .locals 2
+
+    if-eqz p1, :cond_null
+
+    invoke-virtual {p1}, Ljava/lang/Object;->toString()Ljava/lang/String;
+    return-object p2
+
+    :cond_null
+    return-object v0
+.end method
+
+.method public newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
+    .locals 2
+
+    if-eqz p1, :cond_null2
+
+    invoke-virtual {p1}, Ljava/lang/Object;->toString()Ljava/lang/String;
+    return-object p3
+
+    :cond_null2
+    return-object v0
+.end method
+"""
+
+
+class PatchMultiReturnPathTest(unittest.TestCase):
+    def _load_patcher(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("patcher", str(PATCHER_PY))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_keystore_spi_both_return_paths_patched(self):
+        mod = self._load_patcher()
+        content = SAMPLE_KEYSTORE_SPI_TWO_RETURNS
+        patched, changed = mod.patch_keystore_spi(content)
+        self.assertTrue(changed)
+        # Collect all return-object lines; each must be preceded by the hook call
+        lines = patched.split('\n')
+        for i, line in enumerate(lines):
+            if 'return-object' in line and 'KaoriosHook' not in line:
+                # Check the preceding non-empty lines contain the hook
+                preceding = '\n'.join(lines[max(0, i - 4):i])
+                self.assertIn(
+                    'CertificateChainIfNeeded', preceding,
+                    f"return-object at line {i} not preceded by CertificateChainIfNeeded hook"
+                )
+
+    def test_keystore_spi_idempotent(self):
+        mod = self._load_patcher()
+        patched, _ = mod.patch_keystore_spi(SAMPLE_KEYSTORE_SPI_TWO_RETURNS)
+        _, changed = mod.patch_keystore_spi(patched)
+        self.assertFalse(changed)
+
+    def test_instrumentation_both_return_paths_patched(self):
+        mod = self._load_patcher()
+        content = SAMPLE_INSTRUMENTATION_TWO_RETURNS
+        patched, changed = mod.patch_instrumentation(content)
+        self.assertTrue(changed)
+        lines = patched.split('\n')
+        for i, line in enumerate(lines):
+            if 'return-object' in line and 'KaoriosHook' not in line:
+                preceding = '\n'.join(lines[max(0, i - 4):i])
+                self.assertIn(
+                    'initContext', preceding,
+                    f"return-object at line {i} not preceded by initContext hook"
+                )
+
+    def test_instrumentation_idempotent(self):
+        mod = self._load_patcher()
+        content = SAMPLE_INSTRUMENTATION_TWO_RETURNS
+        patched, _ = mod.patch_instrumentation(content)
+        _, changed = mod.patch_instrumentation(patched)
+        self.assertFalse(changed)
+
+
 if __name__ == "__main__":
     unittest.main()

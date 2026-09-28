@@ -186,20 +186,23 @@ def patch_keystore_spi(content: str) -> tuple[str, bool]:
     return_matches = list(re.finditer(r'return-object\s+([vp]\d+)', method_body))
     if not return_matches:
         raise ValueError("return-object not found in engineGetCertificateChain")
-    last_return = return_matches[-1]
-    v_return = last_return.group(1)
 
-    block_before = method_body[:last_return.start()]
-    aput_matches = list(re.finditer(r'(aput-object\s+[vp]\d+,\s*([vp]\d+),\s*[vp]\d+)', block_before))
-
-    if not aput_matches:
-        raise ValueError("aput-object anchor not found before return-object in engineGetCertificateChain")
-
-    last_aput = aput_matches[-1]
-    vC = last_aput.group(2)
-    inject = f"\n\n    invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;\n    move-result-object {v_return}\n\n    "
-    new_body = method_body[:last_aput.end()] + inject + method_body[last_aput.end():]
-    return content[:start] + new_body + content[end:], True
+    # Patch every return path, not just the last one.
+    # Work backwards so offsets stay valid.
+    new_body = method_body
+    patched_any = False
+    for ret in reversed(return_matches):
+        v_return = ret.group(1)
+        block_before = new_body[:ret.start()]
+        aput_matches = list(re.finditer(r'(aput-object\s+[vp]\d+,\s*([vp]\d+),\s*[vp]\d+)', block_before))
+        if not aput_matches:
+            raise ValueError("aput-object anchor not found before a return-object in engineGetCertificateChain")
+        last_aput = aput_matches[-1]
+        vC = last_aput.group(2)
+        inject = f"\n\n    invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;\n    move-result-object {v_return}\n\n    "
+        new_body = new_body[:last_aput.end()] + inject + new_body[last_aput.end():]
+        patched_any = True
+    return content[:start] + new_body + content[end:], patched_any
 
 
 def patch_instrumentation(content: str) -> tuple[str, bool]:
@@ -218,9 +221,12 @@ def patch_instrumentation(content: str) -> tuple[str, bool]:
         matches = list(re.finditer(r'(return-object\s+[vp]\d+\s*)', method_body))
         if not matches:
             raise ValueError(f"return-object not found in {method_name}")
-        last_match = matches[-1]
-        inject = f"invoke-static {{{param}}}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V\n\n    {last_match.group(1)}"
-        new_body = method_body[:last_match.start()] + inject + method_body[last_match.end():]
+        # Patch every return path, not just the last one.
+        # Work backwards so offsets stay valid.
+        new_body = method_body
+        for m in reversed(matches):
+            inject = f"invoke-static {{{param}}}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V\n\n    {m.group(1)}"
+            new_body = new_body[:m.start()] + inject + new_body[m.end():]
         return text[:start] + new_body + text[end:], True
 
     content, c1 = patch_method(content, "newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;", "p1")
