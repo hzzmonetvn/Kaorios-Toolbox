@@ -211,6 +211,11 @@ def patch_keystore_spi(content: str) -> tuple[str, bool]:
             raise ValueError("aput-object anchor not found before a return-object in engineGetCertificateChain")
         last_aput = aput_matches[-1]
         vC = last_aput.group(2)
+        if vC != v_return:
+            raise ValueError(
+                f"aput-object array register {vC} does not match return-object register {v_return} "
+                "in engineGetCertificateChain — cannot safely select certificate chain array"
+            )
         inject = f"\n\n    invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;\n    move-result-object {v_return}\n\n    "
         new_body = new_body[:last_aput.end()] + inject + new_body[last_aput.end():]
         patched_any = True
