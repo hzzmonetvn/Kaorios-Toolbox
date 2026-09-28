@@ -90,6 +90,26 @@ jobs:
               check_props(entry, f"device-model.json[{i}]")
 
           print("Toolbox-data field-type validation passed.")
+
+          import re
+          PIF_REQUIRED = ["MANUFACTURER", "MODEL", "DEVICE", "PRODUCT", "FINGERPRINT",
+                          "SECURITY_PATCH", "DEVICE_INITIAL_SDK_INT"]
+          with open("Toolbox-data/Pif-props.json") as f:
+              pif = json.load(f)
+          if not isinstance(pif, dict):
+              print("ERROR Pif-props.json: root must be an object", file=sys.stderr); sys.exit(1)
+          for field in PIF_REQUIRED:
+              if field not in pif:
+                  print(f"ERROR Pif-props.json: missing required field '{field}'", file=sys.stderr); sys.exit(1)
+              if not isinstance(pif[field], str):
+                  print(f"ERROR Pif-props.json: field '{field}' must be a string", file=sys.stderr); sys.exit(1)
+          sdk = pif["DEVICE_INITIAL_SDK_INT"]
+          if not re.fullmatch(r'[0-9]+', sdk) or int(sdk) <= 0:
+              print(f"ERROR Pif-props.json: DEVICE_INITIAL_SDK_INT must be a positive integer string, got '{sdk}'", file=sys.stderr); sys.exit(1)
+          sp = pif["SECURITY_PATCH"]
+          if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', sp):
+              print(f"ERROR Pif-props.json: SECURITY_PATCH must be YYYY-MM-DD, got '{sp}'", file=sys.stderr); sys.exit(1)
+          print("Pif-props.json semantic validation passed.")
           EOF
 
       - name: Run patcher unit tests
