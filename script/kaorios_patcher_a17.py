@@ -335,6 +335,17 @@ def get_diff_text(old_text: str, new_text: str, filename: str) -> str:
     return ""
 
 
+def _extract_method_body(content: str, method_anchor: str, label: str) -> str:
+    """Return the text of the method containing method_anchor, exclusive of .end method."""
+    start = content.find(method_anchor)
+    if start == -1:
+        raise ValueError(f"{label}: method anchor '{method_anchor}' not found")
+    end = content.find('.end method', start)
+    if end == -1:
+        raise ValueError(f"{label}: unterminated method at '{method_anchor}'")
+    return content[start:end]
+
+
 def verify_target_content(filename: str, content: str) -> None:
     """Run dedicated verification on smali content after patch or when already patched."""
     if filename == "ActivityThread.smali":
@@ -350,23 +361,40 @@ def verify_target_content(filename: str, content: str) -> None:
         if mod_sp is not None:
             mod_sp.verify(content)
     elif filename == "AndroidKeyStoreKeyPairGeneratorSpi.smali":
-        if "KaoriosHook;->initGenerateSoftwareKeyPair" not in content:
-            raise ValueError("AndroidKeyStoreKeyPairGeneratorSpi: KaoriosHook initGenerateSoftwareKeyPair hook not found after patch")
-        if "generateKeyPair()Ljava/security/KeyPair;" not in content:
-            raise ValueError("AndroidKeyStoreKeyPairGeneratorSpi: generateKeyPair method not found")
+        body = _extract_method_body(
+            content,
+            "generateKeyPair()Ljava/security/KeyPair;",
+            "AndroidKeyStoreKeyPairGeneratorSpi"
+        )
+        if "KaoriosHook;->initGenerateSoftwareKeyPair" not in body:
+            raise ValueError("AndroidKeyStoreKeyPairGeneratorSpi: KaoriosHook initGenerateSoftwareKeyPair hook not found in generateKeyPair method")
     elif filename == "AndroidKeyStoreSpi.smali":
-        if "KaoriosHook;->CertificateChainIfNeeded" not in content:
-            raise ValueError("AndroidKeyStoreSpi: KaoriosHook CertificateChainIfNeeded hook not found after patch")
-        if "engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;" not in content:
-            raise ValueError("AndroidKeyStoreSpi: engineGetCertificateChain method not found")
+        body = _extract_method_body(
+            content,
+            "engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;",
+            "AndroidKeyStoreSpi"
+        )
+        if "KaoriosHook;->CertificateChainIfNeeded" not in body:
+            raise ValueError("AndroidKeyStoreSpi: KaoriosHook CertificateChainIfNeeded hook not found in engineGetCertificateChain method")
     elif filename == "Instrumentation.smali":
-        if "KaoriosHook;->initContext" not in content:
-            raise ValueError("Instrumentation: KaoriosHook initContext hook not found after patch")
+        body1 = _extract_method_body(
+            content,
+            "newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;",
+            "Instrumentation"
+        )
+        body2 = _extract_method_body(
+            content,
+            "newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;",
+            "Instrumentation"
+        )
+        if "KaoriosHook;->initContext" not in body1 and "KaoriosHook;->initContext" not in body2:
+            raise ValueError("Instrumentation: KaoriosHook initContext hook not found in either newApplication method")
     elif filename == "ApplicationPackageManager.smali":
-        if "KaoriosHook;->hasSystemFeature" not in content:
-            raise ValueError("ApplicationPackageManager: KaoriosHook hasSystemFeature hook not found after patch")
-        if "hasSystemFeature(Ljava/lang/String;I)Z" not in content:
-            raise ValueError("ApplicationPackageManager: hasSystemFeature method not found")
+        pat = re.search(r'(\.method[^\n]*?hasSystemFeature\(Ljava/lang/String;I\)Z.*?\.end method)', content, flags=re.DOTALL)
+        if pat is None:
+            raise ValueError("ApplicationPackageManager: hasSystemFeature(Ljava/lang/String;I)Z method not found")
+        if "KaoriosHook;->hasSystemFeature" not in pat.group(1):
+            raise ValueError("ApplicationPackageManager: KaoriosHook hasSystemFeature hook not found in hasSystemFeature method")
 
 
 def apply_target_patch(filename: str, content: str, targets: dict) -> tuple[str, str, str | None]:

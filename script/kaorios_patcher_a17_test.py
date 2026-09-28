@@ -267,5 +267,78 @@ class PatchBuildTest(unittest.TestCase):
             mod.patch_build_version(".class public static final Landroid/os/Build$VERSION;\n.field public static SOMETHING:I\n")
 
 
+class VerifyTargetContentMethodBodyTest(unittest.TestCase):
+    """Verifier must check hook is inside the target method, not just anywhere in the file."""
+
+    def _load_patcher(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("patcher", str(PATCHER_PY))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def _smali_with_hook_outside_method(self, method_anchor, method_body_lines, hook_line):
+        """Build smali where hook appears in a comment header but NOT inside the target method."""
+        return (
+            f".class public Landroid/test/Fake;\n"
+            f"# {hook_line}\n"   # hook text in a comment, outside any method
+            f".method public {method_anchor}\n"
+            f"    .locals 1\n"
+            + "\n".join(f"    {l}" for l in method_body_lines)
+            + "\n.end method\n"
+        )
+
+    def test_keystore_keypair_hook_outside_method_raises(self):
+        mod = self._load_patcher()
+        content = self._smali_with_hook_outside_method(
+            "generateKeyPair()Ljava/security/KeyPair;",
+            ["const/4 v0, 0x0", "return-object v0"],
+            "KaoriosHook;->initGenerateSoftwareKeyPair"
+        )
+        with self.assertRaises(ValueError, msg="Hook outside method body must raise ValueError"):
+            mod.verify_target_content("AndroidKeyStoreKeyPairGeneratorSpi.smali", content)
+
+    def test_keystore_spi_hook_outside_method_raises(self):
+        mod = self._load_patcher()
+        content = self._smali_with_hook_outside_method(
+            "engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;",
+            ["const/4 v0, 0x0", "return-object v0"],
+            "KaoriosHook;->CertificateChainIfNeeded"
+        )
+        with self.assertRaises(ValueError):
+            mod.verify_target_content("AndroidKeyStoreSpi.smali", content)
+
+    def test_instrumentation_hook_outside_both_methods_raises(self):
+        mod = self._load_patcher()
+        content = (
+            ".class public Landroid/test/Fake;\n"
+            "# KaoriosHook;->initContext\n"
+            ".method public newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;\n"
+            "    .locals 1\n"
+            "    return-object v0\n"
+            ".end method\n"
+            ".method public newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;\n"
+            "    .locals 1\n"
+            "    return-object v0\n"
+            ".end method\n"
+        )
+        with self.assertRaises(ValueError):
+            mod.verify_target_content("Instrumentation.smali", content)
+
+    def test_apk_manager_hook_outside_method_raises(self):
+        mod = self._load_patcher()
+        content = (
+            ".class public Landroid/app/ApplicationPackageManager;\n"
+            "# KaoriosHook;->hasSystemFeature\n"
+            ".method public hasSystemFeature(Ljava/lang/String;I)Z\n"
+            "    .locals 1\n"
+            "    const/4 v0, 0x0\n"
+            "    return v0\n"
+            ".end method\n"
+        )
+        with self.assertRaises(ValueError):
+            mod.verify_target_content("ApplicationPackageManager.smali", content)
+
+
 if __name__ == "__main__":
     unittest.main()
