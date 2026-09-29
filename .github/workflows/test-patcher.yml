@@ -57,60 +57,10 @@ jobs:
           for f in Toolbox-data/*.json; do
             [ -f "$f" ] && python -m json.tool "$f" > /dev/null
           done
-          python - <<'EOF'
-          import json, sys
+          python script/validate_toolbox_data.py Toolbox-data
 
-          STRING_FIELDS = {"MANUFACTURER", "MODEL", "BRAND", "DEVICE", "PRODUCT",
-                           "FINGERPRINT", "SECURITY_PATCH"}
-
-          def check_props(obj, path):
-              for k, v in obj.items():
-                  if k in STRING_FIELDS and not isinstance(v, str):
-                      print(f"ERROR {path}: field '{k}' must be a string, got {type(v).__name__}", file=sys.stderr)
-                      sys.exit(1)
-
-          with open("Toolbox-data/app-props.json") as f:
-              data = json.load(f)
-          if not isinstance(data, dict):
-              print("ERROR app-props.json: root must be an object", file=sys.stderr); sys.exit(1)
-          for pkg, props in data.items():
-              if not isinstance(props, dict):
-                  print(f"ERROR app-props.json: entry '{pkg}' must be an object", file=sys.stderr); sys.exit(1)
-              check_props(props, f"app-props.json[{pkg}]")
-
-          with open("Toolbox-data/device-model.json") as f:
-              data = json.load(f)
-          if not isinstance(data, dict) or not isinstance(data.get("devices"), list):
-              print("ERROR device-model.json: root must be {\"devices\": [...]}", file=sys.stderr); sys.exit(1)
-          for i, entry in enumerate(data["devices"]):
-              if not isinstance(entry, dict):
-                  print(f"ERROR device-model.json: devices[{i}] must be an object", file=sys.stderr); sys.exit(1)
-              if "name" not in entry or not isinstance(entry["name"], str):
-                  print(f"ERROR device-model.json: devices[{i}] missing string 'name'", file=sys.stderr); sys.exit(1)
-              check_props(entry, f"device-model.json[{i}]")
-
-          print("Toolbox-data field-type validation passed.")
-
-          import re
-          PIF_REQUIRED = ["MANUFACTURER", "MODEL", "DEVICE", "PRODUCT", "FINGERPRINT",
-                          "SECURITY_PATCH", "DEVICE_INITIAL_SDK_INT"]
-          with open("Toolbox-data/Pif-props.json") as f:
-              pif = json.load(f)
-          if not isinstance(pif, dict):
-              print("ERROR Pif-props.json: root must be an object", file=sys.stderr); sys.exit(1)
-          for field in PIF_REQUIRED:
-              if field not in pif:
-                  print(f"ERROR Pif-props.json: missing required field '{field}'", file=sys.stderr); sys.exit(1)
-              if not isinstance(pif[field], str):
-                  print(f"ERROR Pif-props.json: field '{field}' must be a string", file=sys.stderr); sys.exit(1)
-          sdk = pif["DEVICE_INITIAL_SDK_INT"]
-          if not re.fullmatch(r'[0-9]+', sdk) or int(sdk) <= 0:
-              print(f"ERROR Pif-props.json: DEVICE_INITIAL_SDK_INT must be a positive integer string, got '{sdk}'", file=sys.stderr); sys.exit(1)
-          sp = pif["SECURITY_PATCH"]
-          if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', sp):
-              print(f"ERROR Pif-props.json: SECURITY_PATCH must be YYYY-MM-DD, got '{sp}'", file=sys.stderr); sys.exit(1)
-          print("Pif-props.json semantic validation passed.")
-          EOF
+      - name: Run PIF updater unit tests
+        run: bash Toolbox-Update/scripts/update_pif_test.sh
 
       - name: Run patcher unit tests
         run: python -m unittest discover -s script -p 'kaorios_patcher_a17_test.py' -v

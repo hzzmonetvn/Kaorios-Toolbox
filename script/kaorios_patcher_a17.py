@@ -166,12 +166,19 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
         # generateKeyPair() is a virtual (non-static) method with 1 implicit param (p0=this)
         method_body = _canonicalize_param_aliases(method_body, old_reg, 1)
         v_target = f"v{new_reg - 2}"
+        p0_num = new_reg - 1
     else:
         v_target = f"v{old_reg}"
+        p0_num = old_reg + 1
 
     lbl = _unique_label(":cond_kaorios_gen_stock", method_body)
+    if p0_num > 15:
+        invoke_str = "invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;"
+    else:
+        invoke_str = "invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;"
+
     inject = f"""
-    invoke-static {{p0}}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    {invoke_str}
     move-result-object {v_target}
 
     if-eqz {v_target}, {lbl}
@@ -216,7 +223,12 @@ def patch_keystore_spi(content: str) -> tuple[str, bool]:
                 f"aput-object array register {vC} does not match return-object register {v_return} "
                 "in engineGetCertificateChain — cannot safely select certificate chain array"
             )
-        inject = f"\n\n    invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;\n    move-result-object {v_return}\n\n    "
+        vC_num = int(vC[1:])
+        if vC_num > 15:
+            invoke_str = f"invoke-static/range {{{vC} .. {vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;"
+        else:
+            invoke_str = f"invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;"
+        inject = f"\n\n    {invoke_str}\n    move-result-object {v_return}\n\n    "
         new_body = new_body[:last_aput.end()] + inject + new_body[last_aput.end():]
         patched_any = True
     return content[:start] + new_body + content[end:], patched_any
@@ -238,15 +250,33 @@ def patch_instrumentation(content: str) -> tuple[str, bool]:
         matches = list(re.finditer(r'(return-object\s+[vp]\d+\s*)', method_body))
         if not matches:
             raise ValueError(f"return-object not found in {method_name}")
+
+        reg_match = re.search(r'\.(registers|locals)\s+(\d+)', method_body)
+        real_reg_num = 0
+        if reg_match:
+            directive = reg_match.group(1)
+            count = int(reg_match.group(2))
+            param_num = int(param[1:])
+            if directive == "registers":
+                p_count = 3 if "Class;" in method_name else 4
+                real_reg_num = count - p_count + param_num
+            else:
+                real_reg_num = count + param_num
+
+        if real_reg_num > 15:
+            invoke_str = f"invoke-static/range {{{param} .. {param}}}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V"
+        else:
+            invoke_str = f"invoke-static {{{param}}}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V"
+
         # Patch every return path, not just the last one.
         # Work backwards so offsets stay valid.
         new_body = method_body
         for m in reversed(matches):
-            inject = f"invoke-static {{{param}}}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V\n\n    {m.group(1)}"
+            inject = f"{invoke_str}\n\n    {m.group(1)}"
             new_body = new_body[:m.start()] + inject + new_body[m.end():]
         return text[:start] + new_body + text[end:], True
 
-    content, c1 = patch_method(content, "newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;", "p1")
+    content, c1 = patch_method(content, "newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;", "p2")
     content, c2 = patch_method(content, "newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;", "p3")
     return content, (c1 or c2)
 
@@ -272,28 +302,38 @@ def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
     if directive == "locals":
         # .locals N: locals are v0..v{N-1}; new slot is v{N} (= v{old_count})
         scratch = f"v{old_count}"
+        scratch_num = old_count
+        p1_num = old_count + 1 + 1 # p0=v{old_count+1}, p1=v{old_count+2}, p2=v{old_count+3}
+        p2_num = old_count + 1 + 2
     else:
         # .registers N: total = locals + params; params for instance method with (String;I) = p0,p1,p2 = 3
         # locals = N - 3; new scratch local after bump = v{N - 3} (was v{N-4} before bump)
         param_count = 3  # p0=this, p1=String, p2=int
         method_body = _canonicalize_param_aliases(method_body, old_count, param_count)
         scratch = f"v{new_count - param_count - 1}"
-
-    scratch_num = int(scratch[1:])
-    if scratch_num > 15:
-        raise ValueError(
-            f"Scratch register {scratch} exceeds v15 limit for non-range invoke in hasSystemFeature; "
-            "cannot safely patch this layout"
-        )
+        scratch_num = new_count - param_count - 1
+        p1_num = new_count - param_count + 1
+        p2_num = new_count - param_count + 2
 
     new_directive = f".{directive} {new_count}{reg_match.group(3)}"
     lbl = _unique_label(":cond_kaorios_feature_stock", method_body)
+
+    if p1_num > 15 or p2_num > 15:
+        invoke_static_str = "invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;"
+    else:
+        invoke_static_str = "invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;"
+
+    if scratch_num > 15:
+        invoke_virtual_str = f"invoke-virtual/range {{{scratch} .. {scratch}}}, Ljava/lang/Boolean;->booleanValue()Z"
+    else:
+        invoke_virtual_str = f"invoke-virtual {{{scratch}}}, Ljava/lang/Boolean;->booleanValue()Z"
+
     inject = f"""
-    invoke-static {{p1, p2}}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    {invoke_static_str}
     move-result-object {scratch}
 
     if-eqz {scratch}, {lbl}
-    invoke-virtual {{{scratch}}}, Ljava/lang/Boolean;->booleanValue()Z
+    {invoke_virtual_str}
     move-result {scratch}
     return {scratch}
 
@@ -417,6 +457,22 @@ def verify_target_content(filename: str, content: str) -> None:
             raise ValueError(
                 f"AndroidKeyStoreSpi: expected {return_count} CertificateChainIfNeeded hooks (one per return-object), found {hook_count}"
             )
+        # Verify dataflow: hook result is piped to the return-object register
+        pairs = re.findall(
+            r'KaoriosHook;->CertificateChainIfNeeded\(\[Ljava/security/cert/Certificate;\)\[Ljava/security/cert/Certificate;\s+'
+            r'move-result-object\s+([vp]\d+)\s+'
+            r'return-object\s+([vp]\d+)',
+            body
+        )
+        if len(pairs) != return_count:
+            raise ValueError(
+                f"AndroidKeyStoreSpi: hook dataflow verification failed: expected {return_count} piped hooks, found {len(pairs)}"
+            )
+        for injected_reg, returned_reg in pairs:
+            if injected_reg != returned_reg:
+                raise ValueError(
+                    f"AndroidKeyStoreSpi: dataflow mismatch: move-result-object {injected_reg} != return-object {returned_reg}"
+                )
     elif filename == "Instrumentation.smali":
         body1 = _extract_method_body(
             content,
@@ -442,6 +498,8 @@ def verify_target_content(filename: str, content: str) -> None:
             )
         if hooks1 == 0 and hooks2 == 0:
             raise ValueError("Instrumentation: KaoriosHook initContext hook not found in either newApplication method")
+        if "initContext(Landroid/content/Context;)V" in body1 and re.search(r'invoke-static(/range)?\s*\{p1(\s*\.\.\s*p1)?\}', body1):
+            raise ValueError("Instrumentation: newApplication(Class, Context) incorrectly passed p1 instead of p2 to initContext")
     elif filename == "ApplicationPackageManager.smali":
         pat = re.search(r'(\.method[^\n]*?hasSystemFeature\(Ljava/lang/String;I\)Z.*?\.end method)', content, flags=re.DOTALL)
         if pat is None:
@@ -464,6 +522,11 @@ def verify_target_content(filename: str, content: str) -> None:
                 raise ValueError(f"Build.smali post-patch: field {f} not found")
             if "final" in m.group(0):
                 raise ValueError(f"Build.smali post-patch: field {f} still has 'final' modifier — patch did not apply")
+        m_time = re.search(r'\.field public static[^\n]* TIME:J', content)
+        if not m_time:
+            raise ValueError("Build.smali post-patch: field TIME:J not found")
+        if "final" in m_time.group(0):
+            raise ValueError("Build.smali post-patch: field TIME:J still has 'final' modifier — patch did not apply")
     elif filename == "Build$VERSION.smali":
         fields_version = [
             "RELEASE", "RELEASE_OR_CODENAME", "RELEASE_OR_PREVIEW_DISPLAY",

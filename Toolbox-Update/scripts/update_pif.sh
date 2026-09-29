@@ -224,15 +224,27 @@ device_initial_sdk() {
   esac
 }
 
-DEVICE_INITIAL_SDK="$(device_initial_sdk "$DEVICE")"
-if [ -z "$DEVICE_INITIAL_SDK" ]; then
-  if [ -n "$CURRENT_DEVICE_INITIAL_SDK" ] && [ "$DEVICE" = "$CURRENT_DEVICE" ]; then
-    DEVICE_INITIAL_SDK="$CURRENT_DEVICE_INITIAL_SDK"
-    echo "Warning: device '$DEVICE' not in launch-SDK map; preserving existing DEVICE_INITIAL_SDK_INT=$CURRENT_DEVICE_INITIAL_SDK."
-  else
-    echo "Failed to determine DEVICE_INITIAL_SDK_INT for device '$DEVICE' (not in map, no existing value to preserve)."
-    exit 1
+resolve_device_initial_sdk() {
+  local dev="$1" current_dev="${2:-}" current_sdk="${3:-}"
+  local sdk
+  sdk="$(device_initial_sdk "$dev")"
+  if [ -n "$sdk" ]; then
+    printf '%s\n' "$sdk"
+    return 0
   fi
+  if [ -n "$current_sdk" ] && [ "$dev" = "$current_dev" ]; then
+    printf '%s\n' "$current_sdk"
+    return 0
+  fi
+  return 1
+}
+
+if ! DEVICE_INITIAL_SDK="$(resolve_device_initial_sdk "$DEVICE" "$CURRENT_DEVICE" "$CURRENT_DEVICE_INITIAL_SDK")"; then
+  echo "Failed to determine DEVICE_INITIAL_SDK_INT for device '$DEVICE' (not in map, no existing value to preserve)."
+  exit 1
+fi
+if [ -z "$(device_initial_sdk "$DEVICE")" ]; then
+  echo "Warning: device '$DEVICE' not in launch-SDK map; preserving existing DEVICE_INITIAL_SDK_INT=$DEVICE_INITIAL_SDK."
 fi
 
 if ! printf '%s' "$DEVICE_INITIAL_SDK" | grep -qE '^[0-9]+$' || [ "$DEVICE_INITIAL_SDK" -le 0 ]; then

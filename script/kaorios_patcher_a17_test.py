@@ -523,5 +523,159 @@ class PartialPatchFailClosedTest(unittest.TestCase):
         self.assertIsNotNone(msg)
 
 
+SAMPLE_APP_PKG_MANAGER_HIGH_REGISTERS = """\
+.class public Landroid/app/ApplicationPackageManager;
+.super Ljava/lang/Object;
+
+.method public hasSystemFeature(Ljava/lang/String;I)Z
+    .registers 20
+    const/4 v0, 0x0
+    return v0
+.end method
+"""
+
+SAMPLE_KEYSTORE_GEN_HIGH_REGISTERS = """\
+.class public Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
+.super Ljava/lang/Object;
+
+.method public generateKeyPair()Ljava/security/KeyPair;
+    .registers 20
+    const/4 v0, 0x0
+    return-object v0
+.end method
+"""
+
+SAMPLE_KEYSTORE_SPI_HIGH_REGISTERS = """\
+.class public Landroid/security/AndroidKeyStoreSpi;
+.super Ljava/lang/Object;
+
+.method public engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    .registers 20
+    aput-object v0, v16, v2
+    return-object v16
+.end method
+"""
+
+SAMPLE_INSTRUMENTATION_HIGH_REGISTERS = """\
+.class public Landroid/app/Instrumentation;
+.super Ljava/lang/Object;
+
+.method public newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
+    .registers 20
+    const/4 v0, 0x0
+    return-object v0
+.end method
+
+.method public newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
+    .registers 20
+    const/4 v0, 0x0
+    return-object v0
+.end method
+"""
+
+
+class HighRegistersAndStructuralVerificationTest(unittest.TestCase):
+    """Bug #12-#17, #28: High registers (>15) use /range format and structural verifiers check strict correctness."""
+
+    def _load_patcher(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("patcher", str(PATCHER_PY))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_app_pkg_manager_high_registers_uses_range(self):
+        mod = self._load_patcher()
+        patched, changed = mod.patch_app_pkg_manager(SAMPLE_APP_PKG_MANAGER_HIGH_REGISTERS)
+        self.assertTrue(changed)
+        self.assertIn("invoke-static/range {p1 .. p2}", patched)
+        self.assertIn("invoke-virtual/range {v17 .. v17}", patched)
+        mod.verify_target_content("ApplicationPackageManager.smali", patched)
+
+    def test_keystore_generator_high_registers_uses_range(self):
+        mod = self._load_patcher()
+        patched, changed = mod.patch_keystore_generator(SAMPLE_KEYSTORE_GEN_HIGH_REGISTERS)
+        self.assertTrue(changed)
+        self.assertIn("invoke-static/range {p0 .. p0}", patched)
+        mod.verify_target_content("AndroidKeyStoreKeyPairGeneratorSpi.smali", patched)
+
+    def test_keystore_spi_high_registers_uses_range(self):
+        mod = self._load_patcher()
+        patched, changed = mod.patch_keystore_spi(SAMPLE_KEYSTORE_SPI_HIGH_REGISTERS)
+        self.assertTrue(changed)
+        self.assertIn("invoke-static/range {v16 .. v16}", patched)
+        self.assertIn("move-result-object v16", patched)
+        self.assertIn("return-object v16", patched)
+        mod.verify_target_content("AndroidKeyStoreSpi.smali", patched)
+
+    def test_instrumentation_high_registers_uses_range_and_correct_params(self):
+        mod = self._load_patcher()
+        patched, changed = mod.patch_instrumentation(SAMPLE_INSTRUMENTATION_HIGH_REGISTERS)
+        self.assertTrue(changed)
+        self.assertIn("invoke-static/range {p2 .. p2}", patched)
+        self.assertIn("invoke-static/range {p3 .. p3}", patched)
+        self.assertNotIn("invoke-static {p1}", patched)
+        self.assertNotIn("invoke-static/range {p1 .. p1}", patched)
+        mod.verify_target_content("Instrumentation.smali", patched)
+
+    def test_instrumentation_verifier_rejects_p1_context(self):
+        mod = self._load_patcher()
+        bad_instrumentation = """\
+.class public Landroid/app/Instrumentation;
+.super Ljava/lang/Object;
+.method public newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
+    .locals 1
+    invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+    return-object v0
+.end method
+.method public newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
+    .locals 1
+    invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+    return-object v0
+.end method
+"""
+        with self.assertRaises(ValueError) as ctx:
+            mod.verify_target_content("Instrumentation.smali", bad_instrumentation)
+        self.assertIn("incorrectly passed p1 instead of p2", str(ctx.exception))
+
+    def test_keystore_spi_verifier_rejects_dataflow_mismatch(self):
+        mod = self._load_patcher()
+        bad_spi = """\
+.class public Landroid/security/AndroidKeyStoreSpi;
+.super Ljava/lang/Object;
+.method public engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    .locals 2
+    invoke-static {v0}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+    move-result-object v0
+    return-object v1
+.end method
+"""
+        with self.assertRaises(ValueError) as ctx:
+            mod.verify_target_content("AndroidKeyStoreSpi.smali", bad_spi)
+        self.assertIn("dataflow mismatch", str(ctx.exception))
+
+    def test_build_verifier_rejects_missing_or_final_time_field(self):
+        mod = self._load_patcher()
+        fields_null = [
+            "BRAND", "BRAND_FOR_ATTESTATION", "DEVICE", "DEVICE_FOR_ATTESTATION",
+            "FINGERPRINT", "HARDWARE", "ID", "MANUFACTURER", "MANUFACTURER_FOR_ATTESTATION",
+            "MODEL", "MODEL_FOR_ATTESTATION", "PRODUCT", "PRODUCT_FOR_ATTESTATION",
+            "TAGS", "TYPE", "USER"
+        ]
+        base_lines = [".class public final Landroid/os/Build;", ".super Ljava/lang/Object;"]
+        for f in fields_null:
+            base_lines.append(f".field public static {f}:Ljava/lang/String; = null")
+
+        bad_build_missing = "\n".join(base_lines) + "\n"
+        with self.assertRaises(ValueError) as ctx:
+            mod.verify_target_content("Build.smali", bad_build_missing)
+        self.assertIn("TIME:J not found", str(ctx.exception))
+
+        bad_build_final = "\n".join(base_lines) + "\n.field public static final TIME:J\n"
+        with self.assertRaises(ValueError) as ctx:
+            mod.verify_target_content("Build.smali", bad_build_final)
+        self.assertIn("still has 'final' modifier", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
