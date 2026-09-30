@@ -105,6 +105,17 @@ ZERO_LOCALS_SMALI = """\
 
 
 class TestPatchServicesA17(unittest.TestCase):
+    def test_combined_visibility_and_installer_high_register_order_and_idempotence(self):
+        installer = load_module("installer_fixture", TOOLS_DIR / "patch-installer-source-test.py")
+        stock = STOCK_7_PARAM_SMALI.replace('.registers 10', '.registers 48')
+        stock += installer.fixture(40).split('.super Ljava/lang/Object;\n', 1)[1]
+        patched, changed = patcher.patch(stock)
+        self.assertTrue(changed)
+        self.assertIn('shouldHideAppListForCaller', patched)
+        self.assertEqual(2, patched.count(installer.patcher.HOOK))
+        patcher.verify(patched)
+        self.assertEqual((patched, False), patcher.patch(patched))
+
     def test_stock_7_param_patches_and_verifies(self):
         patched, changed = patcher.patch(STOCK_7_PARAM_SMALI)
         self.assertTrue(changed)

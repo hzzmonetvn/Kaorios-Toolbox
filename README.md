@@ -91,7 +91,7 @@ If a ROM lacks these hooks or policy rules, toggling the feature will not take e
 ## 📋 Todo List / Roadmap
 
 - [x] ⚡ **Automated Patcher Tool 2.0.6+** (`script/kaorios_patcher_a17.py`)
-- [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Included A13–A17 call/query layouts validated; read-only Global/Secure/System capability gate integrated. Legacy String snippet is unverified for A13–A16; real-device Binder/SELinux checks remain. [Validation matrix](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
+- [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Included A13–A17 call/query layouts validated; read-only Global/Secure/System capability gate revalidates saved ON requests at startup, retains intent on failures and offers manual retry. Legacy String snippet is unverified for A13–A16; real-device Binder/SELinux checks remain. [Validation matrix](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
 - [ ] 📦 **Spoof Installer Source Package**: Existing per-caller policy, UI controls and patcher/verifier cover both installer read APIs in the five included samples. Only the installing package result is filtered; real-device checks remain. [Scope and checklist](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
 
 ---

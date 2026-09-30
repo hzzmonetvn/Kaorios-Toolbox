@@ -57,7 +57,7 @@ Raw archive chưa decompile không được gọi là `NOT_FOUND`. Khi cần aud
 
 With Advanced OFF, run from the Toolbox/app caller context, using Android Settings API rather than a shell UID. Generate a fresh 16-byte SecureRandom value encoded as 32 lowercase hex characters. Read `kaorios_advanced_probe_<nonce>` separately through `Settings.Global.getString`, `Settings.Secure.getString`, and `Settings.System.getString`. Require exact `kaorios-advanced-v1:<namespace>:<nonce>`; print only PASS/FAIL for each namespace. Do not write or persist the key. Repeat with a new nonce, missing hooks, and the policy service unavailable. Normal settings without rules must remain stock.
 
-Legacy handshake requires both stages on the same provider thread and consumes the challenge once. The modern provider/service path uses the same protocol independent of the Advanced flag. The app reports per-namespace success and path UNKNOWN because the response cannot distinguish the two implementations. Enabling Advanced requires all three reads to pass; failure leaves the switch OFF and reports the missing namespaces. The Settings response does not prove installer hooks exist.
+Legacy handshake requires both stages on the same provider thread and consumes the challenge once. The modern provider/service path uses the same protocol independent of the Advanced flag. The app reports per-namespace success and path UNKNOWN because the response cannot distinguish the two implementations. Enabling Advanced requires all three reads to pass. Loading a saved ON request revalidates all three; failure leaves the effective switch OFF, retains desired ON and offers manual recheck without writing the flag. Null/wrong responses report Missing; exceptions report Check failed/retry. A partial flag write keeps its written value and warns that cache propagation is uncertain. The Settings response does not prove installer hooks exist.
 
 ## Installer device checklist / Checklist trên thiết bị
 
@@ -73,3 +73,42 @@ From the **same configured caller**, compare both `PackageManager.getInstallerPa
 - Save/cancel a rule, toggle its parent off/on and reopen: children and unrelated rule fields must survive; cancel must not persist edits.
 
 Record PASS/FAIL for each API/case, successful boot and absence of new PackageManager failures/AVCs. Real install provenance and permission decisions must remain unchanged. No new installer Binder service or SELinux rules are required.
+
+## Reproduce sample evidence (dev only)
+
+Run from the public repository with Python 3.9+ and Java. [refresh-sample-compatibility.py](../../script/refresh-sample-compatibility.py) uses a temporary directory, extracts every root `classes*.dex`, checks extracted hashes against ZIP entries, disassembles selected diagnostic/installer entry classes, and runs the checker in explicit strict decompiled mode. `--verify-patches` additionally patches ComputerEngine/SettingsProvider, checks idempotence, assembles and re-disassembles each patched class, then runs its structural verifier. Temporary trees are removed; no decompiled files should be committed. JSON records archive/DEX/tool hashes and observations, not device certification.
+
+The pinned tool set is smali/baksmali/dexlib2/util **3.0.8**, ANTLR **3.5.2**, JCommander **1.82**, Guava **31.1-android**. Fetch the exact filenames:
+
+```sh
+sample_tools=$(mktemp -d)
+curl -fsSL https://dl.google.com/dl/android/maven2/com/android/tools/smali/smali/3.0.8/smali-3.0.8.jar -o "$sample_tools/smali-3.0.8.jar"
+curl -fsSL https://dl.google.com/dl/android/maven2/com/android/tools/smali/smali-baksmali/3.0.8/smali-baksmali-3.0.8.jar -o "$sample_tools/baksmali-3.0.8.jar"
+curl -fsSL https://dl.google.com/dl/android/maven2/com/android/tools/smali/smali-dexlib2/3.0.8/smali-dexlib2-3.0.8.jar -o "$sample_tools/smali-dexlib2.jar"
+curl -fsSL https://dl.google.com/dl/android/maven2/com/android/tools/smali/smali-util/3.0.8/smali-util-3.0.8.jar -o "$sample_tools/smali-util.jar"
+curl -fsSL https://repo.maven.apache.org/maven2/org/antlr/antlr-runtime/3.5.2/antlr-runtime-3.5.2.jar -o "$sample_tools/antlr-runtime.jar"
+curl -fsSL https://repo.maven.apache.org/maven2/com/beust/jcommander/1.82/jcommander-1.82.jar -o "$sample_tools/jcommander.jar"
+curl -fsSL https://repo.maven.apache.org/maven2/com/google/guava/guava/31.1-android/guava-31.1-android.jar -o "$sample_tools/guava.jar"
+python3 script/refresh-sample-compatibility.py --tool-dir "$sample_tools" --report /tmp/kaorios-sample-report.json --verify-patches
+```
+
+The helper does not run in normal CI. CI syntax-checks it and runs synthetic tests plus honest raw archive diagnostics. Samples remain development inputs, never runtime dependencies or a universal ROM oracle.
+
+## Installer caller/user re-audit
+
+The included Binder entry is IPackageManagerBase, inherited by PackageManagerService$IPackageManagerImpl; client ApplicationPackageManager calls IPackageManager. Entry delegation must retain Binder identity. Root/system appIds bypass policy even for internal system_server calls; an application-UID internal reentrant call is not independently distinguishable from its Binder caller, so device verification remains necessary. No new package-installer exception is added: unconfigured application callers are stock; privileged UIDs use the existing bypass.
+
+A13 stock getInstallSource derives user from the supplied calling UID. A14–A17 ComputerEngine overloads use explicit target user; the patch preserves that parameter even for cross-user calls. In these samples, the legacy Binder API derives its forwarded user from calling UID; the modern client API forwards ApplicationPackageManager.getUserId(). Do not replace modern target user with caller user. InstallSourceInfo constructors store `p1` as initiating, `p3` as originating and `p4` as installing (invocation index 4 including receiver). Tests reject swapping the installing provenance. A null **stock installer field** can be spoofed for an installed non-system target; an early null InstallSourceInfo object remains stock.
+
+## Additional device cases
+
+Use a small test app with the actual caller package/UID. Launch its test Activity via adb; do not use shell Settings reads as capability evidence. Log fresh-nonce namespace PASS/FAIL and both PackageManager read results from inside that app. No install database writes are needed.
+
+- Reboot and load saved Advanced ON: fresh capability check must run.
+- ROM/framework replacement missing hooks: desired ON remains saved, effective OFF with warning.
+- Service startup failure or SELinux denial: gate fails without clearing preference; retry after recovery restores effective ON without an unnecessary flag write.
+- Normal unrelated Settings remain stock; configured replacement/removal yields replacement/null. Missing one namespace blocks enable.
+- System installer-hide OFF preserves stock; self-exemption OFF allows normal spoof; Advanced OFF restores stock for both installer APIs.
+- For cross-user reads, compare the actual target-user result; both APIs must agree where their stock target-user semantics match.
+
+Các bước trên cần caller app thật. Helper sample chỉ tái lập bằng chứng HOST/SAMPLE LAYOUT; Binder, SELinux, reboot/update và hiệu lực policy trên thiết bị vẫn là NEEDS_DEVICE_TEST.

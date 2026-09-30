@@ -9,6 +9,7 @@ on:
       - 'script/patch-*.py'
       - 'script/verify-*.py'
       - 'script/check-*.py'
+      - 'script/refresh-sample-compatibility.py'
       - 'Toolbox-Update/scripts/**'
       - 'Toolbox-data/Pif-props.json'
       - 'Toolbox-data/app-props.json'
@@ -21,6 +22,7 @@ on:
       - 'script/patch-*.py'
       - 'script/verify-*.py'
       - 'script/check-*.py'
+      - 'script/refresh-sample-compatibility.py'
       - 'Toolbox-Update/scripts/**'
       - 'Toolbox-data/Pif-props.json'
       - 'Toolbox-data/app-props.json'
@@ -43,7 +45,7 @@ jobs:
 
       - name: Syntax check all Python scripts
         run: |
-          python -m py_compile script/kaorios_patcher_a17.py
+          python -m py_compile script/kaorios_patcher_a17.py script/refresh-sample-compatibility.py
           for f in script/patch-*.py script/verify-*.py script/check-*.py; do
             [ -f "$f" ] && python -m py_compile "$f"
           done

@@ -630,3 +630,9 @@ The CLI may print Vietnamese messages such as `ĐÃ ĐƯỢC PATCH TỪ TRƯỚC
 ## Advanced Settings capability / Kiểm tra capability Settings
 
 Before enabling Advanced, Toolbox reads a fresh random nonce probe through each of Global, Secure and System. The exact namespace/nonce response is required for all three; missing/unsupported hooks leave the switch OFF and show each namespace result. The read-only probe works with Advanced OFF, writes no setting and persists no key. The modern path validates the provider-to-AdvancedPolicyService route; legacy compatibility requires both stages. Runtime path is reported UNKNOWN because the same response does not distinguish architectures. See the [read-only device checklist](Sample_Compatibility_2.0.6.0.md#read-only-device-settings-check). Host/sample verification still needs real-device confirmation.
+
+### Startup capability and saved intent
+
+The persisted Advanced flag is user intent, not proof that hooks are alive after a reboot, ROM update or framework replacement. Toolbox revalidates Global/Secure/System when loading a saved ON request. A missing response or read exception leaves the effective switch OFF with per-namespace status; it does not clear the saved request. Use **Recheck Settings hooks** after the service/framework is ready, or explicitly turn off the saved request. Retry only reads capability and does not rewrite the flag. A saved OFF request needs no startup probe. Enabling still probes before writing; partial writes retain the written preference and warn that cache propagation is uncertain. No periodic polling is used.
+
+Settings capability does not certify installer hooks. Installer-only rules now show their installer ON/OFF state alongside target/template counts. An installed, non-system target with no stock installer can still report Play Store when the caller rule requests it; unknown/uninstalled targets retain stock behavior. Both read APIs filter only the installing package field.

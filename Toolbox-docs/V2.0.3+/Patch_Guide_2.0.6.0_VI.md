@@ -630,3 +630,9 @@ CLI có thể hiển thị thông báo tiếng Việt như `ĐÃ ĐƯỢC PATCH 
 ## Advanced Settings capability / Kiểm tra capability Settings
 
 Trước khi bật Advanced, Toolbox đọc probe nonce ngẫu nhiên mới qua Global, Secure và System. Cả ba phải trả đúng namespace/nonce; thiếu hook hoặc không hỗ trợ thì switch giữ OFF và báo kết quả từng namespace. Probe chỉ đọc, chạy khi Advanced OFF, không ghi setting và không lưu key. Đường modern kiểm tra tuyến provider tới AdvancedPolicyService; đường legacy cần đủ hai bước. App báo path UNKNOWN vì cùng response không phân biệt được kiến trúc. Xem [checklist chỉ đọc trên thiết bị](Sample_Compatibility_2.0.6.0.md#read-only-device-settings-check). Kiểm chứng host/sample vẫn cần xác nhận trên thiết bị thật.
+
+### Capability lúc khởi động và ý định đã lưu
+
+Flag Advanced đã lưu là ý định người dùng, không chứng minh hooks vẫn sống sau reboot, cập nhật ROM hoặc thay framework. Khi tải request ON, Toolbox kiểm tra lại Global/Secure/System. Response thiếu hoặc lỗi đọc khiến switch effective OFF và báo trạng thái từng namespace; request đã lưu không bị xoá. Chọn **Kiểm tra lại Settings hooks** khi service/framework sẵn sàng, hoặc chủ động tắt request đã lưu. Retry chỉ đọc capability, không ghi lại flag. Request OFF không bắt buộc probe lúc tải. Enable vẫn probe trước khi ghi; partial write giữ preference đã ghi và cảnh báo cache propagation chưa chắc chắn. Không polling định kỳ.
+
+Settings capability không xác nhận installer hooks. Rule chỉ có installer giờ hiển thị trạng thái BẬT/TẮT cùng số target/template. Target thường đã cài nhưng stock installer null vẫn có thể trả Play Store theo rule caller; target chưa cài/không tồn tại giữ stock. Hai API chỉ lọc installing package field.

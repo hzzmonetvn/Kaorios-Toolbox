@@ -113,6 +113,39 @@ class InstallerPatcherTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 patcher.patch(stock)
 
+    def test_constructor_installing_slot_cannot_be_swapped_with_originating(self):
+        stock = fixture().replace('move-object v5, v4\n    const/4 v4, 0x0',
+                                  'move-object v5, v3\n    move-object v4, v4')
+        with self.assertRaisesRegex(ValueError, 'installing argument'):
+            patcher.patch(stock)
+        patched, _ = patcher.patch(fixture())
+        modified = patched.replace('move-object v5, v4\n    const/4 v4, 0x0',
+                                   'move-object v5, v3\n    move-object v4, v4')
+        with self.assertRaises(ValueError):
+            patcher.verify(modified)
+
+    def test_a13_user_is_derived_from_original_calling_uid(self):
+        stock = fixture().replace('(Ljava/lang/String;I)', '(Ljava/lang/String;)')
+        stock = stock.replace('    move/from16 v3, p2\n', '')
+        stock = stock.replace('getInstallSource(Ljava/lang/String;II)', 'getInstallSource(Ljava/lang/String;I)')
+        stock = stock.replace('{v0 .. v3}', '{v0 .. v2}')
+        patched, _ = patcher.patch(stock)
+        patcher.verify(patched)
+        self.assertIn('invoke-static/range {v11 .. v11}, Landroid/os/UserHandle;->getUserId(I)I\n    move-result v12', patched)
+        self.assertNotIn('move/16 v12,', patched)
+
+    def test_parameter_metadata_and_register_limit_are_preserved(self):
+        stock = fixture(40).replace('    .locals 40', '    .locals 40\n    .param p1, "target"\n    .param p2, "user"\n    .local p1, "target":Ljava/lang/String;')
+        patched, _ = patcher.patch(stock)
+        patcher.verify(patched)
+        self.assertIn('.param p1, "target"', patched)
+        self.assertIn('.param p2, "user"', patched)
+        self.assertIn('.local v41, "target":Ljava/lang/String;', patched)
+        self.assertIn('move-object/16 v41, p1', patched)
+        self.assertIn('move/16 v42, p2', patched)
+        with self.assertRaisesRegex(ValueError, 'register limits'):
+            patcher.patch(fixture(250))
+
     def test_missing_api_rejected(self):
         with self.assertRaises(ValueError):
             patcher.patch(fixture().split('.method public getInstallSourceInfo')[0])

@@ -68,6 +68,34 @@ SAMPLE_SETTINGS_PROVIDER_STOCK = """
 
 
 class KaoriosPatcherA17Test(unittest.TestCase):
+    def test_main_modes_cover_combined_high_register_computer_engine(self):
+        import importlib.util
+        def load(name, filename):
+            spec = importlib.util.spec_from_file_location(name, SCRIPT_DIR / filename)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+        services = load('services_fixture', 'patch-services-a17-test.py')
+        installer = load('installer_fixture', 'patch-installer-source-test.py')
+        stock = services.STOCK_7_PARAM_SMALI.replace('.registers 10', '.registers 48')
+        stock += installer.fixture(40).split('.super Ljava/lang/Object;\n', 1)[1]
+        for mode in ['1', '3']:
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as td:
+                path = Path(td) / 'ComputerEngine.smali'
+                path.write_text(stock)
+                command = [sys.executable, str(PATCHER_PY), str(path), '--mode', mode, '--no-delay']
+                first = subprocess.run(command, capture_output=True, text=True)
+                self.assertEqual(0, first.returncode, first.stdout + first.stderr)
+                self.assertIn('Status: PATCHED', first.stdout)
+                patched = path.read_text()
+                self.assertIn('shouldHideAppListForCaller', patched)
+                self.assertEqual(2, patched.count(installer.patcher.HOOK))
+                services.patcher.verify(patched)
+                second = subprocess.run(command, capture_output=True, text=True)
+                self.assertEqual(0, second.returncode, second.stdout + second.stderr)
+                self.assertIn('ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS)', second.stdout)
+                self.assertEqual(patched, path.read_text())
+
     def test_single_file_stock_patch_and_verify(self):
         with tempfile.TemporaryDirectory() as td:
             f = Path(td) / "ActivityThread.smali"
