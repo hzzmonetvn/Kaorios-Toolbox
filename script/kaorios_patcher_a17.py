@@ -372,6 +372,8 @@ def patch_build(content: str) -> tuple[str, bool]:
     anchor = fields_null[0]
     if not re.search(rf'\.field public static[^\n]*? {anchor}:Ljava/lang/String;', content):
         raise ValueError(f"Build.smali: expected field {anchor} not found — unsupported layout")
+    if not re.search(r'\.field public static[^\n]*? TIME:J', content):
+        raise ValueError("Build.smali: expected field TIME:J not found — unsupported layout")
 
     patched = content
     for f in fields_null:

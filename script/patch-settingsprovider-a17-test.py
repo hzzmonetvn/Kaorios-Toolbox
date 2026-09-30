@@ -313,6 +313,62 @@ class TestPatchSettingsProviderA17(unittest.TestCase):
         with self.assertRaises(ValueError):
             patcher.verify(wrong_regs)
 
+    def test_call_high_registers_uses_range_invoke(self):
+        high_reg_smali = """\
+.class public Lcom/android/providers/settings/SettingsProvider;
+.super Landroid/content/ContentProvider;
+.method public call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    .locals 15
+    invoke-virtual {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+    move-result v0
+    return-object p3
+.end method
+"""
+        patched, changed = patcher.patch(high_reg_smali)
+        self.assertTrue(changed)
+        self.assertIn("invoke-static/range {p1 .. p2}", patched)
+        patcher.verify(patched)
+
+    def test_call_locals_canonicalizes_parameter_aliases(self):
+        alias_smali = """\
+.class public Lcom/android/providers/settings/SettingsProvider;
+.super Landroid/content/ContentProvider;
+.method public call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    .locals 2
+    invoke-virtual {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+    move-result v0
+    move-object v1, v2
+    move-object v0, v3
+    return-object p3
+.end method
+"""
+        patched, changed = patcher.patch(alias_smali)
+        self.assertTrue(changed)
+        self.assertIn(".locals 3", patched)
+        self.assertIn("move-object v1, p0", patched)
+        self.assertIn("move-object v0, p1", patched)
+        patcher.verify(patched)
+
+    def test_query_high_registers_fails_closed(self):
+        high_query_smali = """\
+.class public Lcom/android/providers/settings/SettingsProvider;
+.super Landroid/content/ContentProvider;
+.method public call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    .locals 2
+    invoke-virtual {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+    move-result v0
+    return-object p3
+.end method
+.method public query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;
+    .locals 15
+    const/4 v0, 0x0
+    return-object v0
+.end method
+"""
+        with self.assertRaises(ValueError) as ctx:
+            patcher.patch(high_query_smali)
+        self.assertIn("exceeds format 35c limit", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

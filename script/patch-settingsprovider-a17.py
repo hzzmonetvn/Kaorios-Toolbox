@@ -93,7 +93,7 @@ def verify(text: str) -> None:
         raise ValueError("hook must appear BEFORE Binder.clearCallingIdentity")
 
     pattern = (
-        r"invoke-static\s*\{p1,\s*p2\},\s*"
+        r"invoke-static(?:/range)?\s*\{p1(?:,\s*p2|\s*\.\.\s*p2)\},\s*"
         + re.escape(HOOK_TARGET)
         + r"\s*(?:\r?\n)+"
         + r"\s*move-result-object\s+(v\d+)\s*(?:\r?\n)+"
@@ -172,10 +172,25 @@ def _patch_query(text: str) -> tuple[str, bool]:
         current_regs = int(reg_match.group("num"))
         if current_regs < param_width:
             raise ValueError(f".registers {current_regs} is less than parameter count {param_width}")
+        locals_count = current_regs - param_width
+    else:
+        locals_count = int(loc_match.group("num"))
+
+    p1_num = locals_count + 1
+    p3_num = locals_count + 3
+    p4_num = locals_count + 4
+    if p1_num > 15 or p3_num > 15 or p4_num > 15:
+        raise ValueError("SettingsProvider.query: register exceeds format 35c limit (> 15); unsupported high-register layout")
 
     return_matches = list(re.finditer(r"(?m)^(?P<indent>[ \t]*)return-object\s+(?P<reg>[vp]\d+)[ \t]*(?:\r?\n|$)", body))
     if not return_matches:
         raise ValueError("no return-object found in SettingsProvider.query method")
+
+    for m in return_matches:
+        reg = m.group("reg")
+        reg_num = int(reg[1:]) if reg.startswith("v") else locals_count + int(reg[1:])
+        if reg_num > 15:
+            raise ValueError(f"SettingsProvider.query: return register {reg} exceeds format 35c limit (> 15); unsupported high-register layout")
 
     patched_body = body
     for m in reversed(return_matches):
@@ -212,6 +227,16 @@ def patch(text: str) -> tuple[str, bool]:
 
         if loc_match:
             current_locs = int(loc_match.group("num"))
+            # .locals may reference parameter slots numerically as vN. Adding a
+            # local shifts the physical parameter registers, so canonicalize those aliases
+            # to stable pN names before expanding .locals.
+            for param_idx in range(param_width - 1, -1, -1):
+                v_idx = current_locs + param_idx
+                updated_body = re.sub(
+                    rf"(?<![A-Za-z0-9_])v{v_idx}(?![0-9])",
+                    f"p{param_idx}",
+                    updated_body,
+                )
             new_locs = current_locs + 1
             hook_reg = f"v{current_locs}"
             indent = loc_match.group("indent")
@@ -247,6 +272,7 @@ def patch(text: str) -> tuple[str, bool]:
             )
         else:
             hook_reg = "v0"
+            new_locs = 1
             lines = updated_body.splitlines(keepends=True)
             method_line_end = len(lines[0])
             updated_body = (
@@ -255,9 +281,16 @@ def patch(text: str) -> tuple[str, bool]:
                 + updated_body[method_line_end:]
             )
 
+        p1_num = new_locs + 1
+        p2_num = new_locs + 2
+        if p1_num > 15 or p2_num > 15:
+            invoke_str = f"    invoke-static/range {{p1 .. p2}}, {HOOK_TARGET}{newline}"
+        else:
+            invoke_str = f"    invoke-static {{p1, p2}}, {HOOK_TARGET}{newline}"
+
         inj_offset = _find_injection_point(updated_body)
         hook_code = (
-            f"    invoke-static {{p1, p2}}, {HOOK_TARGET}{newline}"
+            f"{invoke_str}"
             f"    move-result-object {hook_reg}{newline}"
             f"    if-eqz {hook_reg}, :cond_kaorios_settings_stock{newline}"
             f"    return-object {hook_reg}{newline}"
