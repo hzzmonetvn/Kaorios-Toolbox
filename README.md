@@ -45,13 +45,29 @@ For **version 2.0.4.0 and below**, see:
 
 ## 📦 Latest release: v2.0.6.0
 
-> ⚡ **Auto Patcher**: *Stay tuned!.*   
-> See Patch Guide v2.0.6.0 in [English](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](https://github.com/hzzmonetvn/Kaorios-Toolbox/blob/main/Toolbox-docs/V2.0.3%2B/Patch_Guide_2.0.6.0_VI.md).  
+See Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md). For Android 17 (SDK 37), also refer to the [Android 17 Build Patch Notes](Toolbox-docs/V2.0.3+/notes-a17.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/notes-a17_VI.md)).
+
+### ⚡ Automated Patcher CLI (`script/kaorios_patcher_a17.py`)
+
+An automated smali patcher for Android 17 is provided in `script/kaorios_patcher_a17.py`. It inspects disassembled smali directories or individual files, validates register limits, canonicalizes parameter aliases, injects hooks, and verifies syntax before saving.
+
+**Usage:**
+
+```bash
+python3 script/kaorios_patcher_a17.py <target_dir_or_file> --mode {1,2,3} [--no-delay]
+```
+
+- **Modes**:
+  - `1`: **Hooks only** — Patches `ActivityThread`, `ComputerEngine`, `SystemServer`, `SettingsProvider`, `Instrumentation`, `ApplicationPackageManager`, `AndroidKeyStoreKeyPairGeneratorSpi`, and `AndroidKeyStoreSpi`.
+  - `2`: **Build Spoof A17 only** — Removes `final` and updates initializers in `Build.smali` and `Build$VERSION.smali`.
+  - `3`: **All-in-One** — Executes both Mode 1 (Hooks) and Mode 2 (Build Spoof).
+- **Options**:
+  - `--no-delay`: Disables terminal typing effect and runs at maximum speed (ideal for CI/automation).
 
 Follow the detailed usage guide here:  
-👉 [Kaorios-Toolbox Guide](https://github.com/hzzmonetvn/Kaorios-Toolbox/tree/main/Toolbox-docs)
+👉 [Kaorios-Toolbox Guide](Toolbox-docs)
 
-Releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases)
+Releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases)  
 Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-Toolbox/releases)
 
 ### Advanced features: framework patch required
@@ -70,7 +86,7 @@ If a ROM lacks these hooks or policy rules, toggling the feature will not take e
 
 ## 📋 Todo List / Roadmap
 
-- [ ] ⚡ **Automated Patcher Tool 2.0.6+**
+- [x] ⚡ **Automated Patcher Tool 2.0.6+** (`script/kaorios_patcher_a17.py`)
 - [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Verify the documented `filterSettingValue` / `shouldRemoveSetting` patches and Advanced capability check on each target ROM.
 - [ ] 📦 **Spoof Installer Source Package**: Spoof package installer origin per-app (`filterInstallerPackageName`, e.g. masquerade as Google Play Store `com.android.vending`).
 

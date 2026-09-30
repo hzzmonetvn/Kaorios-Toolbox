@@ -6,6 +6,23 @@
 
 Guide này dùng chung cho Android 13, 14, 15, 16 và 17. Tên class/method có thể thay đổi giữa AOSP và ROM OEM, nên template chỉ dùng để tìm logic tương đương. Những điểm riêng của Android 17 được ghi chú ngay tại mục liên quan.
 
+### Multi-DEX Disassembly & Thư mục tham chiếu (`tmp/fw/`)
+
+Các file framework hệ thống Android hiện đại (`framework.jar`, `services.jar`, v.v.) chứa nhiều file DEX: `classes.dex`, `classes2.dex`, `classes3.dex`, v.v.
+Khi decompile (disassemble):
+- Sử dụng `baksmali` để decompile từng DEX vào thư mục riêng (ví dụ `smali/`, `smali_classes2/`, `smali_classes3/`) hoặc giải nén vào thư mục làm việc tập trung (ví dụ `tmp/fw/` cho `framework.jar` và `tmp/services/` cho `services.jar`):
+  ```bash
+  # Ví dụ decompile framework.jar multi-dex
+  mkdir -p tmp/fw
+  unzip framework.jar 'classes*.dex' -d tmp/fw/
+  for dex in tmp/fw/classes*.dex; do
+      name=$(basename "$dex" .dex)
+      out_dir="tmp/fw/${name}"
+      baksmali d "$dex" -o "$out_dir"
+  done
+  ```
+- Sử dụng `tmp/fw/` làm thư mục tham chiếu để tìm kiếm class trên toàn bộ các DEX phân mảnh (ví dụ `find tmp/fw/ -name "ApplicationPackageManager.smali"`) và để đối chiếu diff với class stock trước khi đóng gói lại.
+
 ## 1. `framework.jar`
 
 ### A. Khởi tạo cho từng ứng dụng
@@ -17,31 +34,22 @@ Landroid/app/Instrumentation;
 
 **Smali mẫu:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
 
-Patch hai method:
+Patch cả hai method trước lệnh `return-object` cuối:
 
-```smali
-newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
-```
+1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
+   Trong virtual instance method, `p0` là `this`, `p1` là `Class<?>`, và `p2` là `Context`:
+   ```smali
+   invoke-static {p2}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+   ```
+   *(Lưu ý: nếu trên một số ROM OEM được compile dưới dạng static method thì `p0` là `Class` và `p1` là `Context`, truyền `p1`).*
 
-Trước `return-object` cuối, thêm:
+2. `newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;`
+   Trong virtual instance method, `p0` là `this`, `p1` là `ClassLoader`, `p2` là `String`, và `p3` là `Context`:
+   ```smali
+   invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+   ```
 
-```smali
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
-```
-
-Và:
-
-```smali
-newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
-```
-
-Trước `return-object` cuối, thêm:
-
-```smali
-invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
-```
-
-Không cần tăng register vì chỉ dùng parameter register.
+Nếu chỉ số parameter register vượt quá 15 (do số `.locals` lớn), dùng `invoke-static/range {pN .. pN}`. Không cần cấp thêm register.
 
 #### Android 17
 
@@ -87,23 +95,44 @@ Landroid/app/ApplicationPackageManager;
 hasSystemFeature(Ljava/lang/String;I)Z
 ```
 
-Ngay dưới `.registers X` hoặc `.locals X`, thêm:
+#### An toàn cấp phát Register trong Smali & Scratch Register
+
+`hasSystemFeature(String, int)` là một virtual instance method có 3 parameter register: `p0` (`this`), `p1` (`String`), và `p2` (`int`).
+
+> [!WARNING]
+> **TUYỆT ĐỐI KHÔNG tái sử dụng hoặc ghi đè `v0`!**
+> Logic gốc của ROM phụ thuộc vào các register như `v0` được bảo toàn nguyên vẹn. Khi hook trả về `null` (fallback về logic stock), việc ghi đè `v0` sẽ gây crash hoặc hỏng trạng thái hệ thống. Bắt buộc phải cấp phát một register tạm riêng (`vScratch`).
+
+**Các bước cấp phát Register:**
+1. **Chuẩn hóa Parameter Aliases:**
+   Nếu method sử dụng `.registers R`, các parameter `p0..p2` được ánh xạ vật lý vào `v(R-3)..v(R-1)`. Bất kỳ lệnh stock nào tham chiếu các parameter này qua `vN` phải được đổi sang `pN` trước khi mở rộng directive registers để tránh ghi đè sai giá trị parameter.
+2. **Mở rộng Directive Register thêm 1:**
+   - Nếu dùng `.locals L`: đổi thành `.locals L+1`. Register tạm mới là `vL`.
+   - Nếu dùng `.registers R`: đổi thành `.registers R+1`. Register tạm mới là `v(R-3)`.
+3. **Giới hạn khoảng Dalvik Format 35c vs. 3rc (Register > 15):**
+   - Dalvik Format 35c (`invoke-static {p1, p2}`) chỉ hỗ trợ register 4-bit (`0..15`).
+   - Nếu `p1 > 15` hoặc `p2 > 15`, dùng Format 3rc: `invoke-static/range {p1 .. p2}`.
+   - Nếu `vScratch > 15`, dùng `invoke-virtual/range {vScratch .. vScratch}` cho `booleanValue()`.
+
+**Chèn Hook:**
+Ngay dưới directive register đã cập nhật, thêm:
 
 ```smali
-invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-move-result-object v0
+    # Format 35c (registers <= 15) hoặc Format 3rc (/range khi > 15)
+    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    move-result-object vScratch
 
-if-eqz v0, :cond_kaorios_feature_stock
-invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
-move-result v0
-return v0
+    if-eqz vScratch, :cond_kaorios_feature_stock
+    invoke-virtual {vScratch}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result vScratch
+    return vScratch
 
 :cond_kaorios_feature_stock
 ```
 
-Nếu hook trả `null`, code stock tiếp tục chạy.
+Khi hook trả về `null`, code stock tiếp tục thực thi với toàn bộ các register gốc còn nguyên vẹn.
 
-Nếu label trên đã tồn tại trong method, đổi sang label khác chưa dùng.
+Đổi tên nhãn khác nếu method target đã tồn tại `:cond_kaorios_feature_stock`.
 
 ---
 
@@ -121,38 +150,24 @@ Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
 generateKeyPair()Ljava/security/KeyPair;
 ```
 
-Thêm ngay sau directive register/local:
+`generateKeyPair()` là virtual method có 1 parameter register: `p0` (`this`).
+
+**Cấp phát Register:**
+- Tăng `.locals L` lên `.locals L+1` (scratch local mới là `vL`), hoặc `.registers R` lên `.registers R+1` (chuẩn hóa `v(R-1)` thành `p0`, scratch local là `v(R-1)`).
+- Nếu `p0 > 15`, dùng `invoke-static/range {p0 .. p0}`.
+
+**Chèn Hook:**
+Ngay sau directive register/local, thêm:
 
 ```smali
-invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-move-result-object vX
+    invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    move-result-object vScratch
 
-if-eqz vX, :cond_kaorios_gen_stock
-return-object vX
+    if-eqz vScratch, :cond_kaorios_gen_stock
+    return-object vScratch
 
 :cond_kaorios_gen_stock
 ```
-
-Nếu method dùng `.registers X`:
-
-- tăng register thêm `1`;
-- method này là instance method chỉ có `p0`, nên local mới là `v(registers_mới - 2)`.
-
-Ví dụ:
-
-```smali
-.registers 15
-```
-
-đổi thành:
-
-```smali
-.registers 16
-```
-
-và dùng `v14`.
-
-Nếu method dùng `.locals X`, tăng `.locals` thêm 1 và dùng local mới `vX`.
 
 ---
 
@@ -170,7 +185,12 @@ Landroid/security/keystore2/AndroidKeyStoreSpi;
 engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 
-Trước `return-object` cuối, tìm lệnh `aput-object` cuối ghi vào mảng Certificate.
+`engineGetCertificateChain` là virtual method: `p0` (`this`), `p1` (`String alias`).
+
+Trước `return-object <array_reg>` cuối, xác định điểm chèn ở nhánh lá ngay sau khi mảng Certificate được khởi tạo xong (thường là sau lệnh `aput-object` cuối cùng ghi vào mảng).
+
+> [!NOTE]
+> Không đặt hook trong các vòng lặp trung gian hoặc các nhánh trả về null sớm. Chỉ hook mảng certificate cuối cùng đã được điền dữ liệu trước khi return.
 
 Ví dụ:
 
@@ -184,23 +204,14 @@ return-object v3
 Chèn:
 
 ```smali
+# Nếu array_reg <= 15:
 invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+# Hoặc nếu array_reg > 15:
+# invoke-static/range {v3 .. v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
 move-result-object v3
 ```
 
-Kết quả:
-
-```smali
-const/4 v4, 0x0
-aput-object v2, v3, v4
-
-invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
-move-result-object v3
-
-return-object v3
-```
-
-Register truyền vào hook phải là register chứa mảng Certificate[]. `move-result-object` phải ghi vào register được return cuối.
+Register truyền vào hook phải là register chứa mảng Certificate[]. Kết quả `move-result-object` phải được ghi vào register dùng cho lệnh `return-object` cuối.
 
 ---
 

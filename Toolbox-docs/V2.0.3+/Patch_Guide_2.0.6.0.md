@@ -6,6 +6,23 @@
 
 This guide is shared across Android 13, 14, 15, 16 and 17. Class/method layout can differ between AOSP and OEM ROMs, so templates are references for equivalent logic only. Android 17 differences are called out where needed.
 
+### Multi-DEX Disassembly & Sample Reference (`tmp/fw/`)
+
+Modern Android system frameworks (`framework.jar`, `services.jar`, etc.) contain multiple DEX files: `classes.dex`, `classes2.dex`, `classes3.dex`, etc.
+When disassembling:
+- Use `baksmali` to disassemble each DEX into a distinct directory (e.g., `smali/`, `smali_classes2/`, `smali_classes3/`) or extract into a unified working directory (e.g., `tmp/fw/` for `framework.jar` and `tmp/services/` for `services.jar`):
+  ```bash
+  # Example disassembling framework.jar multi-dex
+  mkdir -p tmp/fw
+  unzip framework.jar 'classes*.dex' -d tmp/fw/
+  for dex in tmp/fw/classes*.dex; do
+      name=$(basename "$dex" .dex)
+      out_dir="tmp/fw/${name}"
+      baksmali d "$dex" -o "$out_dir"
+  done
+  ```
+- Use `tmp/fw/` as a reference directory to search across all DEX splits (e.g. `find tmp/fw/ -name "ApplicationPackageManager.smali"`) and to diff against stock classes before repacking.
+
 ## 1. `framework.jar`
 
 ### A. Initialize each app
@@ -17,31 +34,22 @@ Landroid/app/Instrumentation;
 
 **Reference smali:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
 
-Patch both methods:
+Patch both methods before their final `return-object`:
 
-```smali
-newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
-```
+1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
+   In virtual instance methods, `p0` is `this`, `p1` is `Class<?>`, and `p2` is `Context`:
+   ```smali
+   invoke-static {p2}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+   ```
+   *(Note: if compiled as a static method in an OEM ROM, `p0` is `Class` and `p1` is `Context`, pass `p1`).*
 
-Before the final `return-object`:
+2. `newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;`
+   In virtual instance methods, `p0` is `this`, `p1` is `ClassLoader`, `p2` is `String`, and `p3` is `Context`:
+   ```smali
+   invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+   ```
 
-```smali
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
-```
-
-And:
-
-```smali
-newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
-```
-
-Before the final `return-object`:
-
-```smali
-invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
-```
-
-No extra register is required.
+If the parameter register number exceeds 15 (due to high `.locals`), use `invoke-static/range {pN .. pN}`. No extra register is required.
 
 #### Android 17
 
@@ -87,21 +95,42 @@ Landroid/app/ApplicationPackageManager;
 hasSystemFeature(Ljava/lang/String;I)Z
 ```
 
-Immediately below `.registers X` or `.locals X`, add:
+#### Smali Register Allocation Safety & Scratch Register
+
+`hasSystemFeature(String, int)` is a virtual instance method with 3 parameter registers: `p0` (`this`), `p1` (`String`), and `p2` (`int`).
+
+> [!WARNING]
+> **Do NOT reuse or clobber `v0`!**
+> Stock methods often rely on registers like `v0` remaining intact. When the hook returns `null` (stock fallback), clobbering `v0` causes crashes or broken system state. You must allocate a fresh scratch register (`vScratch`).
+
+**Register Allocation Steps:**
+1. **Canonicalize Parameter Aliases:**
+   If the method uses `.registers R`, parameters `p0..p2` map physically to `v(R-3)..v(R-1)`. Any stock instruction referencing these parameter slots by `vN` must be rewritten to `pN` before expanding the register count to prevent clobbering parameter values.
+2. **Expand Register Directive by 1:**
+   - If `.locals L`: change to `.locals L+1`. The new scratch register is `vL`.
+   - If `.registers R`: change to `.registers R+1`. The new scratch register is `v(R-3)`.
+3. **Format 35c vs. 3rc Range Limits (> 15 Registers):**
+   - Dalvik Format 35c (`invoke-static {p1, p2}`) only supports 4-bit register indices (`0..15`).
+   - If `p1 > 15` or `p2 > 15`, use Format 3rc: `invoke-static/range {p1 .. p2}`.
+   - If `vScratch > 15`, use `invoke-virtual/range {vScratch .. vScratch}` for `booleanValue()`.
+
+**Hook Insertion:**
+Immediately below the updated register directive, add:
 
 ```smali
-invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-move-result-object v0
+    # Format 35c (registers <= 15) or Format 3rc (/range for > 15)
+    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    move-result-object vScratch
 
-if-eqz v0, :cond_kaorios_feature_stock
-invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
-move-result v0
-return v0
+    if-eqz vScratch, :cond_kaorios_feature_stock
+    invoke-virtual {vScratch}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result vScratch
+    return vScratch
 
 :cond_kaorios_feature_stock
 ```
 
-When the hook returns `null`, stock code continues.
+When the hook returns `null`, stock code continues with all original registers intact.
 
 Use a different label if the target method already contains `:cond_kaorios_feature_stock`.
 
@@ -121,26 +150,24 @@ Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
 generateKeyPair()Ljava/security/KeyPair;
 ```
 
+`generateKeyPair()` is a virtual method with 1 parameter register: `p0` (`this`).
+
+**Register Allocation:**
+- Increase `.locals L` to `.locals L+1` (new scratch local is `vL`), or `.registers R` to `.registers R+1` (canonicalize `v(R-1)` to `p0`, scratch local is `v(R-1)`).
+- If `p0 > 15`, use `invoke-static/range {p0 .. p0}`.
+
+**Hook Insertion:**
 Below the register/local directive add:
 
 ```smali
-invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-move-result-object vX
+    invoke-static {p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    move-result-object vScratch
 
-if-eqz vX, :cond_kaorios_gen_stock
-return-object vX
+    if-eqz vScratch, :cond_kaorios_gen_stock
+    return-object vScratch
 
 :cond_kaorios_gen_stock
 ```
-
-If the method uses `.registers X`:
-
-- increase the register count by 1;
-- this instance method only has `p0`, so the new local is `v(new_register_count - 2)`.
-
-Example: `.registers 15` becomes `.registers 16`, then use `v14`.
-
-If the method uses `.locals X`, increase locals by one and use the new local.
 
 ---
 
@@ -158,7 +185,12 @@ Landroid/security/keystore2/AndroidKeyStoreSpi;
 engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 ```
 
-Before the final `return-object`, find the last `aput-object` that writes the Certificate array.
+`engineGetCertificateChain` is a virtual method: `p0` (`this`), `p1` (`String alias`).
+
+Before the final `return-object <array_reg>`, locate the leaf insertion point immediately after the certificate array is populated (usually following an `aput-object` that writes into the array).
+
+> [!NOTE]
+> Do not hook intermediate loops or the early null-return paths. Only hook the final populated certificate array before it is returned.
 
 Example:
 
@@ -172,7 +204,10 @@ return-object v3
 Insert:
 
 ```smali
+# If array_reg <= 15:
 invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+# Or if array_reg > 15:
+# invoke-static/range {v3 .. v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
 move-result-object v3
 ```
 
