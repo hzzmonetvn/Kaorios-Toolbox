@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Validate published Toolbox-data assets against the release schema."""
 import json
 import os
 import re
@@ -155,7 +156,7 @@ def main() -> None:
     validate_pif_props(data_dir)
     validate_app_props(data_dir)
     validate_device_model(data_dir)
-    print("Toolbox-data harmonized schema validation passed.")
+    print("Published Toolbox-data schema validation passed.")
 
 
 if __name__ == "__main__":
