@@ -168,6 +168,7 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
         v_target = f"v{new_reg - 2}"
         p0_num = new_reg - 1
     else:
+        method_body = _canonicalize_param_aliases(method_body, old_reg + 1, 1)
         v_target = f"v{old_reg}"
         p0_num = old_reg + 1
 
@@ -202,36 +203,42 @@ def patch_keystore_spi(content: str) -> tuple[str, bool]:
     if "KaoriosHook;->CertificateChainIfNeeded" in method_body:
         return content, False
 
-    return_matches = list(re.finditer(r'return-object\s+([vp]\d+)', method_body))
-    if not return_matches:
-        raise ValueError("return-object not found in engineGetCertificateChain")
+    # The actual A13-A17 methods have two null returns and one populated
+    # certificate array return. Match the leaf insertion immediately before
+    # that return; a loop's earlier aput-object is not a safe hook point.
+    pattern = re.compile(
+        r'(?P<aput>aput-object\s+[vp]\d+,\s*(?P<array>[vp]\d+),\s*[vp]\d+)'
+        r'(?P<gap>(?:[ \t]*\.(?:line|local|end local|restart local)[^\n]*\n|[ \t]*\n)*)'
+        r'[ \t]*(?P<ret>return-object\s+(?P=array))'
+    )
+    matches = list(pattern.finditer(method_body))
+    if not matches:
+        raise ValueError("engineGetCertificateChain: leaf-array return not found")
+    returns = re.findall(r'\breturn-object\s+([vp]\d+)', method_body)
+    if len(returns) == 3 and len(matches) == 1:
+        null_reg = returns[0]
+        if returns != [null_reg, matches[0].group('array'), null_reg] or not re.search(
+            rf'const/4\s+{null_reg},\s*0x0\b', method_body[:matches[0].start()]
+        ):
+            raise ValueError("engineGetCertificateChain: unsupported null-return layout")
+    elif len(returns) != len(matches):
+        raise ValueError("engineGetCertificateChain: unsupported return layout")
 
-    # Patch every return path, not just the last one.
-    # Work backwards so offsets stay valid.
+    reg_match = re.search(r'\.(registers|locals)\s+(\d+)', method_body)
+    if not reg_match:
+        raise ValueError("engineGetCertificateChain register directive not found")
+    reg_count = int(reg_match.group(2))
+    param_base = reg_count - 2 if reg_match.group(1) == "registers" else reg_count
     new_body = method_body
-    patched_any = False
-    for ret in reversed(return_matches):
-        v_return = ret.group(1)
-        block_before = new_body[:ret.start()]
-        aput_matches = list(re.finditer(r'(aput-object\s+[vp]\d+,\s*([vp]\d+),\s*[vp]\d+)', block_before))
-        if not aput_matches:
-            raise ValueError("aput-object anchor not found before a return-object in engineGetCertificateChain")
-        last_aput = aput_matches[-1]
-        vC = last_aput.group(2)
-        if vC != v_return:
-            raise ValueError(
-                f"aput-object array register {vC} does not match return-object register {v_return} "
-                "in engineGetCertificateChain — cannot safely select certificate chain array"
-            )
-        vC_num = int(vC[1:])
-        if vC_num > 15:
-            invoke_str = f"invoke-static/range {{{vC} .. {vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;"
-        else:
-            invoke_str = f"invoke-static {{{vC}}}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;"
-        inject = f"\n\n    {invoke_str}\n    move-result-object {v_return}\n\n    "
-        new_body = new_body[:last_aput.end()] + inject + new_body[last_aput.end():]
-        patched_any = True
-    return content[:start] + new_body + content[end:], patched_any
+    for match in reversed(matches):
+        array = match.group('array')
+        physical = param_base + int(array[1:]) if array.startswith('p') else int(array[1:])
+        source = f"{{{array} .. {array}}}" if physical > 15 else f"{{{array}}}"
+        opcode = "invoke-static/range" if physical > 15 else "invoke-static"
+        invoke = f"{opcode} {source}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;"
+        inject = f"{invoke}\n    move-result-object {array}\n    "
+        new_body = new_body[:match.start('ret')] + inject + new_body[match.start('ret'):]
+    return content[:start] + new_body + content[end:], True
 
 
 def patch_instrumentation(content: str) -> tuple[str, bool]:
@@ -244,6 +251,9 @@ def patch_instrumentation(content: str) -> tuple[str, bool]:
             raise ValueError(f"unterminated {method_name} method in Instrumentation")
 
         method_body = text[start:end]
+        header = text[text.rfind('.method', 0, start):start]
+        if "Class;" in method_name and re.search(r'\bstatic\b', header):
+            param = "p1"
         if "KaoriosHook;->initContext" in method_body:
             return text, False
 
@@ -258,7 +268,7 @@ def patch_instrumentation(content: str) -> tuple[str, bool]:
             count = int(reg_match.group(2))
             param_num = int(param[1:])
             if directive == "registers":
-                p_count = 3 if "Class;" in method_name else 4
+                p_count = (2 if param == "p1" else 3) if "Class;" in method_name else 4
                 real_reg_num = count - p_count + param_num
             else:
                 real_reg_num = count + param_num
@@ -302,6 +312,7 @@ def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
     if directive == "locals":
         # .locals N: locals are v0..v{N-1}; new slot is v{N} (= v{old_count})
         scratch = f"v{old_count}"
+        method_body = _canonicalize_param_aliases(method_body, old_count + 3, 3)
         scratch_num = old_count
         p1_num = old_count + 1 + 1 # p0=v{old_count+1}, p1=v{old_count+2}, p2=v{old_count+3}
         p2_num = old_count + 1 + 2
@@ -449,30 +460,34 @@ def verify_target_content(filename: str, content: str) -> None:
             "engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;",
             "AndroidKeyStoreSpi"
         )
-        return_count = len(re.findall(r'return-object\s+[vp]\d+', body))
+        returns = re.findall(r'return-object\s+([vp]\d+)', body)
+        return_count = len(returns)
         hook_count = len(re.findall(r'KaoriosHook;->CertificateChainIfNeeded', body))
         if return_count == 0:
             raise ValueError("AndroidKeyStoreSpi: no return-object found in engineGetCertificateChain")
-        if hook_count != return_count:
+        expected_hooks = 1 if return_count == 3 else return_count
+        if hook_count != expected_hooks:
             raise ValueError(
-                f"AndroidKeyStoreSpi: expected {return_count} CertificateChainIfNeeded hooks (one per return-object), found {hook_count}"
+                f"AndroidKeyStoreSpi: expected {expected_hooks} CertificateChainIfNeeded hooks, found {hook_count}"
             )
-        # Verify dataflow: hook result is piped to the return-object register
-        pairs = re.findall(
-            r'KaoriosHook;->CertificateChainIfNeeded\(\[Ljava/security/cert/Certificate;\)\[Ljava/security/cert/Certificate;\s+'
-            r'move-result-object\s+([vp]\d+)\s+'
-            r'return-object\s+([vp]\d+)',
-            body
-        )
-        if len(pairs) != return_count:
-            raise ValueError(
-                f"AndroidKeyStoreSpi: hook dataflow verification failed: expected {return_count} piped hooks, found {len(pairs)}"
-            )
-        for injected_reg, returned_reg in pairs:
-            if injected_reg != returned_reg:
-                raise ValueError(
-                    f"AndroidKeyStoreSpi: dataflow mismatch: move-result-object {injected_reg} != return-object {returned_reg}"
-                )
+        pairs = list(re.finditer(
+            r'aput-object\s+[vp]\d+,\s*(?P<array>[vp]\d+),\s*[vp]\d+'
+            r'(?:\s*\.(?:line|local|end local|restart local)[^\n]*\n|\s*\n)*\s*'
+            r'invoke-static(?:/range)?\s*\{(?P=array)(?:\s*\.\.\s*(?P=array))?\},\s*'
+            r'Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded\(\[Ljava/security/cert/Certificate;\)\[Ljava/security/cert/Certificate;\s+'
+            r'move-result-object\s+(?P=array)\s+'
+            r'return-object\s+(?P=array)', body
+        ))
+        if len(pairs) != hook_count:
+            raise ValueError("AndroidKeyStoreSpi: dataflow mismatch; hook must directly dominate its return")
+        if return_count == 3:
+            null_reg = returns[0]
+            if returns != [null_reg, pairs[0].group('array'), null_reg] or not re.search(
+                rf'const/4\s+{null_reg},\s*0x0\b', body[:pairs[0].start()]
+            ):
+                raise ValueError("AndroidKeyStoreSpi: unsupported null-return layout")
+        elif return_count != hook_count:
+            raise ValueError("AndroidKeyStoreSpi: unsupported return layout")
     elif filename == "Instrumentation.smali":
         body1 = _extract_method_body(
             content,
@@ -498,17 +513,43 @@ def verify_target_content(filename: str, content: str) -> None:
             )
         if hooks1 == 0 and hooks2 == 0:
             raise ValueError("Instrumentation: KaoriosHook initContext hook not found in either newApplication method")
-        if "initContext(Landroid/content/Context;)V" in body1 and re.search(r'invoke-static(/range)?\s*\{p1(\s*\.\.\s*p1)?\}', body1):
-            raise ValueError("Instrumentation: newApplication(Class, Context) incorrectly passed p1 instead of p2 to initContext")
+        class_header = content[content.rfind('.method', 0, content.find("newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;")):content.find("newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;")]
+        class_context = 'p1' if re.search(r'\bstatic\b', class_header) else 'p2'
+        for body, context_reg in ((body1, class_context), (body2, 'p3')):
+            for ret in re.finditer(r'\breturn-object\s+[vp]\d+', body):
+                preceding = body[:ret.start()]
+                hook = re.search(
+                    rf'invoke-static(?:/range)?\s*\{{{context_reg}(?:\s*\.\.\s*{context_reg})?\}},\s*'
+                    r'Landroid/security/kaorios/KaoriosHook;->initContext\(Landroid/content/Context;\)V\s*$',
+                    preceding
+                )
+                if hook is None:
+                    raise ValueError("Instrumentation: initContext must directly dominate each return with the Context parameter")
     elif filename == "ApplicationPackageManager.smali":
         pat = re.search(r'(\.method[^\n]*?hasSystemFeature\(Ljava/lang/String;I\)Z.*?\.end method)', content, flags=re.DOTALL)
         if pat is None:
             raise ValueError("ApplicationPackageManager: hasSystemFeature(Ljava/lang/String;I)Z method not found")
-        count = len(re.findall(r'KaoriosHook;->hasSystemFeature', pat.group(1)))
-        if count != 1:
-            raise ValueError(
-                f"ApplicationPackageManager: expected exactly 1 hasSystemFeature hook, found {count}"
-            )
+        body = pat.group(1)
+        sequence = re.search(
+            r'invoke-static(?:/range)?\s*\{p1(?:,\s*p2|\s*\.\.\s*p2)\},\s*'
+            r'Landroid/security/kaorios/KaoriosHook;->hasSystemFeature\(Ljava/lang/String;I\)Ljava/lang/Boolean;\s+'
+            r'move-result-object\s+(?P<scratch>v\d+)\s+'
+            r'if-eqz\s+(?P=scratch),\s*(?P<label>:[\w$]+)\s+'
+            r'invoke-virtual(?:/range)?\s*\{(?P=scratch)(?:\s*\.\.\s*(?P=scratch))?\},\s*'
+            r'Ljava/lang/Boolean;->booleanValue\(\)Z\s+'
+            r'move-result\s+(?P=scratch)\s+'
+            r'return\s+(?P=scratch)\s+'
+            r'(?:\.line\s+\d+\s+)*'
+            r'(?P=label)\b', body
+        )
+        if sequence is None or body.count('KaoriosHook;->hasSystemFeature') != 1:
+            raise ValueError("ApplicationPackageManager: invalid hasSystemFeature hook control flow")
+        if len(re.findall(rf'(?m)^\s*{re.escape(sequence.group("label"))}\s*$', body)) != 1:
+            raise ValueError("ApplicationPackageManager: stock branch target is not unique")
+        prefix = body[:sequence.start()]
+        prefix = re.sub(r'(?m)^\s*\.(?:method|registers|locals|param|line)\b[^\n]*$', '', prefix)
+        if prefix.strip():
+            raise ValueError("ApplicationPackageManager: hook is after stock logic")
     elif filename == "Build.smali":
         fields_null = [
             "BRAND", "BRAND_FOR_ATTESTATION", "DEVICE", "DEVICE_FOR_ATTESTATION",

@@ -9,7 +9,7 @@ HOOK_CALL = "invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSyste
 ANCHOR_CALL = "invoke-static {}, Landroid/os/Looper;->loop()V"
 
 CLASS_RE = re.compile(r"(?m)^\.class\s+.*Lcom/android/server/SystemServer;\s*$")
-METHOD_RUN_RE = re.compile(r"(?m)^\.method\s+(?:public\s+)?run\(\)V\s*$")
+METHOD_RUN_RE = re.compile(r"(?m)^\.method\s+(?:public\s+|private\s+|protected\s+)?(?:final\s+)?run\(\)V\s*$")
 METHOD_END_RE = re.compile(r"(?m)^[ \t]*\.end method[ \t]*(?:\r?\n|$)")
 
 

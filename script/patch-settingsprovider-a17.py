@@ -31,13 +31,28 @@ METHOD_END_RE = re.compile(r"(?m)^[ \t]*\.end method[ \t]*(?:\r?\n|$)")
 REGISTERS_RE = re.compile(r"(?m)^(?P<indent>[ \t]*)\.registers[ \t]+(?P<num>\d+)[ \t]*(?:\r?\n|$)")
 LOCALS_RE = re.compile(r"(?m)^(?P<indent>[ \t]*)\.locals[ \t]+(?P<num>\d+)[ \t]*(?:\r?\n|$)")
 
-# Safe anchor: after getDeviceId() in SettingsProvider.call
+# Safe anchors in SettingsProvider.call:
+# Priority 1: after getDeviceId() (Android 17 / HyperOS 4)
+# Priority 2: after getRequestingUserId() (Android 13-16 / MIUI 14 - HyperOS 3)
 DEVICE_ID_RE = re.compile(
-    r"(?m)^[ \t]*invoke-virtual[ \t]+\{[^}]+\},[ \t]*"
+    r"(?m)^[ \t]*invoke-(?:virtual|direct)[ \t]+\{[^}]+\},[ \t]*"
     r"Lcom/android/providers/settings/SettingsProvider;->getDeviceId\(\)I"
     r"[ \t]*(?:\r?\n|$)"
     r"(?:^[ \t]*move-result[ \t]+[vp]\d+[ \t]*(?:\r?\n|$))?"
 )
+REQ_USER_ID_RE = re.compile(
+    r"(?m)^[ \t]*invoke-static[ \t]+\{[^}]+\},[ \t]*"
+    r"Lcom/android/providers/settings/SettingsProvider;->getRequestingUserId\(Landroid/os/Bundle;\)I"
+    r"[ \t]*(?:\r?\n|$)"
+    r"(?:^[ \t]*move-result[ \t]+[vp]\d+[ \t]*(?:\r?\n|$))?"
+)
+
+
+def _find_anchor_match(body: str) -> re.Match[str] | None:
+    match = DEVICE_ID_RE.search(body)
+    if match is not None:
+        return match
+    return REQ_USER_ID_RE.search(body)
 
 
 def _method_span(text: str) -> tuple[int, int]:
@@ -65,13 +80,13 @@ def verify(text: str) -> None:
     if count != 1:
         raise ValueError(f"expected exactly one filterSettingsCall hook; found {count}")
 
-    anchor_match = DEVICE_ID_RE.search(body)
+    anchor_match = _find_anchor_match(body)
     if anchor_match is None:
-        raise ValueError("safe SettingsProvider.call getDeviceId anchor not found")
+        raise ValueError("safe SettingsProvider.call anchor (getDeviceId / getRequestingUserId) not found")
 
     hook_idx = body.find(HOOK_TARGET)
     if hook_idx < anchor_match.end():
-        raise ValueError("hook must appear AFTER getDeviceId() anchor")
+        raise ValueError("hook must appear AFTER call anchor (getDeviceId / getRequestingUserId)")
 
     clear_id = re.search(r"invoke-static\s*\{[^}]*\},\s*Landroid/os/Binder;->clearCallingIdentity\(\)J", body)
     if clear_id and clear_id.start() < hook_idx:
@@ -111,11 +126,11 @@ def verify(text: str) -> None:
 
 
 def _find_injection_point(body: str) -> int:
-    """Find position after getDeviceId() anchor in SettingsProvider.call."""
-    device_id_match = DEVICE_ID_RE.search(body)
-    if device_id_match is None:
-        raise ValueError("safe SettingsProvider.call getDeviceId anchor not found")
-    return device_id_match.end()
+    """Find position after safe anchor (getDeviceId or getRequestingUserId) in SettingsProvider.call."""
+    anchor_match = _find_anchor_match(body)
+    if anchor_match is None:
+        raise ValueError("safe SettingsProvider.call anchor (getDeviceId / getRequestingUserId) not found")
+    return anchor_match.end()
 
 
 def _query_method_span(text: str) -> tuple[int, int] | None:
@@ -143,7 +158,7 @@ def _patch_query(text: str) -> tuple[str, bool]:
     if QUERY_HOOK_TARGET in body:
         return text, False
 
-    if re.search(r"(?m)^[ \t]*\.(?:catch|catchall|packed-switch|sparse-switch)\b", body):
+    if re.search(r"(?m)^[ \t]*\.(?:catch|catchall)\b", body):
         raise ValueError("unsupported SettingsProvider.query control flow")
 
     newline = "\r\n" if "\r\n" in text else "\n"

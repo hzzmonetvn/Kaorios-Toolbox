@@ -592,6 +592,13 @@ class HighRegistersAndStructuralVerificationTest(unittest.TestCase):
         self.assertIn("invoke-virtual/range {v17 .. v17}", patched)
         mod.verify_target_content("ApplicationPackageManager.smali", patched)
 
+    def test_app_pkg_manager_verifier_rejects_broken_branch(self):
+        mod = self._load_patcher()
+        patched, _ = mod.patch_app_pkg_manager(SAMPLE_APP_PKG_MANAGER_HIGH_REGISTERS)
+        broken = patched.replace("if-eqz v17, :cond_kaorios_feature_stock", "if-eqz v17, :missing_stock")
+        with self.assertRaisesRegex(ValueError, "control flow"):
+            mod.verify_target_content("ApplicationPackageManager.smali", broken)
+
     def test_keystore_generator_high_registers_uses_range(self):
         mod = self._load_patcher()
         patched, changed = mod.patch_keystore_generator(SAMPLE_KEYSTORE_GEN_HIGH_REGISTERS)
@@ -608,6 +615,45 @@ class HighRegistersAndStructuralVerificationTest(unittest.TestCase):
         self.assertIn("return-object v16", patched)
         mod.verify_target_content("AndroidKeyStoreSpi.smali", patched)
 
+    def test_keystore_spi_high_physical_p_register_uses_range(self):
+        mod = self._load_patcher()
+        stock = SAMPLE_KEYSTORE_SPI_HIGH_REGISTERS.replace(
+            "aput-object v0, v16, v2\n    return-object v16",
+            "aput-object v0, p1, v2\n    return-object p1",
+        )
+        patched, changed = mod.patch_keystore_spi(stock)
+        self.assertTrue(changed)
+        self.assertIn("invoke-static/range {p1 .. p1}", patched)
+        mod.verify_target_content("AndroidKeyStoreSpi.smali", patched)
+
+    def test_locals_growth_preserves_physical_parameter_aliases(self):
+        mod = self._load_patcher()
+        manager = """\
+.method public hasSystemFeature(Ljava/lang/String;I)Z
+    .locals 2
+    move-object v0, v3
+    move v1, v4
+    return v1
+.end method
+"""
+        patched, changed = mod.patch_app_pkg_manager(manager)
+        self.assertTrue(changed)
+        self.assertIn("move-object v0, p1", patched)
+        self.assertIn("move v1, p2", patched)
+        mod.verify_target_content("ApplicationPackageManager.smali", patched)
+
+        generator = """\
+.method public generateKeyPair()Ljava/security/KeyPair;
+    .locals 2
+    move-object v0, v2
+    return-object v0
+.end method
+"""
+        patched, changed = mod.patch_keystore_generator(generator)
+        self.assertTrue(changed)
+        self.assertIn("move-object v0, p0", patched)
+        mod.verify_target_content("AndroidKeyStoreKeyPairGeneratorSpi.smali", patched)
+
     def test_instrumentation_high_registers_uses_range_and_correct_params(self):
         mod = self._load_patcher()
         patched, changed = mod.patch_instrumentation(SAMPLE_INSTRUMENTATION_HIGH_REGISTERS)
@@ -616,6 +662,17 @@ class HighRegistersAndStructuralVerificationTest(unittest.TestCase):
         self.assertIn("invoke-static/range {p3 .. p3}", patched)
         self.assertNotIn("invoke-static {p1}", patched)
         self.assertNotIn("invoke-static/range {p1 .. p1}", patched)
+        mod.verify_target_content("Instrumentation.smali", patched)
+
+    def test_static_new_application_uses_p1_context(self):
+        mod = self._load_patcher()
+        stock = SAMPLE_INSTRUMENTATION_HIGH_REGISTERS.replace(
+            ".method public newApplication(Ljava/lang/Class;",
+            ".method public static newApplication(Ljava/lang/Class;",
+        )
+        patched, changed = mod.patch_instrumentation(stock)
+        self.assertTrue(changed)
+        self.assertIn("invoke-static/range {p1 .. p1}", patched)
         mod.verify_target_content("Instrumentation.smali", patched)
 
     def test_instrumentation_verifier_rejects_p1_context(self):
@@ -636,7 +693,7 @@ class HighRegistersAndStructuralVerificationTest(unittest.TestCase):
 """
         with self.assertRaises(ValueError) as ctx:
             mod.verify_target_content("Instrumentation.smali", bad_instrumentation)
-        self.assertIn("incorrectly passed p1 instead of p2", str(ctx.exception))
+        self.assertIn("Context parameter", str(ctx.exception))
 
     def test_keystore_spi_verifier_rejects_dataflow_mismatch(self):
         mod = self._load_patcher()
