@@ -241,7 +241,11 @@ engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 
 `engineGetCertificateChain` là virtual method: `p0` (`this`), `p1` (`String alias`).
 
-Tìm một nhánh lá trả mảng đã điền: `aput-object` ghi vào register mảng X, tiếp theo chỉ có dòng trống hoặc directive debug được layout đã verify cho phép (`.line`, `.local`, `.end local`, `.restart local`), rồi `return-object X`. Chèn hook X ngay trước return đó, move-result-object vào chính X. Không chọn lệnh ghi mảng theo thứ tự văn bản; phải xác minh luồng mảng và nhánh return. Giữ nguyên các nhánh trả null sớm; không hook vòng lặp trung gian. Layout mơ hồ: `UNSUPPORTED_LAYOUT`.
+Tìm một nhánh lá trả mảng đã điền: `aput-object` ghi vào register mảng X, tiếp theo chỉ có dòng trống hoặc directive debug được layout đã verify cho phép (`.line`, `.local`, `.end local`, `.restart local`), rồi `return-object X`. Chèn hook X ngay trước return đó, move-result-object vào chính X. Không chọn lệnh ghi mảng theo thứ tự văn bản; phải xác minh luồng mảng và nhánh return.
+
+> [!IMPORTANT]
+> **Lý Do Chỉ Hook Tại Nhánh Lá (Leaf-Path Placement):**  
+> `engineGetCertificateChain` chứa các nhánh thoát trả về null sớm (khi `KeyEntryResponse` null hoặc mảng byte certificate null) và đúng một nhánh trả về mảng chứng chỉ đã điền đầy đủ (`caList`). Tuyệt đối **không** được hook vào các nhánh return null này. Việc hook vào nhánh null sẽ truyền `null` vào hook hoặc trả về mảng giả lập khi không có chứng chỉ tồn tại, phá vỡ logic fallback mặc định và gây lỗi `NullPointerException` cho client gọi Keystore. Hook `KaoriosHook.CertificateChainIfNeeded` phải được đặt chính xác tại nhánh lá chứa mảng đã điền, ngay sau khi certificate lá được gán vào mảng qua `aput-object` và trước lệnh `return-object`. Giữ nguyên các nhánh trả null sớm; không hook vòng lặp trung gian. Layout mơ hồ: `UNSUPPORTED_LAYOUT`.
 
 Ví dụ:
 
@@ -532,10 +536,12 @@ filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 
 `call(...)` là instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. Patcher tìm anchor ngữ nghĩa an toàn theo thứ tự:
 
-1. `getDeviceId()I`.
-2. Fallback `getRequestingUserId(Landroid/os/Bundle;)I`.
+1. Anchor chính: `getDeviceId()I` (ưu tiên trên các bản ROM Android 17 / HyperOS 4 mới hơn, nơi định tuyến virtual device chạy trước các thao tác binder và thiết lập ngữ cảnh thực thi đích mà không gây tác dụng phụ).
+2. Fallback Anchor: `getRequestingUserId(Landroid/os/Bundle;)I` (cho Android 13–16 và các bản ROM không có định tuyến virtual device).
 
-Hook nằm SAU anchor và `move-result` đi kèm, TRƯỚC `Binder.clearCallingIdentity()` để giữ nguyên caller UID/PID. Không suy ra anchor chỉ từ phiên bản Android. Patcher chuẩn hóa alias vật lý của parameter trước khi tăng locals, rồi cấp register scratch mới `vHook`.
+> [!IMPORTANT]
+> **Bảo Toàn Định Danh Người Gọi (Caller Identity Preservation):**  
+> Hook bắt buộc phải được chèn SAU anchor và lệnh `move-result` đi kèm, nhưng phải đứng nghiêm ngặt TRƯỚC `Binder.clearCallingIdentity()`. Việc đặt hook trước `clearCallingIdentity()` đảm bảo rằng danh tính Binder thực tế của package gọi (`Binder.getCallingUid()` và `Binder.getCallingPid()`) vẫn được giữ nguyên vẹn, điều kiện bắt buộc để bộ lọc package và spoofing cài đặt hoạt động chính xác theo từng caller. Không suy ra anchor chỉ từ phiên bản Android. Patcher chuẩn hóa alias vật lý của parameter trước khi tăng locals, rồi cấp register scratch mới `vHook`.
 
 Dùng `invoke-static {p1, p2}` khi chỉ số vật lý của cả hai <=15; nếu cao hơn, dùng `invoke-static/range {p1 .. p2}` vì hai argument liên tiếp. Ví dụ layout thấp:
 

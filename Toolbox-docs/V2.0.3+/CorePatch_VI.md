@@ -1,3 +1,11 @@
+# CorePatch — Hướng Dẫn Patch Smali Tĩnh Cho Framework
+
+Tài liệu này hướng dẫn **patch smali tĩnh trực tiếp vào framework hệ thống** (`framework.jar`, `services.jar`, và `miui-services.jar`).
+
+> [!NOTE]
+> **Phân biệt Static Smali Patching và Runtime Xposed/LSPosed Module:**  
+> Hướng dẫn này dành cho việc **chỉnh sửa smali tĩnh offline** trên các file JAR decompiled từ ROM để vô hiệu hóa kiểm tra chữ ký ứng dụng và hạ cấp (downgrade) ở tầng hệ điều hành. Cách tiếp cận này **không** phụ thuộc vào runtime Xposed hay LSPosed. Nếu bạn đang sử dụng module Xposed runtime (như module CorePatch cho LSPosed), bạn không cần thực hiện các thao tác sửa smali tĩnh trong tài liệu này.
+
 Đây là mẫu, 1 số giá trị có thể khác với từng rom!
 
 > [!WARNING]

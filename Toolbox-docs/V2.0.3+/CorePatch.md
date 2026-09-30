@@ -1,3 +1,11 @@
+# CorePatch — Static Framework Smali Modification
+
+This guide documents **static framework smali patches** applied directly to system JARs (`framework.jar`, `services.jar`, and `miui-services.jar`).
+
+> [!NOTE]
+> **Static Smali Patching vs. Runtime Xposed/LSPosed Module:**  
+> This guide is for **direct, offline smali modification** of decompiled framework binaries to disable package signature verification and downgrade checks at the OS level. It does **not** require an Xposed or LSPosed framework runtime. If you are using a runtime Xposed module (such as the LSPosed CorePatch module), you do not need to modify these smali files directly.
+
 This is a reference example. Some values may vary depending on the ROM!
 
 > [!WARNING]

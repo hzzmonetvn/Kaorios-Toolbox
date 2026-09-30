@@ -241,7 +241,11 @@ engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 
 `engineGetCertificateChain` is a virtual method: `p0` (`this`), `p1` (`String alias`).
 
-Find a leaf populated-array return path: `aput-object` writes into array register X, followed only by blank lines or debug directives allowed by the verified layout (`.line`, `.local`, `.end local`, `.restart local`), then `return-object X`. Hook X immediately before that return and move the result back into X. Do not select an array write by its textual position; verify the array flow and return path. Leave early null returns untouched and avoid intermediate loops. An ambiguous layout is `UNSUPPORTED_LAYOUT`.
+Find a leaf populated-array return path: `aput-object` writes into array register X, followed only by blank lines or debug directives allowed by the verified layout (`.line`, `.local`, `.end local`, `.restart local`), then `return-object X`. Hook X immediately before that return and move the result back into X. Do not select an array write by its textual position; verify the array flow and return path.
+
+> [!IMPORTANT]
+> **Leaf-Path Placement Rationale:**  
+> `engineGetCertificateChain` contains early null-return exits (when `KeyEntryResponse` is null or certificate bytes are null) and exactly one populated-array return exit (`caList`). You must **never** hook the null-return exits. Hooking null paths passes `null` to the hook or returns modified arrays when no certificate should exist, breaking stock fallback logic and risking `NullPointerException`s in calling clients. The hook `KaoriosHook.CertificateChainIfNeeded` must be inserted strictly on the leaf populated-array path, immediately after the leaf certificate is stored via `aput-object` into the array and before its `return-object`. Leave early null returns untouched and avoid intermediate loops. An ambiguous layout is `UNSUPPORTED_LAYOUT`.
 
 Example:
 
@@ -523,10 +527,12 @@ filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 
 `call(...)` is an instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. The patcher searches for a safe semantic anchor in this order:
 
-1. `getDeviceId()I`.
-2. Fallback `getRequestingUserId(Landroid/os/Bundle;)I`.
+1. Primary Anchor: `getDeviceId()I` (preferred on newer Android 17 / HyperOS 4 ROMs where virtual device routing precedes binder operations and establishes target execution context without side effects).
+2. Fallback Anchor: `getRequestingUserId(Landroid/os/Bundle;)I` (for Android 13–16 and ROMs without virtual device routing).
 
-Insert AFTER the anchor and its associated `move-result`, BEFORE `Binder.clearCallingIdentity()` so caller UID/PID identity remains intact. Do not infer the anchor solely from Android version. The patcher canonicalizes physical parameter aliases before local growth and allocates fresh scratch `vHook`.
+> [!IMPORTANT]
+> **Caller Identity Preservation:**  
+> The hook must be inserted AFTER the anchor and its associated `move-result`, but strictly BEFORE `Binder.clearCallingIdentity()`. Placing the hook before `clearCallingIdentity()` ensures that the calling package's authentic Binder identity (`Binder.getCallingUid()` and `Binder.getCallingPid()`) remains intact, which is required for granular per-caller package filtering and setting spoofing. Do not infer the anchor solely from Android version. The patcher canonicalizes physical parameter aliases before local growth and allocates fresh scratch `vHook`.
 
 Use `invoke-static {p1, p2}` when both physical register indices are <=15; otherwise use `invoke-static/range {p1 .. p2}` because the two arguments are contiguous. Low-register example:
 

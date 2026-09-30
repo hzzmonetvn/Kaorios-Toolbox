@@ -51,7 +51,9 @@ See Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.m
 
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher_a17.py`)
 
-An automated smali patcher for Android 17 is provided in `script/kaorios_patcher_a17.py`. It inspects disassembled smali directories or individual files, canonicalizes parameter aliases, injects hooks, validates supported register/control-flow layout, and structurally verifies the resulting hooks before saving.
+An automated smali patcher targeting **Android 17 (HyperOS 4 / SDK 37)** as its primary platform is provided in `script/kaorios_patcher_a17.py`. Earlier Android versions (Android 13–16 / MIUI 14 – HyperOS 3) serve as experimental/reference baselines that require manual audit and adaptation according to the patch guide.
+
+The CLI inspects disassembled smali directories or individual files, canonicalizes parameter aliases, injects hooks, validates supported register/control-flow layout, and structurally verifies the resulting hooks before saving.
 
 **Usage:**
 
