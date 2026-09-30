@@ -456,16 +456,16 @@ Do not mix the Android 13–16 ABI with the current Android 17 ABI. Verify the a
 
 ### C. Spoof installer source
 
-The class/method varies across Android versions and OEM ROMs. Patch after Package Manager resolves the stock installer and before the value is returned to the caller.
+Enable Advanced Features, then edit a caller rule in Hide Features. `hideInstallationSource` reports Play Store for installed non-system packages queried by that caller. `hideSystemInstallationSource` optionally returns null for system packages; otherwise they stay stock. `excludeTargetInstallationSource` keeps the caller's own installer stock. Child options retain their values while the parent is off. Installer policy applies to installed targets queried by the caller, independently of the app-hide target/template lists. Manager callers, unresolved targets and runtime failures retain stock behavior; Advanced OFF disables filtering. With shared UIDs, any eligible package rule can activate filtering, except a UID containing the manager.
 
-Reference hook:
+In the included A17 sample, patch both `ComputerEngine.getInstallerPackageName(String,int)String` and `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. The latter filters only the installing package constructor argument, covering `getInstallingPackageName()`. Initiating/originating package, update owner, package source, database records and PackageInstaller transactions remain stock. See the [sample matrix and device checklist](Sample_Compatibility_2.0.6.0.md) for A13–A16 descriptors and exact scope.
 
-```smali
-invoke-static {vResolver, vCallingUid, vUserId, vPackageName, vInstaller}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-move-result-object vInstaller
+```sh
+python script/patch-installer-source.py /path/to/ComputerEngine.smali
+python script/patch-installer-source.py /path/to/ComputerEngine.smali --verify-only
 ```
 
-Identify the resolver/null value, calling UID, user ID, queried package and stock installer register on the target ROM.
+Mode 1/3 of the main patcher and the services artifact pipeline also include this patch when installer API methods are present. Both APIs must be recognizable; a partial/unknown installer layout fails closed. Visibility-only synthetic fixtures do not establish installer coverage. The structural verifier proves stock installer provenance, original Binder UID, target/user arguments, result replacement and complete relevant return/constructor coverage. Parameter copies preserve stock physical registers; fresh contiguous scratch registers use `/range` safely. A null resolver is intentional for the current snapshot-based hook. Assemble, re-disassemble and verify the target DEX before ROM integration. The Settings capability probe is separate and does not certify installer hooks.
 
 ---
 
@@ -473,41 +473,9 @@ Identify the resolver/null value, calling UID, user ID, queried package and stoc
 
 This differs between older framework implementations and the current Android 17 patch.
 
-#### Android 13–16 / String-based hook
+#### Legacy two-stage String hooks
 
-Patch the server-side SettingsProvider GET path while the original Binder caller identity is still active.
-
-Do not place the hook:
-
-- in a client cache such as `Settings$NameValueCache`;
-- after `Binder.clearCallingIdentity()`;
-- in a method that does not return the real Settings value to the caller.
-
-For frameworks using:
-
-```smali
-shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
-filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-```
-
-reference logic:
-
-```smali
-const/4 vNull, 0x0
-
-invoke-static {vNull, vNamespace, vName}, Landroid/security/kaorios/KaoriosHook;->shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
-move-result vRemove
-
-if-eqz vRemove, :cond_kaorios_setting_value
-const/4 vValue, 0x0
-return-object vValue
-
-:cond_kaorios_setting_value
-invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-move-result-object vValue
-```
-
-Preserve required stock cleanup and return flow.
+`shouldRemoveSetting(ContentResolver,String,String)` followed by `filterSettingValue(ContentResolver,String,String,String)` remains a deprecated compatibility ABI. Both stages must see the same namespace/name and original Binder caller on the same provider thread. They cannot be copied directly into methods returning `SettingsState$Setting` or Bundle. The generic legacy snippet is not a validated patch strategy for the included A13–A16 samples. For the current DEX, their inspected call/query layouts match the modern strategy below. See [sample validation](Sample_Compatibility_2.0.6.0.md); do not force legacy hooks into A17.
 
 #### Current Android 17 patch
 
@@ -658,3 +626,7 @@ Android 13–17 and OEM updates can move methods/registers, so follow the equiva
 | High-register query | SettingsProvider.query cannot safely encode the non-contiguous arguments; UNSUPPORTED_LAYOUT, do not force /range. |
 
 The CLI may print Vietnamese messages such as `ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS)` or `UNSUPPORTED LAYOUT` rather than the enum spelling. Passing verification is not boot/runtime/device proof.
+
+## Advanced Settings capability / Kiểm tra capability Settings
+
+Before enabling Advanced, Toolbox reads a fresh random nonce probe through each of Global, Secure and System. The exact namespace/nonce response is required for all three; missing/unsupported hooks leave the switch OFF and show each namespace result. The read-only probe works with Advanced OFF, writes no setting and persists no key. The modern path validates the provider-to-AdvancedPolicyService route; legacy compatibility requires both stages. Runtime path is reported UNKNOWN because the same response does not distinguish architectures. See the [read-only device checklist](Sample_Compatibility_2.0.6.0.md#read-only-device-settings-check). Host/sample verification still needs real-device confirmation.

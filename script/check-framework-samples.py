@@ -1,247 +1,196 @@
 #!/usr/bin/env python3
-"""Audit ROM sample decompiled frameworks for known structural patterns.
-
-Verifies:
-1. ComputerEngine: shouldFilterApplication method overloads (II, IIZ, IIZZ)
-2. SettingsProvider.call: caller identification anchors (getDeviceId vs getRequestingUserId)
-3. AppsFilterBase vs AppsFilterImpl: shouldFilterApplication declaration vs inheritance
-4. AndroidKeyStoreSpi: engineGetCertificateChain return paths (leaf populated vs early null)
-5. Instrumentation: newApplication return path dominance
-"""
-
+"""Diagnose raw or explicitly decompiled ROM samples; never imply runtime support."""
 import argparse
-import glob
 import json
-import os
+from pathlib import Path
 import re
-import sys
-
-DEFAULT_SAMPLE_DIRS = [
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "work", "fw")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "tmp", "fw")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "work", "fw")),
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tmp", "fw")),
-    "/home/opc/toolbox/work/fw",
-    "/home/opc/toolbox/tmp/fw",
-]
 
 SAMPLE_GENS = ["miui14-a13", "os1-a14", "os2-a15", "os3-a16", "os4-a17"]
+DEFAULT_SAMPLE_DIRS = [str(Path(__file__).resolve().parents[1] / "tmp/fw")]
+METHOD = re.compile(r"(?m)^\.method (?P<header>[^\n]+)\n(?P<body>.*?)^\.end method", re.S)
+DEBUG = re.compile(r"^\.(?:line|local|end local|restart local|prologue|epilogue|param)\b")
 
 
 def find_sample_base(custom_dir=None):
-    if custom_dir:
-        if os.path.isdir(custom_dir):
-            return os.path.abspath(custom_dir)
-        return None
-    for candidate in DEFAULT_SAMPLE_DIRS:
-        if os.path.isdir(candidate):
-            # Check if it has any sample gen subdirs
-            subdirs = [d for d in os.listdir(candidate) if os.path.isdir(os.path.join(candidate, d))]
-            if any(g in subdirs for g in SAMPLE_GENS):
-                return candidate
+    for candidate in [custom_dir] if custom_dir else DEFAULT_SAMPLE_DIRS:
+        if candidate and Path(candidate).is_dir():
+            return str(Path(candidate).resolve())
     return None
 
 
-def audit_computer_engine(gen_dir):
-    matches = glob.glob(f"{gen_dir}/**/ComputerEngine.smali", recursive=True)
-    if not matches:
-        return {"status": "NOT_FOUND", "overloads": []}
-    with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
-    method_lines = re.findall(r"\.method[^\n]*shouldFilterApplication\([^\n]*", content)
-    overloads = []
-    has_iizz = False
-    has_iiz = False
-    has_ii = False
-    for m in method_lines:
-        sig_match = re.search(r"shouldFilterApplication\((.*?)\)(.)", m)
-        if sig_match:
-            params = sig_match.group(1)
-            overloads.append(params)
-            if params.endswith("IIZZ"):
-                has_iizz = True
-            elif params.endswith("IIZ"):
-                has_iiz = True
-            elif params.endswith("II"):
-                has_ii = True
+def read_class(gen_dir, name):
+    paths = sorted(Path(gen_dir).rglob(name + ".smali"))
+    if not paths:
+        return {"status": "NOT_FOUND"}, None
+    contents = {p.read_text(encoding="utf-8") for p in paths}
+    if len(contents) != 1:
+        return {"status": "UNSUPPORTED_ANALYSIS", "reason": "conflicting class copies"}, None
+    return {"status": "FOUND"}, contents.pop()
+
+
+def methods(content, name):
+    return [m for m in METHOD.finditer(content) if re.search(rf"\b{re.escape(name)}\(", m["header"])]
+
+
+def facts(method):
+    header, body = method["header"], method["body"]
+    register = re.search(r"(?m)^\s*\.(locals|registers)\s+(\d+)", body)
     return {
-        "status": "OK",
-        "has_iizz": has_iizz,
-        "has_iiz": has_iiz,
-        "has_ii": has_ii,
-        "overload_count": len(method_lines),
+        "descriptor": header.split()[-1],
+        "static": "static" in header.split(),
+        "return_count": len(re.findall(r"(?m)^\s*return-object\s+", body)),
+        "register_directive": register.group(0).strip() if register else None,
+        "getCallingUid": "Landroid/os/Binder;->getCallingUid()I" in body,
+        "clearCallingIdentity": "Landroid/os/Binder;->clearCallingIdentity()J" in body,
     }
+
+
+def audit_computer_engine(gen_dir):
+    result, content = read_class(gen_dir, "ComputerEngine")
+    if content is None:
+        return result
+    overloads = [facts(m) for m in methods(content, "shouldFilterApplication")]
+    descriptors = [m["descriptor"] for m in overloads]
+    result.update(overloads=overloads, overload_count=len(overloads),
+                  has_iizz=any("IIZZ)Z" in d for d in descriptors),
+                  has_iiz=any("IIZ)Z" in d for d in descriptors),
+                  has_ii=any("II)Z" in d for d in descriptors))
+    return result
 
 
 def audit_settings_provider(gen_dir):
-    matches = glob.glob(f"{gen_dir}/**/SettingsProvider.smali", recursive=True)
-    if not matches:
-        return {"status": "NOT_FOUND"}
-    # Find the one in providers/settings
-    target_smali = None
-    for m in matches:
-        if "providers/settings" in m or "SettingsProvider" in m:
-            target_smali = m
-            break
-    if not target_smali:
-        target_smali = matches[0]
-
-    with open(target_smali, "r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
-
-    call_match = re.search(r"\.method[^\n]*call\([^\n]*\).*?\.end method", content, re.DOTALL)
-    if not call_match:
-        return {"status": "NO_CALL_METHOD"}
-
-    call_body = call_match.group(0)
-    has_get_device_id = "getDeviceId()I" in call_body
-    has_requesting_user_id = "getRequestingUserId(" in call_body
-
-    return {
-        "status": "OK",
-        "has_getDeviceId": has_get_device_id,
-        "has_getRequestingUserId": has_requesting_user_id,
-    }
+    result, content = read_class(gen_dir, "SettingsProvider")
+    if content is None:
+        return result
+    calls = methods(content, "call")
+    queries = methods(content, "query")
+    legacy = [m for m in METHOD.finditer(content)
+              if re.search(r"\b(?:getGlobalSetting|getSecureSetting|getSystemSetting)\(", m["header"])]
+    result.update(
+        calls=[facts(m) for m in calls], queries=[facts(m) for m in queries],
+        has_getDeviceId=any("getDeviceId()I" in m["body"] for m in calls),
+        has_getRequestingUserId=any("getRequestingUserId(" in m["body"] for m in calls),
+        legacy_candidates=[facts(m) for m in legacy],
+        hook_status="DIFFERENT_LAYOUT" if not calls or not queries else "FOUND")
+    return result
 
 
 def audit_apps_filter(gen_dir):
-    base_matches = glob.glob(f"{gen_dir}/**/AppsFilterBase.smali", recursive=True)
-    impl_matches = glob.glob(f"{gen_dir}/**/AppsFilterImpl.smali", recursive=True)
+    base, bc = read_class(gen_dir, "AppsFilterBase")
+    impl, ic = read_class(gen_dir, "AppsFilterImpl")
+    return {"status": "FOUND" if bc is not None and ic is not None else "NOT_FOUND",
+            "base_status": base["status"], "impl_status": impl["status"],
+            "base_declared": bool(bc and methods(bc, "shouldFilterApplication")),
+            "impl_declared": bool(ic and methods(ic, "shouldFilterApplication"))}
 
-    base_declared = False
-    if base_matches:
-        with open(base_matches[0], "r", encoding="utf-8", errors="ignore") as f:
-            base_declared = bool(re.search(r"\.method[^\n]*shouldFilterApplication\(", f.read()))
 
-    impl_declared = False
-    if impl_matches:
-        with open(impl_matches[0], "r", encoding="utf-8", errors="ignore") as f:
-            impl_declared = bool(re.search(r"\.method[^\n]*shouldFilterApplication\(", f.read()))
-
-    return {
-        "status": "OK" if (base_matches and impl_matches) else "PARTIAL",
-        "base_declared": base_declared,
-        "impl_declared": impl_declared,
-    }
+def populated_leaf(body):
+    # Only debug/blank/comment lines may separate the array write and return.
+    lines = [line.split("#", 1)[0].strip() for line in body.splitlines()]
+    lines = [line for line in lines if line and not DEBUG.match(line)]
+    for previous, current in zip(lines, lines[1:]):
+        write = re.fullmatch(r"aput-object\s+[vp]\d+,\s*([vp]\d+),\s*[vp]\d+", previous)
+        if write and re.fullmatch(r"return-object\s+" + write[1], current):
+            return True
+    return False
 
 
 def audit_keystore_spi(gen_dir):
-    matches = glob.glob(f"{gen_dir}/**/AndroidKeyStoreSpi.smali", recursive=True)
-    if not matches:
-        return {"status": "NOT_FOUND"}
-
-    with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
-
-    m = re.search(r"\.method[^\n]*engineGetCertificateChain\([^\n]*\).*?\.end method", content, re.DOTALL)
-    if not m:
-        return {"status": "NO_METHOD"}
-
-    method_body = m.group(0)
-    returns = re.findall(r"return-object\s+([vp0-9]+)", method_body)
-    has_populated_array_return = False
-    # Check if aput-object precedes one of the return-objects
-    if "aput-object" in method_body and len(returns) >= 2:
-        has_populated_array_return = True
-
-    return {
-        "status": "OK",
-        "return_count": len(returns),
-        "return_registers": returns,
-        "has_populated_array_path": has_populated_array_return,
-    }
+    result, content = read_class(gen_dir, "AndroidKeyStoreSpi")
+    if content is None:
+        return result
+    chains = methods(content, "engineGetCertificateChain")
+    result.update(overloads=[facts(m) for m in chains],
+                  return_count=sum(facts(m)["return_count"] for m in chains),
+                  return_registers=[reg for m in chains for reg in re.findall(r"return-object\s+([vp]\d+)", m["body"])],
+                  has_populated_array_path=any(populated_leaf(m["body"]) for m in chains),
+                  leaf_layout="FOUND" if any(populated_leaf(m["body"]) for m in chains) else "DIFFERENT_LAYOUT")
+    return result
 
 
 def audit_instrumentation(gen_dir):
-    matches = glob.glob(f"{gen_dir}/**/Instrumentation.smali", recursive=True)
-    if not matches:
-        return {"status": "NOT_FOUND"}
+    result, content = read_class(gen_dir, "Instrumentation")
+    if content is None:
+        return result
+    overloads = []
+    for m in methods(content, "newApplication"):
+        detail = facts(m)
+        detail["context_parameter"] = "Landroid/content/Context;" in detail["descriptor"]
+        overloads.append(detail)
+    result.update(overloads=overloads, overload_count=len(overloads))
+    return result
 
-    with open(matches[0], "r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
 
-    overloads = re.findall(r"\.method[^\n]*newApplication\([^\n]*\).*?\.end method", content, re.DOTALL)
-    details = []
-    for ov in overloads:
-        sig = ov.split("\n")[0].strip()
-        rets = re.findall(r"return-object\s+([vp0-9]+)", ov)
-        details.append({"signature": sig, "returns": rets})
+def audit_system_server(gen_dir):
+    result, content = read_class(gen_dir, "SystemServer")
+    if content is None:
+        return result
+    runs = methods(content, "run")
+    result.update(run_present=bool(runs), runs=[facts(m) for m in runs],
+                  looper_anchor=any("Landroid/os/Looper;->loop()V" in m["body"] for m in runs),
+                  start_other_services_anchor=any("->startOtherServices(" in m["body"] for m in runs))
+    return result
 
-    return {
-        "status": "OK",
-        "overload_count": len(overloads),
-        "overloads": details,
-    }
+
+def audit_package_manager(gen_dir):
+    result, content = read_class(gen_dir, "ApplicationPackageManager")
+    if content is not None:
+        result["hasSystemFeature"] = [facts(m) for m in methods(content, "hasSystemFeature")]
+    candidates = []
+    for name in ("ApplicationPackageManager", "ComputerEngine", "PackageManagerService"):
+        status, source = read_class(gen_dir, name)
+        if source is None:
+            continue
+        for method_name in ("getInstallerPackageName", "getInstallSourceInfo", "getInstallSource"):
+            for m in methods(source, method_name):
+                candidates.append(dict(class_name=name, **facts(m)))
+    result["installer_candidates"] = candidates
+    return result
+
+
+AUDITORS = {"computer_engine": audit_computer_engine, "settings_provider": audit_settings_provider,
+            "apps_filter": audit_apps_filter, "keystore_spi": audit_keystore_spi,
+            "instrumentation": audit_instrumentation, "system_server": audit_system_server,
+            "package_manager": audit_package_manager}
 
 
 def run_audit(sample_base):
+    base = Path(sample_base)
+    gens = SAMPLE_GENS if any((base / g).exists() for g in SAMPLE_GENS) else sorted(p.name for p in base.iterdir() if p.is_dir())
     results = {}
-    gens = [g for g in SAMPLE_GENS if os.path.isdir(os.path.join(sample_base, g))]
-    if not gens:
-        # Check any subdirs
-        gens = [d for d in os.listdir(sample_base) if os.path.isdir(os.path.join(sample_base, d))]
-
-    for gen in sorted(gens):
-        gen_dir = os.path.join(sample_base, gen)
-        results[gen] = {
-            "computer_engine": audit_computer_engine(gen_dir),
-            "settings_provider": audit_settings_provider(gen_dir),
-            "apps_filter": audit_apps_filter(gen_dir),
-            "keystore_spi": audit_keystore_spi(gen_dir),
-            "instrumentation": audit_instrumentation(gen_dir),
-        }
+    for gen in gens:
+        root = base / gen
+        smali = next(root.rglob("*.smali"), None) if root.is_dir() else None
+        archives = sorted(str(p.relative_to(root)) for p in root.rglob("*") if p.suffix.lower() in (".jar", ".apk")) if root.is_dir() else []
+        status = "FOUND" if smali else "RAW_ARCHIVE_NOT_DECOMPILED" if archives else "SAMPLE_MISSING"
+        results[gen] = {"status": status, "archives": archives}
+        results[gen].update({name: audit(root) if smali else {"status": status} for name, audit in AUDITORS.items()})
     return results
 
 
 def print_markdown_table(results):
-    print("# ROM Sample Framework Structural Audit\n")
-
-    print("## 1. ComputerEngine & SettingsProvider\n")
-    print("| Generation | ComputerEngine Overloads | has IIZZ | SettingsProvider: getDeviceId | SettingsProvider: reqUserId |")
-    print("|---|---|:---:|:---:|:---:|")
+    print("ROM sample diagnostics; FOUND describes source presence, not verified hooks or device support.\n")
     for gen, data in results.items():
-        ce = data["computer_engine"]
-        sp = data["settings_provider"]
-        ce_iizz = "✓" if ce.get("has_iizz") else "✗"
-        ce_count = ce.get("overload_count", 0)
-        sp_dev = "✓" if sp.get("has_get_device_id") else "✗"
-        sp_user = "✓" if sp.get("has_has_getRequestingUserId") or sp.get("has_getRequestingUserId") else "✗"
-        print(f"| `{gen}` | {ce_count} overloads | {ce_iizz} | {sp_dev} | {sp_user} |")
-
-    print("\n## 2. AppsFilter, Keystore SPI & Instrumentation\n")
-    print("| Generation | AppsFilterBase Declared | AppsFilterImpl Declared | Keystore Returns | Instrumentation Overloads |")
-    print("|---|:---:|:---:|---|:---:|")
-    for gen, data in results.items():
-        af = data["apps_filter"]
-        ks = data["keystore_spi"]
-        inst = data["instrumentation"]
-        af_base = "✓" if af.get("base_declared") else "✗"
-        af_impl = "✓ (declared)" if af.get("impl_declared") else "Inherited (base only)"
-        ks_rets = f"{ks.get('return_count', 0)} ({', '.join(ks.get('return_registers', []))})"
-        inst_cnt = inst.get("overload_count", 0)
-        print(f"| `{gen}` | {af_base} | {af_impl} | {ks_rets} | {inst_cnt} overloads |")
+        print(f"{gen}: {data['status']}" + (" — diagnostic skipped" if data["status"] != "FOUND" else ""))
+        if data["status"] == "FOUND":
+            for name in AUDITORS:
+                print(f"  {name}: {json.dumps(data[name], sort_keys=True)}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Audit framework sample smali patterns across ROM generations.")
-    parser.add_argument("--sample-dir", help="Path to sample base directory (containing miui14-a13, os1-a14, etc.)")
-    parser.add_argument("--format", choices=["table", "json"], default="table", help="Output format (default: table)")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--sample-dir", help="Explicit decompiled tree containing generation directories")
+    parser.add_argument("--format", choices=["table", "json"], default="table")
+    parser.add_argument("--strict", action="store_true", help="Fail if any requested sample lacks usable smali")
     args = parser.parse_args()
-
-    sample_base = find_sample_base(args.sample_dir)
-    if not sample_base:
-        print("INFO: No framework samples found in work/fw or tmp/fw.")
-        print("To populate samples, extract and decompile reference ROM framework jars into work/fw/<generation>/.")
-        print("Skipping framework sample audit (non-fatal).")
-        sys.exit(0)
-
-    results = run_audit(sample_base)
-
+    base = find_sample_base(args.sample_dir)
+    results = run_audit(base) if base else {"samples": {"status": "SAMPLE_MISSING"}}
     if args.format == "json":
         print(json.dumps(results, indent=2))
     else:
         print_markdown_table(results)
+    return 1 if args.strict and (not results or any(d["status"] != "FOUND" for d in results.values())) else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

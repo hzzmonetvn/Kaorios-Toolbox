@@ -76,7 +76,7 @@ Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-To
 
 ### Advanced features: framework patch required
 
-Advanced Features are controlled by the `kaorios_advanced_features` setting in the app. When enabled, the framework switches HMA package visibility isolation from global hide-all to granular, caller-aware policy enforcement (`kaorios_hma_config`) and enables per-app Settings value spoofing (`kaorios_setting_spoof_json`).
+Advanced Features are controlled by the `kaorios_advanced_features` setting in the app. Enabling requires exact read-only nonce responses through Global, Secure and System; missing Settings hooks keep the switch OFF. This probe does not verify installer hooks. When enabled, the framework switches HMA package visibility isolation from global hide-all to granular, caller-aware policy enforcement (`kaorios_hma_config`) and enables per-app Settings value spoofing (`kaorios_setting_spoof_json`).
 
 For Advanced Features to take effect at runtime, the target ROM requires:
 1. **SystemServer Lifecycle Hook**: `initSystemServer()` in `SystemServer.smali` to bootstrap `AdvancedPolicyService`.
@@ -91,8 +91,8 @@ If a ROM lacks these hooks or policy rules, toggling the feature will not take e
 ## 📋 Todo List / Roadmap
 
 - [x] ⚡ **Automated Patcher Tool 2.0.6+** (`script/kaorios_patcher_a17.py`)
-- [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Verify the documented `filterSettingValue` / `shouldRemoveSetting` patches and Advanced capability check on each target ROM.
-- [ ] 📦 **Spoof Installer Source Package**: Spoof package installer origin per-app (`filterInstallerPackageName`, e.g. masquerade as Google Play Store `com.android.vending`).
+- [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Included A13–A17 call/query layouts validated; read-only Global/Secure/System capability gate integrated. Legacy String snippet is unverified for A13–A16; real-device Binder/SELinux checks remain. [Validation matrix](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
+- [ ] 📦 **Spoof Installer Source Package**: Existing per-caller policy, UI controls and patcher/verifier cover both installer read APIs in the five included samples. Only the installing package result is filtered; real-device checks remain. [Scope and checklist](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
 
 ---
 

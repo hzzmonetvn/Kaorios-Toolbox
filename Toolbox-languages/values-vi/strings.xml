@@ -521,4 +521,12 @@
     <string name="payload_cd_batch_dump">Trích xuất các phân vùng đã chọn</string>
     <string name="payload_cd_select_for_dump">Chọn để trích xuất hàng loạt</string>
     <string name="payload_batch_nothing_to_dump">Không có phân vùng đã chọn nào sẵn sàng để trích xuất.</string>
+    <string name="advanced_settings_hooks_missing">Hook Settings của framework thiếu hoặc không được hỗ trợ. Global: %1$s; Secure: %2$s; System: %3$s.</string>
+    <string name="hma_installer_spoof">Giả nguồn cài đặt</string>
+    <string name="hma_installer_spoof_desc">Báo Play Store là trình cài đặt của các ứng dụng thường được caller này truy vấn.</string>
+    <string name="hma_installer_system">Ẩn nguồn cài đặt ứng dụng hệ thống</string>
+    <string name="hma_installer_system_desc">Trả về không có trình cài đặt cho ứng dụng hệ thống được caller này truy vấn.</string>
+    <string name="hma_installer_self">Giữ nguồn cài đặt của chính caller</string>
+    <string name="hma_installer_self_desc">Giữ trình cài đặt gốc khi caller truy vấn package của chính mình.</string>
+    <string name="hma_installer_hook_warning">Lọc trình cài đặt cần hook ROM đã kiểm chứng cho cả hai API PackageManager. Probe Settings không kiểm chứng hook trình cài đặt.</string>
 </resources>

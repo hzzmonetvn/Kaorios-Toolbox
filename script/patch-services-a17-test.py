@@ -249,6 +249,18 @@ class TestPatchServicesA17(unittest.TestCase):
         with self.assertRaises(ValueError):
             patcher.verify(wrong_return)
 
+    def test_high_register_visibility_preserves_stock_physical_slots(self):
+        stock = STOCK_7_PARAM_SMALI.replace('.registers 10', '.registers 28').replace(
+            'invoke-static {p2}', 'invoke-static/range {p2 .. p2}')
+        patched, changed = patcher.patch(stock)
+        self.assertTrue(changed)
+        patcher.verify(patched)
+        self.assertIn('move-object/16 v20, p0', patched)
+        self.assertIn('invoke-static/range {v28 .. v30}', patched)
+        self.assertIn('invoke-static/range {v22 .. v22}, Landroid/os/Process;', patched)
+        with self.assertRaises(ValueError):
+            patcher.verify(patched.replace('move/16 v30, v25', 'move/16 v30, v24'))
+
 
 if __name__ == "__main__":
     unittest.main()

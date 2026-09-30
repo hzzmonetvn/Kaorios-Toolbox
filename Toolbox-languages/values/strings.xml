@@ -336,4 +336,12 @@
     <string name="payload_cd_batch_dump">Dump selected partitions</string>
     <string name="payload_cd_select_for_dump">Select for batch dump</string>
     <string name="payload_batch_nothing_to_dump">No selected partitions are ready to dump.</string>
+    <string name="advanced_settings_hooks_missing">Framework Settings hooks are missing or unsupported. Global: %1$s; Secure: %2$s; System: %3$s.</string>
+    <string name="hma_installer_spoof">Spoof installer source</string>
+    <string name="hma_installer_spoof_desc">Report Play Store as installer for non-system packages queried by this caller.</string>
+    <string name="hma_installer_system">Hide system-app installer source</string>
+    <string name="hma_installer_system_desc">Return no installer for system packages queried by this caller.</string>
+    <string name="hma_installer_self">Keep own installer source</string>
+    <string name="hma_installer_self_desc">Keep the stock installer when this caller queries its own package.</string>
+    <string name="hma_installer_hook_warning">Installer filtering requires verified ROM hooks for both PackageManager installer APIs. The Settings probe does not verify installer hooks.</string>
 </resources>

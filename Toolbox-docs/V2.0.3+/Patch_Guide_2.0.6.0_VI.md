@@ -457,24 +457,16 @@ Không trộn ABI A13–16 và ABI A17. Kiểm tra đúng signature tồn tại 
 
 ### C. Giả mạo nguồn cài đặt
 
-Class/method thay đổi theo Android version và ROM. Điểm patch phải nằm sau khi Package Manager đã xác định installer stock nhưng trước khi trả giá trị cho caller.
+Bật Advanced Features rồi chỉnh rule của caller trong Hide Features. `hideInstallationSource` báo Play Store cho ứng dụng thường đã cài mà caller truy vấn. `hideSystemInstallationSource` tùy chọn trả null cho ứng dụng hệ thống; nếu tắt thì giữ stock. `excludeTargetInstallationSource` giữ nguồn cài đặt của chính caller. Tắt tùy chọn cha không xóa giá trị con. Policy installer áp dụng cho các target đã cài được caller truy vấn, độc lập danh sách target/template dùng để ẩn app. Caller manager, target không xác định và lỗi runtime giữ stock; tắt Advanced cũng giữ stock. Shared UID có thể kích hoạt policy từ bất kỳ rule hợp lệ của package trong UID, trừ UID chứa manager.
 
-Hook tham chiếu:
+Trong sample A17 đi kèm, patch cả `ComputerEngine.getInstallerPackageName(String,int)String` và `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. API thứ hai chỉ lọc argument installing package khi dựng kết quả, bao phủ `getInstallingPackageName()`. Giữ nguyên initiating/originating package, update owner, package source, dữ liệu cài đặt và giao dịch PackageInstaller. Xem [bảng sample và checklist thiết bị](Sample_Compatibility_2.0.6.0.md) để biết descriptor A13–A16 và phạm vi chính xác.
 
-```smali
-invoke-static {vResolver, vCallingUid, vUserId, vPackageName, vInstaller}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-move-result-object vInstaller
+```sh
+python script/patch-installer-source.py /path/to/ComputerEngine.smali
+python script/patch-installer-source.py /path/to/ComputerEngine.smali --verify-only
 ```
 
-Tự xác định:
-
-- ContentResolver hoặc `null`;
-- calling UID;
-- user ID;
-- package đang được query;
-- installer stock.
-
-Không copy register từ template sang ROM khác.
+Mode 1/3 của patcher chính và pipeline services cũng patch installer khi có method API tương ứng. Phải nhận diện được cả hai API; layout thiếu một phần hoặc không rõ bị từ chối trước khi lưu. Fixture chỉ có visibility không chứng minh installer đã được patch. Verifier kiểm tra nguồn installer stock, Binder UID gốc, target/user, thay giá trị kết quả và đủ các đường return/constructor liên quan. Copy parameter giữ register vật lý stock, scratch liên tiếp dùng `/range` an toàn. Resolver null là chủ ý của hook snapshot hiện tại. Assemble, decompile lại và verify DEX trước khi tích hợp ROM. Probe Settings không chứng minh hook installer hoạt động.
 
 ---
 
@@ -482,41 +474,9 @@ Không copy register từ template sang ROM khác.
 
 Phần này khác rõ giữa implementation/framework cũ và patch A17 hiện tại.
 
-#### Android 13–16 / framework dùng String hook
+#### Hook String hai bước của framework cũ
 
-Patch đường GET phía server của `SettingsProvider` khi Binder caller identity vẫn còn nguyên.
-
-Không đặt hook:
-
-- trong client cache như `Settings$NameValueCache`;
-- sau `Binder.clearCallingIdentity()`;
-- ở method không trả giá trị Settings thật cho caller.
-
-Với framework dùng hai hook:
-
-```smali
-shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
-filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-```
-
-logic tham chiếu:
-
-```smali
-const/4 vNull, 0x0
-
-invoke-static {vNull, vNamespace, vName}, Landroid/security/kaorios/KaoriosHook;->shouldRemoveSetting(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;)Z
-move-result vRemove
-
-if-eqz vRemove, :cond_kaorios_setting_value
-const/4 vValue, 0x0
-return-object vValue
-
-:cond_kaorios_setting_value
-invoke-static {vNull, vNamespace, vName, vValue}, Landroid/security/kaorios/KaoriosHook;->filterSettingValue(Landroid/content/ContentResolver;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-move-result-object vValue
-```
-
-Sau đó giữ nguyên cleanup/return stock của ROM.
+`shouldRemoveSetting(ContentResolver,String,String)` rồi `filterSettingValue(ContentResolver,String,String,String)` là ABI tương thích đã deprecated. Hai bước phải nhận cùng namespace/name và Binder caller gốc trên cùng provider thread. Không chèn trực tiếp vào method trả `SettingsState$Setting` hoặc Bundle. Snippet legacy chung chưa phải strategy đã kiểm chứng cho sample A13–A16. Với DEX hiện tại, layout call/query của các sample này khớp strategy modern bên dưới. Xem [kiểm chứng sample](Sample_Compatibility_2.0.6.0.md); không ép hook legacy vào A17.
 
 #### Android 17 hiện tại
 
@@ -666,3 +626,7 @@ Android 13–17 và ROM OEM có thể thay đổi method/register giữa các b�
 | High-register query | SettingsProvider.query không encode an toàn được argument không liên tiếp; UNSUPPORTED_LAYOUT, không ép /range. |
 
 CLI có thể hiển thị thông báo tiếng Việt như `ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS)` hoặc `UNSUPPORTED LAYOUT` thay cho enum nguyên văn. Verifier qua không chứng minh boot/runtime/device.
+
+## Advanced Settings capability / Kiểm tra capability Settings
+
+Trước khi bật Advanced, Toolbox đọc probe nonce ngẫu nhiên mới qua Global, Secure và System. Cả ba phải trả đúng namespace/nonce; thiếu hook hoặc không hỗ trợ thì switch giữ OFF và báo kết quả từng namespace. Probe chỉ đọc, chạy khi Advanced OFF, không ghi setting và không lưu key. Đường modern kiểm tra tuyến provider tới AdvancedPolicyService; đường legacy cần đủ hai bước. App báo path UNKNOWN vì cùng response không phân biệt được kiến trúc. Xem [checklist chỉ đọc trên thiết bị](Sample_Compatibility_2.0.6.0.md#read-only-device-settings-check). Kiểm chứng host/sample vẫn cần xác nhận trên thiết bị thật.

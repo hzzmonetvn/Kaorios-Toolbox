@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed Android 17 ComputerEngine package-visibility smali patcher for Kaorios HMA."""
 import argparse
+import importlib.util
 import re
 from pathlib import Path
 
@@ -61,15 +62,49 @@ def _hook_count(body: str) -> int:
     return body.count(HOOK_TARGET)
 
 
-def verify(text: str) -> None:
+def _high_hook(param_count, old_base, scratch, label, newline="\n"):
+    width = 8 if param_count == 7 else 4
+    user = 5 if param_count == 7 else 3
+    objects = {0, 1, 3} if param_count == 7 else {0, 1}
+    lines = [f"move{'-object' if i in objects else ''}/16 v{old_base+i}, p{i}" for i in range(width)]
+    lines += [
+        f"if-eqz v{old_base+1}, {label}",
+        f"invoke-interface/range {{v{old_base+1} .. v{old_base+1}}}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;",
+        f"move-result-object v{scratch+1}",
+        f"if-eqz v{scratch+1}, {label}",
+        f"move/16 v{scratch}, v{old_base+2}",
+        f"move/16 v{scratch+2}, v{old_base+user}",
+        f"invoke-static/range {{v{scratch} .. v{scratch+2}}}, {HOOK_TARGET}",
+        f"move-result v{scratch}", f"if-eqz v{scratch}, {label}",
+        f"const/16 v{scratch}, 0x1", f"return v{scratch}", label,
+    ]
+    return ''.join('    ' + line + newline for line in lines)
+
+
+def _verify_visibility(text: str) -> None:
     """Assert the final smali has exactly one structural hook sequence in shouldFilterApplication satisfying Phase 18."""
     start, end, param_count = _method_span(text)
     body = text[start:end]
+    body = re.sub(r"(?m)^[ \t]*\.(?:line|local|end local|restart local|prologue|epilogue)\b[^\n]*\n", "", body)
     count = _hook_count(body)
     if count != 1:
         raise ValueError(f"expected exactly one shouldHideAppListForCaller hook; found {count}")
     if GET_PACKAGE_NAME_CALL not in body:
-        raise ValueError("expected PackageStateInternal.getPackageName() call in hook sequence")
+        directive = LOCALS_RE.search(body) or REGISTERS_RE.search(body)
+        width = 8 if param_count == 7 else 4
+        if directive is None:
+            raise ValueError("missing registers for high-register hook")
+        locals_count = int(directive.group("num")) - (width if directive.re == REGISTERS_RE else 0)
+        scratch = locals_count - 3
+        old_base = scratch - width
+        label = re.search(rf"if-eqz\s+v{old_base+1},\s*(:\S+)", body)
+        if label is None or old_base < 0 or scratch + 2 > 255:
+            raise ValueError("invalid high-register hook frame")
+        expected = _high_hook(param_count, old_base, scratch, label[1])
+        compact = lambda value: '\n'.join(line.strip() for line in value.splitlines() if line.strip())
+        if compact(expected) not in compact(body):
+            raise ValueError("incorrect high-register caller/package/user or return sequence")
+        return
 
     user_param = "p5" if param_count == 7 else "p3"
 
@@ -124,13 +159,13 @@ def _find_injection_point(body: str) -> int:
     return sum(len(lines[j]) for j in range(injected_idx))
 
 
-def patch(text: str) -> tuple[str, bool]:
+def _patch_visibility(text: str) -> tuple[str, bool]:
     """Inject Kaorios HMA visibility hook into ComputerEngine.shouldFilterApplication using register-safe allocation."""
     start, end, param_count = _method_span(text)
     body = text[start:end]
     count = _hook_count(body)
     if count == 1:
-        verify(text)
+        _verify_visibility(text)
         return text, False
     if count > 1:
         raise ValueError("multiple shouldHideAppListForCaller hooks already present")
@@ -190,6 +225,31 @@ def patch(text: str) -> tuple[str, bool]:
             + updated_body[method_line_end:]
         )
 
+    locals_match = LOCALS_RE.search(updated_body)
+    new_locals = int(locals_match.group("num")) if locals_match else 1
+    if max(new_locals + int(user_param[1:]), int(hook_reg[1:])) > 15:
+        original_directive = LOCALS_RE.search(body) or REGISTERS_RE.search(body)
+        old_count = int(original_directive.group("num"))
+        old_base = old_count if original_directive.re == LOCALS_RE else old_count - param_width
+        scratch = old_base + param_width
+        if scratch + 2 > 255:
+            raise ValueError("UNSUPPORTED_LAYOUT: high-register scratch exceeds 8-bit limits")
+        lines = []
+        for line in body.splitlines(keepends=True):
+            if not line.strip().startswith('.param'):
+                parts = re.split(r'("(?:\\.|[^"\\])*"|#[^\n]*)', line)
+                line = ''.join(part if i % 2 else re.sub(r'\bp(\d+)\b', lambda m: f'v{old_base+int(m[1])}', part) for i, part in enumerate(parts))
+            lines.append(line)
+        updated_body = ''.join(lines)
+        directive = LOCALS_RE.search(updated_body) or REGISTERS_RE.search(updated_body)
+        updated_body = updated_body[:directive.start()] + f"    .locals {scratch+3}{newline}" + updated_body[directive.end():]
+        inj_offset = _find_injection_point(updated_body)
+        hook_code = _high_hook(param_count, old_base, scratch, ':cond_kaorios_ps_null', newline)
+        patched_body = updated_body[:inj_offset] + hook_code + updated_body[inj_offset:]
+        patched = text[:start] + patched_body + text[end:]
+        _verify_visibility(patched)
+        return patched, True
+
     inj_offset = _find_injection_point(updated_body)
     hook_code = (
         f"    if-eqz p1, :cond_kaorios_ps_null{newline}"
@@ -206,8 +266,37 @@ def patch(text: str) -> tuple[str, bool]:
 
     patched_body = updated_body[:inj_offset] + hook_code + updated_body[inj_offset:]
     patched = text[:start] + patched_body + text[end:]
-    verify(patched)
+    _verify_visibility(patched)
     return patched, True
+
+
+def _installer_patcher(text):
+    if not re.search(r"(?m)^\.method[^\n]*\b(?:getInstallerPackageName|getInstallSourceInfo)\(", text):
+        return None
+    path = Path(__file__).with_name("patch-installer-source.py")
+    if not path.is_file():
+        raise ValueError("installer patcher/verifier unavailable")
+    spec = importlib.util.spec_from_file_location("installer_patcher", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def verify(text: str) -> None:
+    _verify_visibility(text)
+    installer = _installer_patcher(text)
+    if installer is not None:
+        installer.verify(text)
+
+
+def patch(text: str) -> tuple[str, bool]:
+    patched, changed = _patch_visibility(text)
+    installer = _installer_patcher(text)
+    if installer is not None:
+        patched, installer_changed = installer.patch(patched)
+        changed = changed or installer_changed
+    verify(patched)
+    return patched, changed
 
 
 def main() -> None:

@@ -5,6 +5,8 @@ import importlib.util
 import os
 from pathlib import Path
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -50,7 +52,7 @@ class TestCheckFrameworkSamples(unittest.TestCase):
                 ".end method\n"
             )
         res = audit_computer_engine(gen_dir)
-        self.assertEqual(res["status"], "OK")
+        self.assertEqual(res["status"], "FOUND")
         self.assertTrue(res["has_iizz"])
         self.assertEqual(res["overload_count"], 1)
 
@@ -67,7 +69,7 @@ class TestCheckFrameworkSamples(unittest.TestCase):
                 ".end method\n"
             )
         res = audit_settings_provider(os.path.join(self.temp_dir, "test-gen"))
-        self.assertEqual(res["status"], "OK")
+        self.assertEqual(res["status"], "FOUND")
         self.assertTrue(res["has_getDeviceId"])
         self.assertTrue(res["has_getRequestingUserId"])
 
@@ -88,7 +90,7 @@ class TestCheckFrameworkSamples(unittest.TestCase):
                 "# Inherits shouldFilterApplication\n"
             )
         res = audit_apps_filter(gen_dir)
-        self.assertEqual(res["status"], "OK")
+        self.assertEqual(res["status"], "FOUND")
         self.assertTrue(res["base_declared"])
         self.assertFalse(res["impl_declared"])
 
@@ -108,7 +110,7 @@ class TestCheckFrameworkSamples(unittest.TestCase):
                 ".end method\n"
             )
         res = audit_keystore_spi(gen_dir)
-        self.assertEqual(res["status"], "OK")
+        self.assertEqual(res["status"], "FOUND")
         self.assertEqual(res["return_count"], 2)
         self.assertTrue(res["has_populated_array_path"])
 
@@ -127,8 +129,52 @@ class TestCheckFrameworkSamples(unittest.TestCase):
                 ".end method\n"
             )
         res = audit_instrumentation(gen_dir)
-        self.assertEqual(res["status"], "OK")
+        self.assertEqual(res["status"], "FOUND")
         self.assertEqual(res["overload_count"], 2)
+
+    def test_raw_archive_is_not_class_not_found(self):
+        root = Path(self.temp_dir) / "os4-a17"
+        root.mkdir()
+        (root / "framework.jar").write_bytes(b"raw")
+        data = run_audit(self.temp_dir)["os4-a17"]
+        self.assertEqual("RAW_ARCHIVE_NOT_DECOMPILED", data["status"])
+        self.assertEqual("RAW_ARCHIVE_NOT_DECOMPILED", data["computer_engine"]["status"])
+        for strict, expected in [(False, 0), (True, 1)]:
+            command = [sys.executable, str(SCRIPT_PATH), "--sample-dir", self.temp_dir]
+            if strict:
+                command.append("--strict")
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(expected, result.returncode)
+            self.assertIn("RAW_ARCHIVE_NOT_DECOMPILED", result.stdout)
+            self.assertNotIn("NOT_FOUND", result.stdout)
+
+    def test_missing_dataset_and_decompiled_missing_class_are_distinct(self):
+        root = Path(self.temp_dir) / "os4-a17"
+        root.mkdir()
+        (root / "Instrumentation.smali").write_text(".class public Landroid/app/Instrumentation;\n")
+        data = run_audit(self.temp_dir)
+        self.assertEqual("FOUND", data["os4-a17"]["status"])
+        self.assertEqual("NOT_FOUND", data["os4-a17"]["computer_engine"]["status"])
+        self.assertEqual("SAMPLE_MISSING", data["miui14-a13"]["status"])
+        result = subprocess.run([sys.executable, str(SCRIPT_PATH), "--sample-dir", str(root / "absent"), "--strict"], capture_output=True)
+        self.assertEqual(1, result.returncode)
+
+    def test_leaf_path_requires_same_array_and_only_debug_between(self):
+        valid = "aput-object v1, v2, v3\n.line 42\n.local v2, \"chain\":[Ljava/security/cert/Certificate;\nreturn-object v2"
+        self.assertTrue(cfs.populated_leaf(valid))
+        for invalid in [valid.replace("return-object v2", "return-object v3"),
+                        valid.replace(".line 42", "move-object v2, v4"),
+                        valid.replace(".line 42", ":join"),
+                        "aput-object v1, v2, v3\nreturn-object v4\nreturn-object v2"]:
+            self.assertFalse(cfs.populated_leaf(invalid))
+
+    def test_conflicting_copies_report_unsupported_analysis(self):
+        root = Path(self.temp_dir)
+        for index in (1, 2):
+            child = root / str(index)
+            child.mkdir()
+            (child / "ComputerEngine.smali").write_text(f".class public Ldifferent{index};")
+        self.assertEqual("UNSUPPORTED_ANALYSIS", audit_computer_engine(root)["status"])
 
 
 if __name__ == "__main__":
