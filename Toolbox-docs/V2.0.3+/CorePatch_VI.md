@@ -1,5 +1,8 @@
 Đây là mẫu, 1 số giá trị có thể khác với từng rom!
 
+> [!WARNING]
+> Các register như `v14`, `v12`, `v11` chỉ là ví dụ từ ROM tham chiếu. Phải xác định register thực tế và giá trị đang sống trên ROM đích trước khi sửa; không copy mù các số `vN` cố định.
+
 ## 1. `framework.jar`
 
 ### `android.content.pm.PackageParser`

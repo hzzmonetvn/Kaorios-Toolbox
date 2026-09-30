@@ -1,5 +1,8 @@
 This is a reference example. Some values may vary depending on the ROM!
 
+> [!WARNING]
+> Registers such as `v14`, `v12`, and `v11` are examples from a reference ROM only. Resolve the actual registers and live values on your target ROM before editing; do not blindly copy hardcoded `vN` numbers.
+
 ## 1. `framework.jar`
 
 ### `android.content.pm.PackageParser`

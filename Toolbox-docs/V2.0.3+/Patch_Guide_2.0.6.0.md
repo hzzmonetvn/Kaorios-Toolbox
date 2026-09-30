@@ -6,22 +6,75 @@
 
 This guide is shared across Android 13, 14, 15, 16 and 17. Class/method layout can differ between AOSP and OEM ROMs, so templates are references for equivalent logic only. Android 17 differences are called out where needed.
 
-### Multi-DEX Disassembly & Sample Reference (`tmp/fw/`)
+> [!WARNING]
+> Registers in snippets are examples. `vScratch`, `vHook`, `vX`, and `<cursor_reg>` are placeholders that must be replaced with valid target ROM registers. Resolve actual values and liveness, including `v0`, before editing; preserve stock registers used on fallback paths.
 
-Modern Android system frameworks (`framework.jar`, `services.jar`, etc.) contain multiple DEX files: `classes.dex`, `classes2.dex`, `classes3.dex`, etc.
-When disassembling:
-- Use `baksmali` to disassemble each DEX into a distinct directory (e.g., `smali/`, `smali_classes2/`, `smali_classes3/`) or extract into a unified working directory (e.g., `tmp/fw/` for `framework.jar` and `tmp/services/` for `services.jar`):
-  ```bash
-  # Example disassembling framework.jar multi-dex
-  mkdir -p tmp/fw
-  unzip framework.jar 'classes*.dex' -d tmp/fw/
-  for dex in tmp/fw/classes*.dex; do
-      name=$(basename "$dex" .dex)
-      out_dir="tmp/fw/${name}"
-      baksmali d "$dex" -o "$out_dir"
-  done
-  ```
-- Use `tmp/fw/` as a reference directory to search across all DEX splits (e.g. `find tmp/fw/ -name "ApplicationPackageManager.smali"`) and to diff against stock classes before repacking.
+## Start from clean stock files from the target ROM
+
+Back up `framework.jar.orig`, `services.jar.orig`, and `SettingsProvider.apk.orig` before editing. Always use clean files from the exact target ROM. Do not copy `tmp/fw/` samples into a ROM or copy whole Template classes from another ROM. Avoid frameworks with arbitrary prior patches; restore clean source if earlier modifications conflict.
+
+## Multi-DEX workspace
+
+A target class may be in `classes2.dex`, `classes3.dex`, or another split rather than `classes.dex`. Disassemble each DEX into its own tree:
+
+```bash
+mkdir -p work/framework/input
+unzip framework.jar 'classes*.dex' -d work/framework/input
+for dex in work/framework/input/classes*.dex; do
+    name=$(basename "$dex" .dex)
+    baksmali d "$dex" -o "work/framework/smali_${name}"
+done
+```
+
+The output trees are `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Use `work/services/` and `work/settingsprovider/` for the other archives. Search all smali trees in the workspace; do not overwrite the `tmp/fw/` dataset.
+
+## Included Framework Samples
+
+`tmp/fw/**` contains sample/reference frameworks from several Android/HyperOS generations. Each sample includes `framework.jar`, `services.jar`, and `SettingsProvider.apk`. Use them to inspect class presence, method descriptors, control flow and register layout, research compatibility, and develop/test the patcher.
+
+These are not files to flash, a canonical framework, replacements for your ROM, universal proof that every ROM on the same Android version has the same layout, or runtime dependencies. Observations below apply only **in the included sample**; class presence does not establish full feature support.
+
+| Target | A13 sample | A14 sample | A15 sample | A16 sample | A17 sample |
+|---|---|---|---|---|---|
+| ActivityThread / handleBindApplication | FOUND | FOUND | FOUND | FOUND | FOUND |
+| Instrumentation / both newApplication overloads | FOUND | FOUND | FOUND | FOUND | FOUND |
+| ApplicationPackageManager / hasSystemFeature(String,int) | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AndroidKeyStoreKeyPairGeneratorSpi / generateKeyPair | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AndroidKeyStoreSpi / engineGetCertificateChain | FOUND | FOUND | FOUND | FOUND | FOUND |
+| Build | FOUND | FOUND | FOUND | FOUND | FOUND |
+| Build$VERSION | FOUND | FOUND | FOUND | FOUND | FOUND |
+| SystemServer / run | FOUND | FOUND | FOUND | FOUND | FOUND |
+| ComputerEngine | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AppsFilterBase | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AppsFilterImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
+| SettingsProvider / call + query | FOUND | FOUND | FOUND | FOUND | FOUND |
+| ComputerEngine / PackageStateInternal IIZZ overload | DIFFERENT LAYOUT | DIFFERENT LAYOUT | FOUND | FOUND | FOUND |
+| SettingsProvider.call / getDeviceId() anchor | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND | FOUND |
+| SettingsProvider.call / getRequestingUserId(Bundle) anchor | FOUND | FOUND | FOUND | FOUND | FOUND |
+
+`FOUND` means the named class/method was located. `NOT FOUND` means that specific target was absent. `DIFFERENT LAYOUT` means the class exists but the compared descriptor differs; `NOT APPLICABLE` is reserved for irrelevant targets (no cells need it here).
+
+### Included sample observations
+
+- **MIUI 14 / Android 13 (`miui14-a13`)**: in the included sample, `newApplication(Class,Context)` is static with Context `p1`; the ClassLoader overload is instance with Context `p3`. ComputerEngine has PackageStateInternal `II` and ComponentName `II` overloads, without `IIZZ`. SettingsProvider.call uses `getRequestingUserId(Bundle)`; query has `.registers 10` and 7 return-object exits.
+- **HyperOS 1 / Android 14 (`os1-a14`)**: in the included sample, Instrumentation mapping and SettingsProvider anchor match A13; ComputerEngine adds ComponentName `IIZ`, without `IIZZ`. Query has `.registers 10` and 7 return-object exits.
+- **HyperOS 2 / Android 15 (`os2-a15`)**: in the included sample, ComputerEngine has `IIZZ`; SettingsProvider.call still uses `getRequestingUserId(Bundle)`. Query has `.registers 11` and 7 return-object exits.
+- **HyperOS 3 / Android 16 (`os3-a16`)**: in the included sample, ComputerEngine has `IIZZ`; call still uses `getRequestingUserId(Bundle)`. Query has `.registers 10` and 7 return-object exits.
+- **HyperOS 4 / Android 17 (`os4-a17`)**: in the included sample, call has both anchors and the patcher prefers `getDeviceId()`; ComputerEngine has `IIZZ`. Query has `.registers 11`, 8 return-object exits and a `getDeviceId()` invocation.
+
+In all five samples, each Instrumentation overload has one return-object; KeyStore SPI has two null paths and one populated-array return (`v3`, `.registers 11`). `SystemServer.run()` contains both `startOtherServices(...)` and `Looper.loop()` with differing register counts. AppsFilterBase declares `shouldFilterApplication(...)` and `shouldFilterApplicationUsingCache(III)Z`; AppsFilterImpl exists but does not itself declare these two methods. Check inherited methods and exact descriptors. These are source observations from baksmali inspection of all DEX splits in 15 archives, not a CI oracle or runtime/device verification.
+
+## Auto-patcher
+
+```bash
+python3 script/kaorios_patcher_a17.py work/framework --mode 1 --no-delay
+# General CLI:
+python3 script/kaorios_patcher_a17.py <target_dir_or_file> --mode {1,2,3} [--no-delay]
+```
+
+Mode `1` inserts hooks; mode `2` patches A17 Build spoof (`Build` and `Build$VERSION`); mode `3` does both. `--no-delay` disables typing delays. Scan the corresponding framework, services and SettingsProvider smali workspaces; the A17 name does not guarantee support for every OEM layout.
+
+The patcher validates supported register/control-flow layout and structurally verifies resulting hooks before saving; it does not invoke a smali assembler. A file outside the mode's targets prints a not-target message and is unsuccessful; a directory without targets also fails. The CLI does not print a separate literal status for an unrelated file. Exit `0` means required processing in this CLI context succeeded; exit `1` means error, unsupported layout, or no applicable target. Work on backed-up trees: earlier successful files may already have been saved when another file fails.
 
 ## 1. `framework.jar`
 
@@ -34,7 +87,7 @@ Landroid/app/Instrumentation;
 
 **Reference smali:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
 
-Patch both methods before their final `return-object`:
+For both overloads, every supported `return-object` must have `initContext()` immediately before it. The patcher verifies every return path; do not patch only the final textual return:
 
 1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
    In virtual instance methods, `p0` is `this`, `p1` is `Class<?>`, and `p2` is `Context`:
@@ -106,6 +159,7 @@ hasSystemFeature(Ljava/lang/String;I)Z
 **Register Allocation Steps:**
 1. **Canonicalize Parameter Aliases:**
    If the method uses `.registers R`, parameters `p0..p2` map physically to `v(R-3)..v(R-1)`. Any stock instruction referencing these parameter slots by `vN` must be rewritten to `pN` before expanding the register count to prevent clobbering parameter values.
+   This also applies to `.locals`: with `.locals 2`, `p0=v2`, `p1=v3`, `p2=v4`; after growth to `.locals 3`, `p1=v4`, so the old `v3` no longer aliases `p1`. Canonicalize all stock parameter aliases before growing locals.
 2. **Expand Register Directive by 1:**
    - If `.locals L`: change to `.locals L+1`. The new scratch register is `vL`.
    - If `.registers R`: change to `.registers R+1`. The new scratch register is `v(R-3)`.
@@ -187,10 +241,7 @@ engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 
 `engineGetCertificateChain` is a virtual method: `p0` (`this`), `p1` (`String alias`).
 
-Before the final `return-object <array_reg>`, locate the leaf insertion point immediately after the certificate array is populated (usually following an `aput-object` that writes into the array).
-
-> [!NOTE]
-> Do not hook intermediate loops or the early null-return paths. Only hook the final populated certificate array before it is returned.
+Find a leaf populated-array return path: `aput-object` writes into array register X, followed only by blank lines or debug directives allowed by the verified layout (`.line`, `.local`, `.end local`, `.restart local`), then `return-object X`. Hook X immediately before that return and move the result back into X. Do not select an array write by its textual position; verify the array flow and return path. Leave early null returns untouched and avoid intermediate loops. An ambiguous layout is `UNSUPPORTED_LAYOUT`.
 
 Example:
 
@@ -470,9 +521,14 @@ Current hook ABI:
 filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 ```
 
-Inside `call(...)`, find the `getDeviceId()I` call. If a `move-result` follows it, inject after that line but strictly BEFORE any later `Binder.clearCallingIdentity()`. The hook relies on Binder calling UID/PID to determine the true calling package identity.
+`call(...)` is an instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. The patcher searches for a safe semantic anchor in this order:
 
-Allocate one extra local `vHook`, then add:
+1. `getDeviceId()I`.
+2. Fallback `getRequestingUserId(Landroid/os/Bundle;)I`.
+
+Insert AFTER the anchor and its associated `move-result`, BEFORE `Binder.clearCallingIdentity()` so caller UID/PID identity remains intact. Do not infer the anchor solely from Android version. The patcher canonicalizes physical parameter aliases before local growth and allocates fresh scratch `vHook`.
+
+Use `invoke-static {p1, p2}` when both physical register indices are <=15; otherwise use `invoke-static/range {p1 .. p2}` because the two arguments are contiguous. Low-register example:
 
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
@@ -505,15 +561,19 @@ Current query hook ABI:
 filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
 ```
 
-To support cursor-based settings queries per calling app, `SettingsProvider.query(...)` requires post-processing hook insertion at every `return-object` exit site.
+To support cursor-based settings queries per calling app, `SettingsProvider.query(...)` requires post-processing hook insertion on every supported `return-object` path.
 
-Before each `return-object <cursor_reg>`, insert:
+Each supported return path must pair the hook, `move-result-object`, and `return-object` using the same cursor register:
 
 ```smali
 invoke-static {<cursor_reg>, p1, p3, p4}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
 move-result-object <cursor_reg>
 return-object <cursor_reg>
 ```
+
+Try/catch, complex CFG, or unsupported branch structures may fail closed. Do not manually patch only the final textual return.
+
+If the physical index of `p1`, `p3`, `p4`, or the returned cursor register exceeds 15, the patcher fails closed with `register exceeds format 35c limit (> 15)` (the cursor variant says `return register ... exceeds format 35c limit (> 15)`). Treat this as `UNSUPPORTED_LAYOUT`. Arguments `cursorReg, p1, p3, p4` are non-contiguous; switching directly to `invoke-static/range` cannot encode them without first moving them into contiguous scratch registers and verifying that layout. Do not force the patch.
 
 Stock cursor semantics and nullity are preserved if the hook returns the original cursor or null.
 
@@ -570,3 +630,25 @@ Android 13–17 and OEM updates can move methods/registers, so follow the equiva
 - [Disable Secure Flag](Disable_Secure_Flag.md)
 - [CorePatch](CorePatch.md)
 - [Smali templates](../Template/Template_V2060)
+
+## Rebuild and ROM integration
+
+1. Assemble each modified smali tree back into its matching DEX, for example `smali a work/framework/smali_classes2 -o work/framework/output/classes2.dex` (create the output directory first).
+2. Replace only the corresponding `classes*.dex` entries in a copy of the target archive.
+3. Preserve all other archive contents.
+4. Verify the archive entries and replaced DEX files.
+5. Optionally disassemble the rebuilt DEX and rerun hook verification; assembly and structural verification check different properties.
+6. Integrate using the ROM-specific build/packaging process. Do not apply a normal user APK signing workflow to `framework.jar`, `services.jar`, or `SettingsProvider.apk`.
+
+## Troubleshooting status table
+
+| Status / situation | Meaning / action |
+|---|---|
+| PATCHED | The file changed and structural verification passed. |
+| ALREADY_PATCHED | The full final verifier confirms the desired structure, not just a hook name. |
+| UNSUPPORTED_LAYOUT | Target found but a safe layout was not recognized; restore stock and inspect the layout. |
+| FAILED | Internal or verifier failure; inspect the error and restore the working file as needed. |
+| No target found | Wrong directory, different Android/OEM layout, class in another DEX, or irrelevant target; search all splits. |
+| High-register query | SettingsProvider.query cannot safely encode the non-contiguous arguments; UNSUPPORTED_LAYOUT, do not force /range. |
+
+The CLI may print Vietnamese messages such as `ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS)` or `UNSUPPORTED LAYOUT` rather than the enum spelling. Passing verification is not boot/runtime/device proof.

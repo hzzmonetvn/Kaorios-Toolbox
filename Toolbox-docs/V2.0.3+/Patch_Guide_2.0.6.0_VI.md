@@ -6,22 +6,75 @@
 
 Guide này dùng chung cho Android 13, 14, 15, 16 và 17. Tên class/method có thể thay đổi giữa AOSP và ROM OEM, nên template chỉ dùng để tìm logic tương đương. Những điểm riêng của Android 17 được ghi chú ngay tại mục liên quan.
 
-### Multi-DEX Disassembly & Thư mục tham chiếu (`tmp/fw/`)
+> [!WARNING]
+> Register trong snippet chỉ là ví dụ. `vScratch`, `vHook`, `vX` và `<cursor_reg>` là placeholder, phải đổi thành register hợp lệ của ROM đích. Xác định giá trị và liveness thực tế của cả `v0` trước khi sửa; không ghi đè register stock còn dùng trên nhánh fallback.
 
-Các file framework hệ thống Android hiện đại (`framework.jar`, `services.jar`, v.v.) chứa nhiều file DEX: `classes.dex`, `classes2.dex`, `classes3.dex`, v.v.
-Khi decompile (disassemble):
-- Sử dụng `baksmali` để decompile từng DEX vào thư mục riêng (ví dụ `smali/`, `smali_classes2/`, `smali_classes3/`) hoặc giải nén vào thư mục làm việc tập trung (ví dụ `tmp/fw/` cho `framework.jar` và `tmp/services/` cho `services.jar`):
-  ```bash
-  # Ví dụ decompile framework.jar multi-dex
-  mkdir -p tmp/fw
-  unzip framework.jar 'classes*.dex' -d tmp/fw/
-  for dex in tmp/fw/classes*.dex; do
-      name=$(basename "$dex" .dex)
-      out_dir="tmp/fw/${name}"
-      baksmali d "$dex" -o "$out_dir"
-  done
-  ```
-- Sử dụng `tmp/fw/` làm thư mục tham chiếu để tìm kiếm class trên toàn bộ các DEX phân mảnh (ví dụ `find tmp/fw/ -name "ApplicationPackageManager.smali"`) và để đối chiếu diff với class stock trước khi đóng gói lại.
+## Bắt đầu từ file stock sạch của ROM đích
+
+Sao lưu `framework.jar.orig`, `services.jar.orig`, `SettingsProvider.apk.orig` trước khi sửa. Luôn dùng file sạch từ đúng ROM đích. Không copy sample `tmp/fw/` vào ROM, không copy nguyên class Template từ ROM khác, và tránh dùng framework đã patch tùy tiện. Nếu chỉnh sửa cũ xung đột, khôi phục source sạch rồi patch lại.
+
+## Workspace Multi-DEX
+
+Class đích có thể ở `classes2.dex`, `classes3.dex` hoặc split khác thay vì `classes.dex`. Disassemble từng DEX vào cây riêng:
+
+```bash
+mkdir -p work/framework/input
+unzip framework.jar 'classes*.dex' -d work/framework/input
+for dex in work/framework/input/classes*.dex; do
+    name=$(basename "$dex" .dex)
+    baksmali d "$dex" -o "work/framework/smali_${name}"
+done
+```
+
+Kết quả là `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Dùng tương tự `work/services/` và `work/settingsprovider/` cho hai archive còn lại. Tìm class trên mọi cây smali của workspace; không ghi đè dataset `tmp/fw/`.
+
+## Included Framework Samples
+
+`tmp/fw/**` chứa sample/reference framework từ một số thế hệ Android/HyperOS. Mỗi sample có `framework.jar`, `services.jar`, `SettingsProvider.apk`. Dataset giúp xem class tồn tại, method descriptor, control flow, register layout, nghiên cứu tương thích và phát triển/test patcher.
+
+Sample không phải file để flash, framework chuẩn, replacement cho ROM của bạn, bằng chứng mọi ROM cùng Android giống nhau hay runtime dependency. Các quan sát dưới đây chỉ áp dụng **trong sample đi kèm**; class presence không chứng minh feature được hỗ trợ đầy đủ.
+
+| Target | A13 sample | A14 sample | A15 sample | A16 sample | A17 sample |
+|---|---|---|---|---|---|
+| ActivityThread / handleBindApplication | FOUND | FOUND | FOUND | FOUND | FOUND |
+| Instrumentation / both newApplication overloads | FOUND | FOUND | FOUND | FOUND | FOUND |
+| ApplicationPackageManager / hasSystemFeature(String,int) | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AndroidKeyStoreKeyPairGeneratorSpi / generateKeyPair | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AndroidKeyStoreSpi / engineGetCertificateChain | FOUND | FOUND | FOUND | FOUND | FOUND |
+| Build | FOUND | FOUND | FOUND | FOUND | FOUND |
+| Build$VERSION | FOUND | FOUND | FOUND | FOUND | FOUND |
+| SystemServer / run | FOUND | FOUND | FOUND | FOUND | FOUND |
+| ComputerEngine | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AppsFilterBase | FOUND | FOUND | FOUND | FOUND | FOUND |
+| AppsFilterImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
+| SettingsProvider / call + query | FOUND | FOUND | FOUND | FOUND | FOUND |
+| ComputerEngine / PackageStateInternal IIZZ overload | DIFFERENT LAYOUT | DIFFERENT LAYOUT | FOUND | FOUND | FOUND |
+| SettingsProvider.call / getDeviceId() anchor | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND | FOUND |
+| SettingsProvider.call / getRequestingUserId(Bundle) anchor | FOUND | FOUND | FOUND | FOUND | FOUND |
+
+`FOUND` là đã tìm thấy class/method được ghi ở row. `NOT FOUND` là không có target cụ thể đó. `DIFFERENT LAYOUT` là có class nhưng descriptor đang so sánh khác; `NOT APPLICABLE` dùng khi target không liên quan (không có ô nào cần trạng thái này trong matrix).
+
+### Included sample observations
+
+- **MIUI 14 / Android 13 (`miui14-a13`)**: trong sample đi kèm, `newApplication(Class,Context)` là static, Context `p1`; overload ClassLoader là instance, Context `p3`. ComputerEngine có overload PackageStateInternal `II` và ComponentName `II`, chưa có `IIZZ`. SettingsProvider.call dùng `getRequestingUserId(Bundle)`; query có `.registers 10`, 7 return-object.
+- **HyperOS 1 / Android 14 (`os1-a14`)**: trong sample đi kèm, mapping Instrumentation và anchor SettingsProvider như A13; ComputerEngine thêm ComponentName `IIZ`, chưa có `IIZZ`. Query có `.registers 10`, 7 return-object.
+- **HyperOS 2 / Android 15 (`os2-a15`)**: trong sample đi kèm, ComputerEngine có `IIZZ`; SettingsProvider.call vẫn dùng `getRequestingUserId(Bundle)`. Query có `.registers 11`, 7 return-object.
+- **HyperOS 3 / Android 16 (`os3-a16`)**: trong sample đi kèm, ComputerEngine có `IIZZ`; call vẫn dùng `getRequestingUserId(Bundle)`. Query có `.registers 10`, 7 return-object.
+- **HyperOS 4 / Android 17 (`os4-a17`)**: trong sample đi kèm, call có cả hai anchor, patcher ưu tiên `getDeviceId()`; ComputerEngine có `IIZZ`. Query có `.registers 11`, 8 return-object và lời gọi `getDeviceId()`.
+
+Trong cả 5 sample, hai overload Instrumentation có một return-object mỗi method; KeyStore SPI có hai nhánh null và một nhánh trả mảng đã điền (register `v3`, `.registers 11`). `SystemServer.run()` có cả `startOtherServices(...)` và `Looper.loop()`; register count khác nhau. AppsFilterBase có `shouldFilterApplication(...)` và `shouldFilterApplicationUsingCache(III)Z`; AppsFilterImpl tồn tại nhưng không tự khai báo hai method này. Phải kiểm tra method inherited và descriptor thực tế. Đây là quan sát source của 15 archive qua baksmali trên mọi DEX split, không phải CI oracle hay kiểm chứng runtime/device.
+
+## Auto-patcher
+
+```bash
+python3 script/kaorios_patcher_a17.py work/framework --mode 1 --no-delay
+# General CLI:
+python3 script/kaorios_patcher_a17.py <target_dir_or_file> --mode {1,2,3} [--no-delay]
+```
+
+Mode `1` chèn hooks; mode `2` patch Build spoof A17 (`Build` và `Build$VERSION`); mode `3` thực hiện cả hai. `--no-delay` tắt hiệu ứng gõ chữ. Quét workspace smali của framework, services và SettingsProvider tương ứng; tên A17 không đảm bảo mọi layout OEM được hỗ trợ.
+
+Patcher kiểm tra register/control-flow được hỗ trợ và verify cấu trúc hook trước khi lưu; không chạy smali assembler. Một file không thuộc target của mode sẽ báo không nằm trong danh sách mục tiêu và không thành công; thư mục không có target cũng thất bại. CLI không in một status literal riêng cho file ngoài target. Exit `0` nghĩa là xử lý bắt buộc trong ngữ cảnh CLI đã thành công; exit `1` nghĩa là lỗi, unsupported hoặc không có target áp dụng. Patch trên cây làm việc có backup: file thành công trước đó có thể đã được lưu khi một file khác thất bại.
 
 ## 1. `framework.jar`
 
@@ -34,7 +87,7 @@ Landroid/app/Instrumentation;
 
 **Smali mẫu:** [`Instrumentation.smali`](../Template/Template_V2060/framework/Instrumentation.smali)
 
-Patch cả hai method trước lệnh `return-object` cuối:
+Với cả hai overload, mỗi `return-object` trên đường trả về được hỗ trợ phải có `initContext()` ngay trước nó. Patcher verify mọi đường return; không chỉ patch return cuối theo thứ tự văn bản:
 
 1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
    Trong virtual instance method, `p0` là `this`, `p1` là `Class<?>`, và `p2` là `Context`:
@@ -106,6 +159,7 @@ hasSystemFeature(Ljava/lang/String;I)Z
 **Các bước cấp phát Register:**
 1. **Chuẩn hóa Parameter Aliases:**
    Nếu method sử dụng `.registers R`, các parameter `p0..p2` được ánh xạ vật lý vào `v(R-3)..v(R-1)`. Bất kỳ lệnh stock nào tham chiếu các parameter này qua `vN` phải được đổi sang `pN` trước khi mở rộng directive registers để tránh ghi đè sai giá trị parameter.
+   Quy tắc này cũng áp dụng với `.locals`: với `.locals 2`, `p0=v2`, `p1=v3`, `p2=v4`; sau khi tăng thành `.locals 3`, `p1=v4`, nên `v3` cũ không còn là `p1`. Chuẩn hóa mọi alias parameter stock trước khi tăng locals.
 2. **Mở rộng Directive Register thêm 1:**
    - Nếu dùng `.locals L`: đổi thành `.locals L+1`. Register tạm mới là `vL`.
    - Nếu dùng `.registers R`: đổi thành `.registers R+1`. Register tạm mới là `v(R-3)`.
@@ -187,10 +241,7 @@ engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
 
 `engineGetCertificateChain` là virtual method: `p0` (`this`), `p1` (`String alias`).
 
-Trước `return-object <array_reg>` cuối, xác định điểm chèn ở nhánh lá ngay sau khi mảng Certificate được khởi tạo xong (thường là sau lệnh `aput-object` cuối cùng ghi vào mảng).
-
-> [!NOTE]
-> Không đặt hook trong các vòng lặp trung gian hoặc các nhánh trả về null sớm. Chỉ hook mảng certificate cuối cùng đã được điền dữ liệu trước khi return.
+Tìm một nhánh lá trả mảng đã điền: `aput-object` ghi vào register mảng X, tiếp theo chỉ có dòng trống hoặc directive debug được layout đã verify cho phép (`.line`, `.local`, `.end local`, `.restart local`), rồi `return-object X`. Chèn hook X ngay trước return đó, move-result-object vào chính X. Không chọn lệnh ghi mảng theo thứ tự văn bản; phải xác minh luồng mảng và nhánh return. Giữ nguyên các nhánh trả null sớm; không hook vòng lặp trung gian. Layout mơ hồ: `UNSUPPORTED_LAYOUT`.
 
 Ví dụ:
 
@@ -479,15 +530,14 @@ ABI hook:
 filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 ```
 
-Trong method `call(...)`, tìm:
+`call(...)` là instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. Patcher tìm anchor ngữ nghĩa an toàn theo thứ tự:
 
-```smali
-Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
-```
+1. `getDeviceId()I`.
+2. Fallback `getRequestingUserId(Landroid/os/Bundle;)I`.
 
-Nếu có `move-result`, đặt hook ngay sau `move-result` đó nhưng bắt buộc TRƯỚC mọi lời gọi `Binder.clearCallingIdentity()`. Hook phụ thuộc vào Binder calling UID/PID để xác định chính xác danh tính app gọi.
+Hook nằm SAU anchor và `move-result` đi kèm, TRƯỚC `Binder.clearCallingIdentity()` để giữ nguyên caller UID/PID. Không suy ra anchor chỉ từ phiên bản Android. Patcher chuẩn hóa alias vật lý của parameter trước khi tăng locals, rồi cấp register scratch mới `vHook`.
 
-Cấp thêm một local register `vHook`, rồi chèn:
+Dùng `invoke-static {p1, p2}` khi chỉ số vật lý của cả hai <=15; nếu cao hơn, dùng `invoke-static/range {p1 .. p2}` vì hai argument liên tiếp. Ví dụ layout thấp:
 
 ```smali
 invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
@@ -529,6 +579,11 @@ invoke-static {<cursor_reg>, p1, p3, p4}, Landroid/security/kaorios/KaoriosHook;
 move-result-object <cursor_reg>
 return-object <cursor_reg>
 ```
+
+
+Mỗi đường return được hỗ trợ phải có `invoke hook` → `move-result-object` vào cùng cursor register → `return-object` chính register đó. Try/catch, CFG phức tạp hoặc nhánh không được nhận diện có thể khiến patcher dừng an toàn; không chỉ patch return cuối theo văn bản.
+
+Nếu chỉ số vật lý của `p1`, `p3`, `p4` hoặc cursor register >15, patcher dừng với lỗi `register exceeds format 35c limit (> 15)` (cursor có thể hiện `return register ... exceeds format 35c limit (> 15)`). Xử lý là `UNSUPPORTED_LAYOUT`. Các argument `cursorReg, p1, p3, p4` không liên tiếp; không thể đổi thẳng sang `invoke-static/range` nếu chưa move chúng vào scratch liên tiếp và verify lại. Không ép patch.
 
 #### 3. Yêu cầu SELinux cho AdvancedPolicy Service
 
@@ -583,3 +638,25 @@ Android 13–17 và ROM OEM có thể thay đổi method/register giữa các b�
 - [Disable Secure Flag](Disable_Secure_Flag_VI.md)
 - [CorePatch](CorePatch_VI.md)
 - [Template Smali](../Template/Template_V2060)
+
+## Rebuild và tích hợp ROM
+
+1. Assemble mỗi cây smali đã sửa thành đúng DEX tương ứng, ví dụ `smali a work/framework/smali_classes2 -o work/framework/output/classes2.dex` (tạo thư mục output trước).
+2. Thay chỉ các `classes*.dex` tương ứng trong bản sao archive đích.
+3. Bảo toàn mọi nội dung archive còn lại.
+4. Verify archive, kiểm tra entry và DEX vừa thay.
+5. Có thể disassemble DEX rebuilt và chạy lại verifier hook; assembler và verifier cấu trúc kiểm tra các phần khác nhau.
+6. Tích hợp theo quy trình build/packaging riêng của ROM; không dùng quy trình ký APK người dùng thông thường cho `framework.jar`, `services.jar` hoặc `SettingsProvider.apk`.
+
+## Bảng troubleshooting
+
+| Trạng thái / tình huống | Ý nghĩa / xử lý |
+|---|---|
+| PATCHED | File được sửa và verifier cấu trúc đã qua. |
+| ALREADY_PATCHED | Verifier cuối đầy đủ xác nhận cấu trúc mong muốn; không chỉ tìm thấy tên hook. |
+| UNSUPPORTED_LAYOUT | Có target nhưng chưa nhận diện layout an toàn; khôi phục stock và inspect layout. |
+| FAILED | Lỗi nội bộ hoặc verifier; xem lỗi và khôi phục file làm việc nếu cần. |
+| No target found | Sai thư mục, layout Android/OEM khác, class ở DEX khác hoặc target không liên quan; tìm trên mọi split. |
+| High-register query | SettingsProvider.query không encode an toàn được argument không liên tiếp; UNSUPPORTED_LAYOUT, không ép /range. |
+
+CLI có thể hiển thị thông báo tiếng Việt như `ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS)` hoặc `UNSUPPORTED LAYOUT` thay cho enum nguyên văn. Verifier qua không chứng minh boot/runtime/device.

@@ -47,9 +47,11 @@ For **version 2.0.4.0 and below**, see:
 
 See Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md). For Android 17 (SDK 37), also refer to the [Android 17 Build Patch Notes](Toolbox-docs/V2.0.3+/notes-a17.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/notes-a17_VI.md)).
 
+`tmp/fw/` contains sample/reference system framework files used for compatibility research. Do not flash them or replace your ROM framework with them. Always patch your own ROM's clean files; see [Included Framework Samples](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md#included-framework-samples).
+
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher_a17.py`)
 
-An automated smali patcher for Android 17 is provided in `script/kaorios_patcher_a17.py`. It inspects disassembled smali directories or individual files, validates register limits, canonicalizes parameter aliases, injects hooks, and verifies syntax before saving.
+An automated smali patcher for Android 17 is provided in `script/kaorios_patcher_a17.py`. It inspects disassembled smali directories or individual files, canonicalizes parameter aliases, injects hooks, validates supported register/control-flow layout, and structurally verifies the resulting hooks before saving.
 
 **Usage:**
 
