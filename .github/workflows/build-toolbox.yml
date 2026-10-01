@@ -186,9 +186,22 @@ jobs:
             -name 'KaoriosFramework*.class' \
             -exec cp {} "$api_package/" \;
 
+          settings_api="$api_dir/android/security/kaorios/settings"
+          mkdir -p "$settings_api"
+          for api_class in AdvancedPolicyClient AdvancedPolicyRuntimeStatus IAdvancedPolicyService SettingDecisionParcel ServiceManagerBridge; do
+            test -f "$framework_classes/android/security/kaorios/settings/$api_class.class"
+            find "$framework_classes/android/security/kaorios/settings" \
+              -maxdepth 1 -type f -name "$api_class*.class" \
+              -exec cp {} "$settings_api/" \;
+          done
+
           jar --update --file "$public_android" -C "$api_dir" .
           unzip -Z1 "$public_android" > "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
           grep -Fx "com/kousei/framework/KaoriosFramework.class" \
+            "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
+          grep -Fx "android/security/kaorios/settings/AdvancedPolicyClient.class" \
+            "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
+          grep -Fx "android/security/kaorios/settings/AdvancedPolicyRuntimeStatus.class" \
             "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
           unzip -tq "$public_android"
 
