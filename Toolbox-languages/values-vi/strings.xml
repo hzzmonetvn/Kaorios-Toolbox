@@ -189,13 +189,6 @@
     <string name="settings_row_gradient_cards_desc">Tắt để card dùng nền trắng/đen; nền ứng dụng vẫn giữ gradient</string>
     <string name="pref_ui_style_title">Giao diện ứng dụng</string>
     <string name="pref_ui_style_summary">Chọn phong cách tổng thể của toàn bộ ứng dụng</string>
-    <string name="ui_style_md3">Mặc định (Material You)</string>
-    <string name="ui_style_md3_desc">Material Design 3 chuẩn, có màu động theo hệ thống</string>
-    <string name="ui_style_floating">Nổi</string>
-    <string name="ui_style_floating_desc">Thẻ nổi mềm, thanh điều hướng nổi dưới, nhiều animation hơn</string>
-    <string name="ui_style_liquid_glass">Gradient</string>
-    <string name="ui_style_liquid_glass_desc">Gradient nhiều màu phủ lên toàn bộ nền, thẻ và thanh điều hướng</string>
-    <string name="pref_ui_style_locked_msg">Các tuỳ chọn màu chỉ khả dụng ở giao diện mặc định.</string>
     <string name="language">Ngôn ngữ</string>
     <string name="author_desc">Nhà phát triển của Kaorios Toolbox</string>
     <string name="not_found">Không tìm thấy</string>
@@ -544,4 +537,6 @@
     <string name="advanced_policy_pending">Yêu cầu đã lưu chưa được generation policy runtime hiện tại xác nhận. Hãy kiểm tra lại sau khi đồng bộ.</string>
     <string name="advanced_settings_inactive">Giả Settings chưa hoạt động. Bật Advanced Features trong phần Cài đặt, rồi kiểm tra Settings hooks cùng policy runtime.</string>
     <string name="advanced_package_hook_unknown">Trạng thái hook ẩn ứng dụng: chưa kiểm chứng. Các rule cấu hình yêu cầu đã lưu và cần hook ROM đã kiểm chứng. Hook trình cài đặt cần kiểm chứng riêng.</string>
+    <string name="ui_style_expressive">Material 3 Expressive</string>
+    <string name="ui_style_expressive_desc">Chuyển động Expressive, điều khiển phản hồi và bảng màu sáng hoặc tối đồng nhất</string>
 </resources>

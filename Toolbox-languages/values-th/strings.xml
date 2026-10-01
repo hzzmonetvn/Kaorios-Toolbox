@@ -116,13 +116,6 @@
     <string name="settings_row_gradient_cards_desc">ปิดเพื่อการ์ดขาว/ดำเรียบ พื้นหลังยังไล่เฉด</string>
     <string name="pref_ui_style_title">รูปลักษณ์แอป</string>
     <string name="pref_ui_style_summary">เลือกสไตล์โดยรวมของแอป</string>
-    <string name="ui_style_md3">ค่าเริ่มต้น (Material You)</string>
-    <string name="ui_style_md3_desc">Material Design 3 มาตรฐาน พร้อมสีไดนามิกของระบบ</string>
-    <string name="ui_style_floating">ลอย</string>
-    <string name="ui_style_floating_desc">การ์ดลอยนุ่ม แถบล่างลอย แอนิเมชันมากขึ้น</string>
-    <string name="ui_style_liquid_glass">ไล่เฉด</string>
-    <string name="ui_style_liquid_glass_desc">ไล่เฉดหลากสีบนการ์ด พื้นหลัง และแถบนำทาง</string>
-    <string name="pref_ui_style_locked_msg">ตัวเลือกสีใช้ได้เฉพาะรูปลักษณ์เริ่มต้น</string>
 
     <!-- Settings Screen -->
     <string name="app_config">การตั้งค่าแอป</string>
