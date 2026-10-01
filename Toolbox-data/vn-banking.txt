@@ -1,3 +1,6 @@
+# Last verified against current Google Play listings: 2026-10-01
+# Scope: public official Android apps for SBV-regulated banks/credit institutions, finance companies, payment intermediaries/e-wallets and Mobile Money.
+# Licensed organizations without a public Android app/package are not listed. Existing non-SBV sections are retained separately.
 # ===== BANKS / DIGITAL BANKS =====
 
 # Vietcombank
@@ -6,9 +9,11 @@ com.vcb.sme
 
 # BIDV
 com.vnpay.bidv
+vn.com.bidv.ibank
 
 # VietinBank
 com.vietinbank.ipay
+com.vietinbank.dbs.efast
 
 # Agribank
 com.vnpay.Agribank3g
@@ -18,21 +23,27 @@ com.mbmobile
 
 # Techcombank
 vn.com.techcombank.bb.app
+vn.com.techcombank.bb.corp.app
 
 # VPBank
 com.vnpay.vpbankonline
+com.vpbank.b2b
 
 # ACB
 mobile.acb.com.vn
+com.acb.acbb.prod
 
 # Sacombank
 com.sacombank.ewallet
 
 # TPBank
 com.tpb.mb.gprsandroid
+com.tpb.ebmobile
 
 # VIB
 com.vib.myvib2
+com.vib.myvibsme
+com.myvib.corp
 
 # SHB - current
 vn.shb.saha.mbanking
@@ -45,6 +56,7 @@ vn.shb.dn
 
 # SeABank
 vn.com.seabank.mb1
+vn.com.seabank.seamobiledn
 
 # MSB
 vn.com.msb.smartBanking
@@ -59,6 +71,7 @@ vn.com.eximbank.business
 
 # LPBank
 vn.com.lpb.lienviet24h
+com.lpb.android.lpbankbiz
 
 # HDBank
 com.hdbank.dihdbank
@@ -96,6 +109,7 @@ com.gpbank.cmbapp
 
 # PGBank
 pgbankApp.pgbank.com.vn
+pgbankbiz.pgbank.com.vn
 
 # BAC A BANK
 com.bab.retailUAT
@@ -110,11 +124,27 @@ com.vnpay.coopbank
 # BAOVIET Bank
 com.vnpay.bvbank
 
+# SCB
+com.vnpay.SCB
+
+# Vietnam Bank for Social Policies / VBSP
+com.vnpay.NHCSXH
+
+# MBV - Modern Bank of Vietnam
+com.mbv.mobilebanking
+com.mbv.biz.prod
+
+# Vietcombank Neo / NeoOne
+com.vcbneo.neodigibank
+
 # CIMB Vietnam
 vn.cimbbank.octo
 
 # HSBC Vietnam
 vn.hsbc.hsbcvietnam
+
+# Standard Chartered Vietnam
+com.sc.mobilebanking.vn
 
 # Shinhan Vietnam
 com.shinhan.global.vn.bank
@@ -131,11 +161,26 @@ com.vnpay.publicbank
 # Indovina Bank
 com.vnpay.ivb
 
+# UOB Vietnam / TMRW
+com.uob.mightyvn
+
+# KBank Vietnam / K PLUS
+com.kasikornbank.kplus.vn
+
+# BIDC Mobile Banking Vietnam
+com.vnpay.bidc
+
 # Cake by VPBank
 xyz.be.cake
 
 # Timo
 io.lifestyle.plus
+
+# TNEX by MSB
+vn.tnex.consumer
+
+# Liobank by OCB
+com.ocb.liobank
 
 # Vikki Digital Bank
 com.finx.vikki
@@ -144,6 +189,52 @@ com.finx.vikki
 com.vn.dongabank
 com.dongabank.mobilenternet
 com.dongabank.softotp
+
+# ===== SBV-LICENSED FINANCE / CONSUMER CREDIT COMPANIES =====
+
+# FE Credit / VPBank SMBC Finance
+com.fecredit.feonline
+
+# Home Credit Vietnam
+vn.homecredit.capp
+
+# Mcredit / MB Shinsei Finance
+com.mcreditvn.superapp
+
+# HD SAISON
+com.finos.hdsaison
+vn.com.hdsaison.hpo
+
+# SFinance / former SHBFinance
+com.shbfinance.mobilecustomer
+
+# Shinhan Finance / iShinhan
+vn.com.shinhanfinance.ishinhan
+
+# Mirae Asset Finance Vietnam / My Finance
+vn.mafc.mobileapp
+
+# LOTTE Finance Vietnam
+com.lotte.finance.vietnam
+digital.lottefinance.vn
+
+# EVF / Easy Credit
+vn.evnfc.easyvoucher
+
+# VietCredit
+vn.vietcredit
+vn.vietcredit.vinfast.autoloan
+
+# JACCS International Vietnam Finance
+com.fis.ddc.jlos.cusprod
+com.fis.ddc.jlos.sale.prod
+
+# Toyota Financial Services Vietnam / MyTFSVN
+com.tfsvn.mytfsvn
+
+# TNEX Finance partner app
+vn.tnex.digisale
+
 
 # ===== EWALLETS / PAYMENTS =====
 
@@ -159,17 +250,59 @@ com.bplus.vtpay
 # VNPAY
 vnpay.smartacccount
 
+# VNPT Money
+vnptpay.vnptmedia.vnpt.com.vnptpay
+
+# MobiFone Money / Mobile Money
+com.mobifone.mmdt
+
 # ShopeePay
 com.beeasy.toppay
 
 # Payoo
 vn.payoo
 
-# VNPT Money
-vnptpay.vnptmedia.vnpt.com.vnptpay
+# BaoKim E-wallet
+com.baokim.wallet
+
+# Ngan Luong E-wallet
+com.nganluong
+
+# Vimass E-wallet
+com.qr.vivimass
+
+# PayME E-wallet
+com.payme.app.user
+
+# Shop SmartPay / SmartPay merchant
+vn.com.smartpaymerchant
+
+# 9Pay
+vn.ninepay.ewallet
+
+# Gpay
+vn.gutina.origin
+
+# GTELPAY
+com.gtelpay.gtel
+
+# TrueMoney
+vn.com.truemoney.vnwallet
+
+# VTC Pay
+com.vtc.paygate.main
+
+# Foxpay
+com.ftel.foxpay
+
+# MegaV
+com.epay.ewallet
+
+# MobiVi
+vn.movi.mobivi
 
 
-# ===== SECURITIES / INVESTMENT =====
+# ===== SECURITIES / INVESTMENT (SSC / MINISTRY OF FINANCE, NOT SBV) =====
 
 # SSI
 org.ssi.iBoardSSI.Pro
@@ -238,6 +371,9 @@ vn.goline.das
 
 # ===== GOVERNMENT / PUBLIC SERVICES =====
 
+# State Bank of Vietnam - National Credit Information Centre / CIC Credit Connect
+vn.cicb.customer
+
 # Bộ Công an - VNeID
 com.vnid
 
@@ -255,13 +391,13 @@ vn.vnnic.ispeed
 
 # ===== TELECOM =====
 
-# Viettel - current
+# Viettel Tammi
 com.viettel.appviettel
 
 # Viettel - legacy My Viettel
 com.vttm.vietteldiscovery
 
-# VNPT / Vinaphone
+# My VNPT
 com.vnp.myvinaphone
 
 # MobiFone
@@ -269,5 +405,3 @@ vms.com.vn.mymobifone
 
 # FPT Telecom
 com.rad.hifpt
-
-
