@@ -542,6 +542,6 @@
     <string name="advanced_state_off">TẮT</string>
     <string name="advanced_policy_unavailable">Trạng thái policy trong system_server không khả dụng hoặc chưa sẵn sàng. Hãy kiểm tra lại khi service sẵn sàng.</string>
     <string name="advanced_policy_pending">Yêu cầu đã lưu chưa được generation policy runtime hiện tại xác nhận. Hãy kiểm tra lại sau khi đồng bộ.</string>
-    <string name="advanced_settings_inactive">Giả Settings chưa hoạt động. Bật yêu cầu Advanced đã lưu và kiểm tra Settings hooks cùng policy runtime.</string>
+    <string name="advanced_settings_inactive">Giả Settings chưa hoạt động. Bật Advanced Features trong phần Cài đặt, rồi kiểm tra Settings hooks cùng policy runtime.</string>
     <string name="advanced_package_hook_unknown">Trạng thái hook ẩn ứng dụng: chưa kiểm chứng. Các rule cấu hình yêu cầu đã lưu và cần hook ROM đã kiểm chứng. Hook trình cài đặt cần kiểm chứng riêng.</string>
 </resources>

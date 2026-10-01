@@ -76,7 +76,7 @@ Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-To
 
 ### Advanced features: framework patch required
 
-Advanced Features saves user intent in `kaorios_advanced_features`. Settings spoofing requires exact Global/Secure/System nonce responses and a ready, enabled system_server snapshot that acknowledges the current generation. The Settings card remains disabled with a reason while runtime is unconfirmed; retry reads both capability and policy status without rewriting intent. These checks do not verify package visibility or installer hooks, which require independent verified ROM hooks.
+Advanced Features saves user intent in `kaorios_advanced_features`. Settings spoofing requires exact Global/Secure/System nonce responses and a ready, enabled system_server snapshot that acknowledges the current generation. The Settings card remains disabled with a reason while runtime is unconfirmed. ON/OFF writes require an acknowledged snapshot matching the saved request; unavailable status after OFF leaves shutdown pending. Retry reads policy status and, for saved ON, Settings capability without rewriting intent; saved OFF without pending acknowledgement offers no Retry. These checks do not verify package visibility or installer hooks, which require independent verified ROM hooks.
 
 For Advanced Features to take effect at runtime, the target ROM requires:
 1. **SystemServer Lifecycle Hook**: `initSystemServer()` in `SystemServer.smali` to bootstrap `AdvancedPolicyService`.

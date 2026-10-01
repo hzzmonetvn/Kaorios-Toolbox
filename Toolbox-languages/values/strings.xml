@@ -357,6 +357,6 @@
     <string name="advanced_state_off">OFF</string>
     <string name="advanced_policy_unavailable">The system-server policy status is unavailable or not ready. Recheck after the service is ready.</string>
     <string name="advanced_policy_pending">The saved request has not been acknowledged by the current runtime policy generation. Recheck after propagation.</string>
-    <string name="advanced_settings_inactive">Settings spoofing is inactive. Enable the saved Advanced request and verify Settings hooks and runtime policy.</string>
+    <string name="advanced_settings_inactive">Settings spoofing is inactive. Enable Advanced Features in Settings, then verify Settings hooks and runtime policy.</string>
     <string name="advanced_package_hook_unknown">Package visibility hook status: not verified. These rules configure saved intent and require a verified ROM hook. Installer hooks must be verified separately.</string>
 </resources>
