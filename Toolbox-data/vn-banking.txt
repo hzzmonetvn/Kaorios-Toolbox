@@ -105,6 +105,10 @@ vn.abbank.retail
 com.gpbank.app
 com.gpbank.cmbapp
 
+# PGBank
+pgbankApp.pgbank.com.vn
+pgbankbiz.pgbank.com.vn
+
 # BAC A BANK
 com.bab.retailUAT
 com.bab.corp
