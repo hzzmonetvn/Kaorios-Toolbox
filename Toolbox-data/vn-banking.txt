@@ -1,4 +1,6 @@
 # Last verified against current Google Play listings: 2026-10-01
+# Scope: public official Android apps for SBV-regulated banks/credit institutions, finance companies, payment intermediaries/e-wallets and Mobile Money.
+# Licensed organizations without a public Android app/package are not listed. Existing non-SBV sections are retained separately.
 # ===== BANKS / DIGITAL BANKS =====
 
 # Vietcombank
@@ -122,6 +124,12 @@ com.vnpay.coopbank
 # BAOVIET Bank
 com.vnpay.bvbank
 
+# SCB
+com.vnpay.SCB
+
+# Vietnam Bank for Social Policies / VBSP
+com.vnpay.NHCSXH
+
 # MBV - Modern Bank of Vietnam
 com.mbv.mobilebanking
 com.mbv.biz.prod
@@ -159,6 +167,9 @@ com.uob.mightyvn
 # KBank Vietnam / K PLUS
 com.kasikornbank.kplus.vn
 
+# BIDC Mobile Banking Vietnam
+com.vnpay.bidc
+
 # Cake by VPBank
 xyz.be.cake
 
@@ -179,6 +190,52 @@ com.vn.dongabank
 com.dongabank.mobilenternet
 com.dongabank.softotp
 
+# ===== SBV-LICENSED FINANCE / CONSUMER CREDIT COMPANIES =====
+
+# FE Credit / VPBank SMBC Finance
+com.fecredit.feonline
+
+# Home Credit Vietnam
+vn.homecredit.capp
+
+# Mcredit / MB Shinsei Finance
+com.mcreditvn.superapp
+
+# HD SAISON
+com.finos.hdsaison
+vn.com.hdsaison.hpo
+
+# SFinance / former SHBFinance
+com.shbfinance.mobilecustomer
+
+# Shinhan Finance / iShinhan
+vn.com.shinhanfinance.ishinhan
+
+# Mirae Asset Finance Vietnam / My Finance
+vn.mafc.mobileapp
+
+# LOTTE Finance Vietnam
+com.lotte.finance.vietnam
+digital.lottefinance.vn
+
+# EVF / Easy Credit
+vn.evnfc.easyvoucher
+
+# VietCredit
+vn.vietcredit
+vn.vietcredit.vinfast.autoloan
+
+# JACCS International Vietnam Finance
+com.fis.ddc.jlos.cusprod
+com.fis.ddc.jlos.sale.prod
+
+# Toyota Financial Services Vietnam / MyTFSVN
+com.tfsvn.mytfsvn
+
+# TNEX Finance partner app
+vn.tnex.digisale
+
+
 # ===== EWALLETS / PAYMENTS =====
 
 # MoMo
@@ -196,11 +253,29 @@ vnpay.smartacccount
 # VNPT Money
 vnptpay.vnptmedia.vnpt.com.vnptpay
 
+# MobiFone Money / Mobile Money
+com.mobifone.mmdt
+
 # ShopeePay
 com.beeasy.toppay
 
 # Payoo
 vn.payoo
+
+# BaoKim E-wallet
+com.baokim.wallet
+
+# Ngan Luong E-wallet
+com.nganluong
+
+# Vimass E-wallet
+com.qr.vivimass
+
+# PayME E-wallet
+com.payme.app.user
+
+# Shop SmartPay / SmartPay merchant
+vn.com.smartpaymerchant
 
 # 9Pay
 vn.ninepay.ewallet
@@ -227,7 +302,7 @@ com.epay.ewallet
 vn.movi.mobivi
 
 
-# ===== SECURITIES / INVESTMENT =====
+# ===== SECURITIES / INVESTMENT (SSC / MINISTRY OF FINANCE, NOT SBV) =====
 
 # SSI
 org.ssi.iBoardSSI.Pro
@@ -295,6 +370,9 @@ vn.innotech.haseco.mts
 vn.goline.das
 
 # ===== GOVERNMENT / PUBLIC SERVICES =====
+
+# State Bank of Vietnam - National Credit Information Centre / CIC Credit Connect
+vn.cicb.customer
 
 # Bộ Công an - VNeID
 com.vnid
