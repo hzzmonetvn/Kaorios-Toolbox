@@ -345,14 +345,18 @@
     <string name="hma_installer_self_desc">Keep the stock installer when this caller queries its own package.</string>
     <string name="hma_installer_hook_warning">Installer filtering requires verified ROM hooks for both PackageManager installer APIs. The Settings probe does not verify installer hooks.</string>
     <string name="advanced_capability_ok">OK</string>
-    <string name="advanced_capability_missing">Missing</string>
+    <string name="advanced_capability_missing">Unavailable</string>
     <string name="advanced_capability_error">Check failed; retry</string>
-    <string name="advanced_capability_unavailable">Advanced Features is inactive: the runtime Settings check did not pass. Global: %1$s · Secure: %2$s · System: %3$s</string>
+    <string name="advanced_capability_unavailable">Settings spoofing is inactive: the runtime Settings check did not pass. Global: %1$s · Secure: %2$s · System: %3$s</string>
     <string name="advanced_desired_retained">Your saved ON request is retained. Recheck after the service or framework is ready.</string>
-    <string name="advanced_capability_retry">Recheck Settings hooks</string>
+    <string name="advanced_capability_retry">Recheck Settings runtime</string>
     <string name="advanced_disable_request">Turn off saved Advanced request</string>
     <string name="advanced_propagation_uncertain">The preference was saved, but cache refresh failed. Runtime propagation is uncertain.</string>
     <string name="hma_installer_rule_summary">Installer spoof: %1$s</string>
     <string name="advanced_state_on">ON</string>
     <string name="advanced_state_off">OFF</string>
+    <string name="advanced_policy_unavailable">The system-server policy status is unavailable or not ready. Recheck after the service is ready.</string>
+    <string name="advanced_policy_pending">The saved request has not been acknowledged by the current runtime policy generation. Recheck after propagation.</string>
+    <string name="advanced_settings_inactive">Settings spoofing is inactive. Enable the saved Advanced request and verify Settings hooks and runtime policy.</string>
+    <string name="advanced_package_hook_unknown">Package visibility hook status: not verified. These rules configure saved intent and require a verified ROM hook. Installer hooks must be verified separately.</string>
 </resources>

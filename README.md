@@ -76,7 +76,7 @@ Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-To
 
 ### Advanced features: framework patch required
 
-Advanced Features are controlled by the `kaorios_advanced_features` setting in the app. Enabling requires exact read-only nonce responses through Global, Secure and System; missing Settings hooks keep the switch OFF. This probe does not verify installer hooks. When enabled, the framework switches HMA package visibility isolation from global hide-all to granular, caller-aware policy enforcement (`kaorios_hma_config`) and enables per-app Settings value spoofing (`kaorios_setting_spoof_json`).
+Advanced Features saves user intent in `kaorios_advanced_features`. Settings spoofing requires exact Global/Secure/System nonce responses and a ready, enabled system_server snapshot that acknowledges the current generation. The Settings card remains disabled with a reason while runtime is unconfirmed; retry reads both capability and policy status without rewriting intent. These checks do not verify package visibility or installer hooks, which require independent verified ROM hooks.
 
 For Advanced Features to take effect at runtime, the target ROM requires:
 1. **SystemServer Lifecycle Hook**: `initSystemServer()` in `SystemServer.smali` to bootstrap `AdvancedPolicyService`.
@@ -91,7 +91,7 @@ If a ROM lacks these hooks or policy rules, toggling the feature will not take e
 ## 📋 Todo List / Roadmap
 
 - [x] ⚡ **Automated Patcher Tool 2.0.6+** (`script/kaorios_patcher_a17.py`)
-- [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Included A13–A17 call/query layouts validated; read-only Global/Secure/System capability gate revalidates saved ON requests at startup, retains intent on failures and offers manual retry. Legacy String snippet is unverified for A13–A16; real-device Binder/SELinux checks remain. [Validation matrix](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
+- [ ] ⚙️ **ROM validation for Fake & Filter System Settings**: Included A13–A17 call/query layouts validated; read-only Global/Secure/System checks and system_server snapshot/generation acknowledgement revalidate saved ON requests at startup, retain intent on failures and offer manual retry. Legacy String snippet is unverified for A13–A16; real-device Binder/SELinux checks remain. [Validation matrix](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
 - [ ] 📦 **Spoof Installer Source Package**: Existing per-caller policy, UI controls and patcher/verifier cover both installer read APIs in the five included samples. Only the installing package result is filtered; real-device checks remain. [Scope and checklist](Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md).
 
 ---

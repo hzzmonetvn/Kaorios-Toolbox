@@ -22,7 +22,10 @@ CLASSES = ['Lcom/android/server/pm/ComputerEngine;',
            'Lcom/android/providers/settings/SettingsProvider;',
            'Lcom/android/server/SystemServer;', 'Landroid/app/Instrumentation;',
            'Landroid/app/ApplicationPackageManager;', 'Landroid/content/pm/InstallSourceInfo;',
-           'Landroid/security/keystore2/AndroidKeyStoreSpi;']
+           'Landroid/security/keystore2/AndroidKeyStoreSpi;',
+           'Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;',
+           'Landroid/app/ActivityThread;', 'Landroid/os/Build;', 'Landroid/os/Build$VERSION;',
+           'Lcom/android/server/pm/AppsFilterBase;', 'Lcom/android/server/pm/AppsFilterImpl;']
 
 
 def load(name):
@@ -67,7 +70,8 @@ def refresh(sample_dir, tool_dir, report_path, verify_patches):
                           'sha256': digest(archive), 'dex': []}
                 report['archives'].append(record)
                 with zipfile.ZipFile(archive) as zipped:
-                    names = [name for name in zipped.namelist() if re.fullmatch(r'classes(?:[2-9]|[1-9][0-9]+)?\.dex', name)]
+                    names = sorted([name for name in zipped.namelist() if re.fullmatch(r'classes(?:[2-9]|[1-9][0-9]+)?\.dex', name)],
+                                   key=lambda name: 1 if name == 'classes.dex' else int(name[7:-4]))
                     if not names or len(names) != len(set(names)):
                         raise ValueError(f'No unique classes*.dex entries: {archive}')
                     for name in names:
@@ -84,7 +88,7 @@ def refresh(sample_dir, tool_dir, report_path, verify_patches):
                              'disassemble', '--classes', ','.join(CLASSES), '-o', str(output), str(dex)])
                 print(f'{generation}/{filename}: extracted and disassembled', file=sys.stderr)
         report['installer_entry_observations'] = []
-        for path in tree.rglob('*.smali'):
+        for path in sorted(tree.rglob('*.smali')):
             if path.stem not in ['IPackageManagerBase', 'InstallSourceInfo', 'ApplicationPackageManager']:
                 continue
             for method in re.finditer(r'(?ms)^\.method[^\n]* (?:getInstallerPackageName|getInstallSourceInfo|<init>)\([^\n]*\n.*?^\.end method', path.read_text()):

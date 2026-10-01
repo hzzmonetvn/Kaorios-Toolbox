@@ -627,12 +627,24 @@ Android 13–17 và ROM OEM có thể thay đổi method/register giữa các b�
 
 CLI có thể hiển thị thông báo tiếng Việt như `ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS)` hoặc `UNSUPPORTED LAYOUT` thay cho enum nguyên văn. Verifier qua không chứng minh boot/runtime/device.
 
-## Advanced Settings capability / Kiểm tra capability Settings
+## Advanced Settings runtime
 
-Trước khi bật Advanced, Toolbox đọc probe nonce ngẫu nhiên mới qua Global, Secure và System. Cả ba phải trả đúng namespace/nonce; thiếu hook hoặc không hỗ trợ thì switch giữ OFF và báo kết quả từng namespace. Probe chỉ đọc, chạy khi Advanced OFF, không ghi setting và không lưu key. Đường modern kiểm tra tuyến provider tới AdvancedPolicyService; đường legacy cần đủ hai bước. App báo path UNKNOWN vì cùng response không phân biệt được kiến trúc. Xem [checklist chỉ đọc trên thiết bị](Sample_Compatibility_2.0.6.0.md#read-only-device-settings-check). Kiểm chứng host/sample vẫn cần xác nhận trên thiết bị thật.
+Saved request là ý định người dùng (`kaorios_advanced_features`). Settings capability là khả năng truy cập hook qua nonce Global/Secure/System, độc lập với master flag. Policy active là snapshot thực tế trong system_server đã sẵn sàng và `enabled=true`. Effective Settings cần cả ba, cùng generation acknowledgement; probe PASS hoặc ghi preference thành công chưa đủ.
 
-### Capability lúc khởi động và ý định đã lưu
+### Startup, toggle và retry
 
-Flag Advanced đã lưu là ý định người dùng, không chứng minh hooks vẫn sống sau reboot, cập nhật ROM hoặc thay framework. Khi tải request ON, Toolbox kiểm tra lại Global/Secure/System. Response thiếu hoặc lỗi đọc khiến switch effective OFF và báo trạng thái từng namespace; request đã lưu không bị xoá. Chọn **Kiểm tra lại Settings hooks** khi service/framework sẵn sàng, hoặc chủ động tắt request đã lưu. Retry chỉ đọc capability, không ghi lại flag. Request OFF không bắt buộc probe lúc tải. Enable vẫn probe trước khi ghi; partial write giữ preference đã ghi và cảnh báo cache propagation chưa chắc chắn. Không polling định kỳ.
+Saved OFF không bắt buộc probe/status lúc startup. Saved ON kiểm tra cả ba namespace và đọc status policy qua Binder: hook không khả dụng, service chưa sẵn sàng, snapshot disabled hoặc generation cũ khiến Settings spoof inactive; không xoá ý định ON. Switch thể hiện saved request, card Settings spoof thể hiện runtime hiệu lực và lý do disabled.
 
-Settings capability không xác nhận installer hooks. Rule chỉ có installer giờ hiển thị trạng thái BẬT/TẮT cùng số target/template. Target thường đã cài nhưng stock installer null vẫn có thể trả Play Store theo rule caller; target chưa cài/không tồn tại giữ stock. Hai API chỉ lọc installing package field.
+Toggle ON probe trước khi ghi; probe không đạt thì không ghi. Total failure giữ OFF; partial write giữ ý định ON nhưng chưa xác nhận propagation. Sau lần ghi thành công, chỉ báo Settings runtime active khi snapshot enabled đã ACK epoch mới. Toggle OFF cập nhật saved request ngay khi valueWritten=true, dù snapshot tạm thời vẫn ON. Không polling; **Kiểm tra lại Settings runtime** đọc lại probe, generation và snapshot, không ghi flag hay ép service refresh. Retry có thể khôi phục hiệu lực sau khi status thực tế xác nhận policy đã active.
+
+### Runtime policy acknowledgement
+
+Status read-only của Binder service hiện có chỉ trả readiness, enabled và generation đang giữ trong snapshot, không trả rule hoặc spoof value và không đọc/ghi Settings trong getter. Cho phép root/system hoặc UID riêng của manager package đang ở snapshot (hỗ trợ package ngẫu nhiên); manager share UID với app khác bị từ chối. ROM cần cho phép manager domain tìm service và gọi Binder; không mở quyền đọc policy cho mọi app. Service không có, API cũ, IPC/SELinux bị từ chối hoặc lỗi đều là unavailable; không dùng snapshot cục bộ để giả làm system_server state.
+
+Generation là token `kaorios_time` của snapshot. Client so với epoch đã đọc sau lần ghi: token số bằng hoặc mới hơn mới ACK; nếu epoch write thất bại, cần snapshot generation mới hơn baseline trước khi bỏ propagation warning. Nếu token không thể đọc/so sánh thì vẫn uncertain. Status query không gây refresh; observer service chịu trách nhiệm tải snapshot.
+
+### Các capability domain khác
+
+Probe Settings không xác nhận package visibility hoặc installer hooks. Hide Features dùng master desired để cấu hình rule, hiển thị package hook **chưa kiểm chứng**; installer giữ cảnh báo cần verified ROM hooks riêng. Không cài package thử, đổi install source hoặc ghi HMA config để probe. Target thường đã cài nhưng stock installer null vẫn có thể trả `com.android.vending` theo rule caller; early null InstallSourceInfo và target không tồn tại giữ stock. Chỉ installing package field được lọc.
+
+Xem [sample evidence và checklist thiết bị](Sample_Compatibility_2.0.6.0.md). Settings và Installer roadmap vẫn PARTIAL / NEEDS_DEVICE_TEST.

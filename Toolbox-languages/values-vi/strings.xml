@@ -530,14 +530,18 @@
     <string name="hma_installer_self_desc">Giữ trình cài đặt gốc khi caller truy vấn package của chính mình.</string>
     <string name="hma_installer_hook_warning">Lọc trình cài đặt cần hook ROM đã kiểm chứng cho cả hai API PackageManager. Probe Settings không kiểm chứng hook trình cài đặt.</string>
     <string name="advanced_capability_ok">OK</string>
-    <string name="advanced_capability_missing">Thiếu</string>
+    <string name="advanced_capability_missing">Không khả dụng</string>
     <string name="advanced_capability_error">Lỗi kiểm tra; hãy thử lại</string>
-    <string name="advanced_capability_unavailable">Advanced Features chưa hoạt động: kiểm tra Settings runtime chưa đạt. Global: %1$s · Secure: %2$s · System: %3$s</string>
+    <string name="advanced_capability_unavailable">Giả Settings chưa hoạt động: kiểm tra Settings runtime chưa đạt. Global: %1$s · Secure: %2$s · System: %3$s</string>
     <string name="advanced_desired_retained">Yêu cầu BẬT đã lưu vẫn được giữ. Kiểm tra lại khi service hoặc framework sẵn sàng.</string>
-    <string name="advanced_capability_retry">Kiểm tra lại Settings hooks</string>
+    <string name="advanced_capability_retry">Kiểm tra lại Settings runtime</string>
     <string name="advanced_disable_request">Tắt yêu cầu Advanced đã lưu</string>
     <string name="advanced_propagation_uncertain">Preference đã được lưu nhưng cập nhật cache thất bại. Việc áp dụng runtime chưa được xác nhận.</string>
     <string name="hma_installer_rule_summary">Spoof installer: %1$s</string>
     <string name="advanced_state_on">BẬT</string>
     <string name="advanced_state_off">TẮT</string>
+    <string name="advanced_policy_unavailable">Trạng thái policy trong system_server không khả dụng hoặc chưa sẵn sàng. Hãy kiểm tra lại khi service sẵn sàng.</string>
+    <string name="advanced_policy_pending">Yêu cầu đã lưu chưa được generation policy runtime hiện tại xác nhận. Hãy kiểm tra lại sau khi đồng bộ.</string>
+    <string name="advanced_settings_inactive">Giả Settings chưa hoạt động. Bật yêu cầu Advanced đã lưu và kiểm tra Settings hooks cùng policy runtime.</string>
+    <string name="advanced_package_hook_unknown">Trạng thái hook ẩn ứng dụng: chưa kiểm chứng. Các rule cấu hình yêu cầu đã lưu và cần hook ROM đã kiểm chứng. Hook trình cài đặt cần kiểm chứng riêng.</string>
 </resources>

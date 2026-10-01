@@ -627,12 +627,24 @@ Android 13–17 and OEM updates can move methods/registers, so follow the equiva
 
 The CLI may print Vietnamese messages such as `ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS)` or `UNSUPPORTED LAYOUT` rather than the enum spelling. Passing verification is not boot/runtime/device proof.
 
-## Advanced Settings capability / Kiểm tra capability Settings
+## Advanced Settings runtime
 
-Before enabling Advanced, Toolbox reads a fresh random nonce probe through each of Global, Secure and System. The exact namespace/nonce response is required for all three; missing/unsupported hooks leave the switch OFF and show each namespace result. The read-only probe works with Advanced OFF, writes no setting and persists no key. The modern path validates the provider-to-AdvancedPolicyService route; legacy compatibility requires both stages. Runtime path is reported UNKNOWN because the same response does not distinguish architectures. See the [read-only device checklist](Sample_Compatibility_2.0.6.0.md#read-only-device-settings-check). Host/sample verification still needs real-device confirmation.
+The saved request is user intent (`kaorios_advanced_features`). Settings capability is hook reachability through Global/Secure/System nonces, independent of the master flag. Policy active means the actual system_server snapshot is ready and `enabled=true`. Effective Settings requires all three plus generation acknowledgement; a passing probe or successful preference write alone is insufficient.
 
-### Startup capability and saved intent
+### Startup, toggles and retry
 
-The persisted Advanced flag is user intent, not proof that hooks are alive after a reboot, ROM update or framework replacement. Toolbox revalidates Global/Secure/System when loading a saved ON request. A missing response or read exception leaves the effective switch OFF with per-namespace status; it does not clear the saved request. Use **Recheck Settings hooks** after the service/framework is ready, or explicitly turn off the saved request. Retry only reads capability and does not rewrite the flag. A saved OFF request needs no startup probe. Enabling still probes before writing; partial writes retain the written preference and warn that cache propagation is uncertain. No periodic polling is used.
+Saved OFF needs no startup probe/status read. Saved ON rechecks all three namespaces and reads policy status over Binder: unavailable hooks, an unready service, a disabled snapshot or a stale generation leaves Settings spoofing inactive without clearing the saved ON request. The switch shows saved intent; the Settings spoof card shows runtime effectiveness and a disabled reason.
 
-Settings capability does not certify installer hooks. Installer-only rules now show their installer ON/OFF state alongside target/template counts. An installed, non-system target with no stock installer can still report Play Store when the caller rule requests it; unknown/uninstalled targets retain stock behavior. Both read APIs filter only the installing package field.
+Toggle ON probes before writing; failed capability makes no write. Total write failure keeps OFF; partial writes retain ON intent with uncertain propagation. After a successful write, Settings runtime is active only when an enabled snapshot acknowledges the epoch. Toggle OFF changes saved intent as soon as valueWritten=true, even if the snapshot is temporarily still ON. There is no polling. **Recheck Settings runtime** rereads probes, generation and snapshot without writing the flag or forcing service refresh. Retry can restore effective Settings only after the actual status confirms active policy.
+
+### Runtime policy acknowledgement
+
+The existing Binder service exposes read-only readiness, enabled and snapshot generation metadata, without rules/spoof values or Settings reads/writes in the getter. Root/system and the sole UID package matching the current snapshot manager are allowed, including randomized manager packages; shared application UIDs are denied. The ROM must allow the manager domain to find the service and call Binder; do not grant every app access to policy state. Missing service, an old API, IPC/SELinux denial and errors are unavailable; the client never substitutes a local snapshot for system_server state.
+
+Generation is the snapshot's `kaorios_time` token. The client compares it with the epoch read after writing: an equal or newer numeric token acknowledges propagation. When the epoch write fails, the snapshot must advance beyond the baseline before clearing the propagation warning. Unreadable/incomparable tokens remain uncertain. The status query does not refresh policy; the service observer loads snapshots.
+
+### Other capability domains
+
+Settings probes do not verify package visibility or installer hooks. Hide Features uses master intent to configure rules and labels package hook status **not verified**; installer retains its separate verified-ROM-hook warning. No temporary package installation, install-source mutation or HMA config write is used to probe these domains. An installed non-system target with a null stock installer can still return `com.android.vending` under the caller rule; early null InstallSourceInfo and unknown targets retain stock behavior. Only the installing package field is filtered.
+
+See [sample evidence and the device checklist](Sample_Compatibility_2.0.6.0.md). Settings and Installer roadmaps remain PARTIAL / NEEDS_DEVICE_TEST.

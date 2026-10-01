@@ -31,6 +31,14 @@ class TestCheckFrameworkSamples(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
+    def test_refresh_extracts_both_apps_filter_classes_for_diagnostics(self):
+        spec = importlib.util.spec_from_file_location(
+            "refresh_samples", SCRIPT_PATH.with_name("refresh-sample-compatibility.py"))
+        refresh = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(refresh)
+        self.assertIn("Lcom/android/server/pm/AppsFilterBase;", refresh.CLASSES)
+        self.assertIn("Lcom/android/server/pm/AppsFilterImpl;", refresh.CLASSES)
+
     def test_find_sample_base_nonexistent(self):
         result = find_sample_base(os.path.join(self.temp_dir, "nonexistent"))
         self.assertIsNone(result)
