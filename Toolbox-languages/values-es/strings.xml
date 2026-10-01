@@ -116,6 +116,13 @@
     <string name="settings_row_gradient_cards_desc">Desactívalo para tarjetas lisas blancas/negras; el fondo sigue con gradiente</string>
     <string name="pref_ui_style_title">Apariencia de la app</string>
     <string name="pref_ui_style_summary">Elige el aspecto general de la aplicación</string>
+    <string name="ui_style_md3">Predeterminado (Material You)</string>
+    <string name="ui_style_md3_desc">Material Design 3 estándar con color dinámico del sistema</string>
+    <string name="ui_style_floating">Flotante</string>
+    <string name="ui_style_floating_desc">Tarjetas elevadas suaves, barra inferior flotante, más animación</string>
+    <string name="ui_style_liquid_glass">Gradiente</string>
+    <string name="ui_style_liquid_glass_desc">Gradiente colorido sobre tarjetas, fondo y barra de navegación</string>
+    <string name="pref_ui_style_locked_msg">Las opciones de color solo están disponibles en la apariencia predeterminada.</string>
 
     <!-- Settings Screen -->
     <string name="app_config">Configuración de la app</string>

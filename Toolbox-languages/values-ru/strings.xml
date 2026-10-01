@@ -171,6 +171,13 @@
     <string name="settings_row_gradient_cards_desc">Выключите для простых белых/чёрных карточек; фон остаётся градиентным</string>
     <string name="pref_ui_style_title">Внешний вид приложения</string>
     <string name="pref_ui_style_summary">Общий стиль интерфейса приложения</string>
+    <string name="ui_style_md3">По умолчанию (Material You)</string>
+    <string name="ui_style_md3_desc">Стандартный Material Design 3 с динамическими цветами системы</string>
+    <string name="ui_style_floating">Плавающий</string>
+    <string name="ui_style_floating_desc">Мягкие карточки, плавающая нижняя панель, больше анимации</string>
+    <string name="ui_style_liquid_glass">Градиент</string>
+    <string name="ui_style_liquid_glass_desc">Цветной градиент на карточках, фоне и панели навигации</string>
+    <string name="pref_ui_style_locked_msg">Настройки цвета доступны только в режиме по умолчанию.</string>
 
     <!-- Settings Screen -->
     <string name="app_config">Конфигурация приложения</string>

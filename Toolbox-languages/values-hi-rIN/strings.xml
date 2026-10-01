@@ -116,6 +116,13 @@
     <string name="settings_row_gradient_cards_desc">सादे सफ़ेद/काले कार्ड के लिए बंद करें; पृष्ठभूमि ग्रेडिएंट रहती है</string>
     <string name="pref_ui_style_title">ऐप दिखावट</string>
     <string name="pref_ui_style_summary">पूरे ऐप का लुक और अनुभव चुनें</string>
+    <string name="ui_style_md3">डिफ़ॉल्ट (Material You)</string>
+    <string name="ui_style_md3_desc">मानक Material Design 3, सिस्टम डायनामिक रंग के साथ</string>
+    <string name="ui_style_floating">फ़्लोटिंग</string>
+    <string name="ui_style_floating_desc">मुलायम उठे कार्ड, फ़्लोटिंग निचली पट्टी, अधिक एनीमेशन</string>
+    <string name="ui_style_liquid_glass">ग्रेडिएंट</string>
+    <string name="ui_style_liquid_glass_desc">कार्ड, पृष्ठभूमि और नेविगेशन बार पर रंगीन ग्रेडिएंट</string>
+    <string name="pref_ui_style_locked_msg">रंग विकल्प केवल डिफ़ॉल्ट दिखावट में उपलब्ध हैं।</string>
 
     <!-- Settings Screen -->
     <string name="app_config">ऐप कॉन्फ़िगरेशन</string>

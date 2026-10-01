@@ -123,9 +123,3 @@ Help us translate Kaorios-Toolbox into your language! 🌐
 ### Keybox validation
 
 Keybox Hub XML supports EC-only, RSA-only or both. Check structure locally with `python3 script/validate_keybox.py <Keybox.xml>`; cryptographic and device validation remain separate. See the guide in [English](Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0_VI.md).
-
-### Interface
-
-The Android app uses Material 3 Expressive with a branded light/dark palette, responsive button shapes and adaptive bottom-bar/rail navigation. Previous appearance choices migrate to Expressive. Compose Expressive APIs remain experimental; see [AndroidX Material3](https://developer.android.com/jetpack/androidx/releases/compose-material3). Visual checks on real devices remain a separate release check.
-
-Giao diện Android chuyển sang Material 3 Expressive, dùng bảng màu sáng/tối thống nhất, button phản hồi khi nhấn và navigation thích ứng theo chiều rộng. Các lựa chọn style cũ được chuyển sang Expressive. Kiểm tra hình ảnh trên thiết bị thật vẫn là bước kiểm chứng riêng.

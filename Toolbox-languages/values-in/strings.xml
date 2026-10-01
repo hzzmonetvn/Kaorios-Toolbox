@@ -116,6 +116,13 @@
     <string name="settings_row_gradient_cards_desc">Matikan agar kartu polos putih/hitam; latar tetap gradien</string>
     <string name="pref_ui_style_title">Tampilan aplikasi</string>
     <string name="pref_ui_style_summary">Pilih gaya tampilan keseluruhan aplikasi</string>
+    <string name="ui_style_md3">Default (Material You)</string>
+    <string name="ui_style_md3_desc">Material Design 3 standar dengan warna dinamis sistem</string>
+    <string name="ui_style_floating">Mengambang</string>
+    <string name="ui_style_floating_desc">Kartu lembut mengambang, bilah bawah mengambang, lebih banyak animasi</string>
+    <string name="ui_style_liquid_glass">Gradien</string>
+    <string name="ui_style_liquid_glass_desc">Hamparan gradien warna-warni pada kartu, latar, dan bilah navigasi</string>
+    <string name="pref_ui_style_locked_msg">Opsi warna hanya tersedia pada tampilan default.</string>
 
     <!-- Settings Screen -->
     <string name="app_config">Konfigurasi aplikasi</string>

@@ -116,6 +116,13 @@
     <string name="settings_row_gradient_cards_desc">关闭后卡片为纯白/纯黑；背景仍为渐变</string>
     <string name="pref_ui_style_title">应用外观</string>
     <string name="pref_ui_style_summary">选择整体界面风格</string>
+    <string name="ui_style_md3">默认（Material You）</string>
+    <string name="ui_style_md3_desc">标准 Material Design 3，支持系统动态颜色</string>
+    <string name="ui_style_floating">浮动</string>
+    <string name="ui_style_floating_desc">柔和浮起卡片、浮动底栏、更多动效</string>
+    <string name="ui_style_liquid_glass">渐变</string>
+    <string name="ui_style_liquid_glass_desc">在卡片、背景和导航栏上叠加彩色渐变</string>
+    <string name="pref_ui_style_locked_msg">颜色选项仅在默认外观下可用。</string>
 
     <!-- Settings Screen -->
     <string name="app_config">应用配置</string>
