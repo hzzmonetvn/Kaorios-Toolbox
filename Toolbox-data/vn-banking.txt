@@ -1,3 +1,4 @@
+# Last verified against current Google Play listings: 2026-10-01
 # ===== BANKS / DIGITAL BANKS =====
 
 # Vietcombank
@@ -6,9 +7,11 @@ com.vcb.sme
 
 # BIDV
 com.vnpay.bidv
+vn.com.bidv.ibank
 
 # VietinBank
 com.vietinbank.ipay
+com.vietinbank.dbs.efast
 
 # Agribank
 com.vnpay.Agribank3g
@@ -18,21 +21,27 @@ com.mbmobile
 
 # Techcombank
 vn.com.techcombank.bb.app
+vn.com.techcombank.bb.corp.app
 
 # VPBank
 com.vnpay.vpbankonline
+com.vpbank.b2b
 
 # ACB
 mobile.acb.com.vn
+com.acb.acbb.prod
 
 # Sacombank
 com.sacombank.ewallet
 
 # TPBank
 com.tpb.mb.gprsandroid
+com.tpb.ebmobile
 
 # VIB
 com.vib.myvib2
+com.vib.myvibsme
+com.myvib.corp
 
 # SHB - current
 vn.shb.saha.mbanking
@@ -45,6 +54,7 @@ vn.shb.dn
 
 # SeABank
 vn.com.seabank.mb1
+vn.com.seabank.seamobiledn
 
 # MSB
 vn.com.msb.smartBanking
@@ -59,6 +69,7 @@ vn.com.eximbank.business
 
 # LPBank
 vn.com.lpb.lienviet24h
+com.lpb.android.lpbankbiz
 
 # HDBank
 com.hdbank.dihdbank
@@ -94,9 +105,6 @@ vn.abbank.retail
 com.gpbank.app
 com.gpbank.cmbapp
 
-# PGBank
-pgbankApp.pgbank.com.vn
-
 # BAC A BANK
 com.bab.retailUAT
 com.bab.corp
@@ -110,11 +118,21 @@ com.vnpay.coopbank
 # BAOVIET Bank
 com.vnpay.bvbank
 
+# MBV - Modern Bank of Vietnam
+com.mbv.mobilebanking
+com.mbv.biz.prod
+
+# Vietcombank Neo / NeoOne
+com.vcbneo.neodigibank
+
 # CIMB Vietnam
 vn.cimbbank.octo
 
 # HSBC Vietnam
 vn.hsbc.hsbcvietnam
+
+# Standard Chartered Vietnam
+com.sc.mobilebanking.vn
 
 # Shinhan Vietnam
 com.shinhan.global.vn.bank
@@ -131,11 +149,23 @@ com.vnpay.publicbank
 # Indovina Bank
 com.vnpay.ivb
 
+# UOB Vietnam / TMRW
+com.uob.mightyvn
+
+# KBank Vietnam / K PLUS
+com.kasikornbank.kplus.vn
+
 # Cake by VPBank
 xyz.be.cake
 
 # Timo
 io.lifestyle.plus
+
+# TNEX by MSB
+vn.tnex.consumer
+
+# Liobank by OCB
+com.ocb.liobank
 
 # Vikki Digital Bank
 com.finx.vikki
@@ -269,5 +299,3 @@ vms.com.vn.mymobifone
 
 # FPT Telecom
 com.rad.hifpt
-
-
