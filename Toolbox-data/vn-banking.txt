@@ -193,14 +193,38 @@ com.bplus.vtpay
 # VNPAY
 vnpay.smartacccount
 
+# VNPT Money
+vnptpay.vnptmedia.vnpt.com.vnptpay
+
 # ShopeePay
 com.beeasy.toppay
 
 # Payoo
 vn.payoo
 
-# VNPT Money
-vnptpay.vnptmedia.vnpt.com.vnptpay
+# 9Pay
+vn.ninepay.ewallet
+
+# Gpay
+vn.gutina.origin
+
+# GTELPAY
+com.gtelpay.gtel
+
+# TrueMoney
+vn.com.truemoney.vnwallet
+
+# VTC Pay
+com.vtc.paygate.main
+
+# Foxpay
+com.ftel.foxpay
+
+# MegaV
+com.epay.ewallet
+
+# MobiVi
+vn.movi.mobivi
 
 
 # ===== SECURITIES / INVESTMENT =====
