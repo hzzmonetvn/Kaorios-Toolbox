@@ -289,13 +289,13 @@ vn.vnnic.ispeed
 
 # ===== TELECOM =====
 
-# Viettel - current
+# Viettel Tammi
 com.viettel.appviettel
 
 # Viettel - legacy My Viettel
 com.vttm.vietteldiscovery
 
-# VNPT / Vinaphone
+# My VNPT
 com.vnp.myvinaphone
 
 # MobiFone
