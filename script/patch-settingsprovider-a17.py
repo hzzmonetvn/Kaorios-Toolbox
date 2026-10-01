@@ -104,25 +104,9 @@ def verify(text: str) -> None:
     if not re.search(pattern, body):
         raise ValueError("hook sequence does not match exact fail-closed return structure or register order")
 
-    # Verify query hook if present
     q_span = _query_method_span(text)
     if q_span is not None:
-        q_body = text[q_span[0]:q_span[1]]
-        q_count = _query_hook_count(q_body)
-        returns = re.findall(r"(?m)^[ \t]*return-object[ \t]+[vp]\d+[ \t]*$", q_body)
-        if q_count != len(returns) or not returns:
-            raise ValueError("every SettingsProvider.query return-object must have one hook")
-        if q_count > 0:
-            q_pattern = (
-                r"invoke-static\s*\{([vp]\d+),\s*p1,\s*p3,\s*p4\},\s*"
-                + re.escape(QUERY_HOOK_TARGET)
-                + r"\s*(?:\r?\n)+"
-                + r"\s*move-result-object\s+\1\s*(?:\r?\n)+"
-                + r"\s*return-object\s+\1"
-            )
-            matches = list(re.finditer(q_pattern, q_body))
-            if len(matches) != q_count:
-                raise ValueError("query hook sequence does not match exact fail-closed return structure")
+        _verify_query(text[q_span[0]:q_span[1]])
 
 
 def _find_injection_point(body: str) -> int:
@@ -149,6 +133,75 @@ def _query_hook_count(body: str) -> int:
     return body.count(QUERY_HOOK_TARGET)
 
 
+def _query_layout(body: str):
+    if 'static' in body.splitlines()[0].split():
+        raise ValueError('unsupported static SettingsProvider.query')
+    if re.search(r'(?m)^\s*\.(?:catch|catchall)\b', body):
+        raise ValueError('unsupported SettingsProvider.query control flow')
+    if 'Landroid/os/Binder;->clearCallingIdentity()J' in body:
+        raise ValueError('unsupported query clears original Binder identity')
+    reg = REGISTERS_RE.search(body)
+    loc = LOCALS_RE.search(body)
+    if (reg is None) == (loc is None):
+        raise ValueError('expected exactly one SettingsProvider.query register directive')
+    directive = reg or loc
+    locals_count = int(directive['num']) - (6 if reg else 0)
+    if locals_count < 0:
+        raise ValueError('SettingsProvider.query register count is less than parameter count')
+    return directive, locals_count
+
+
+def _query_instructions(body: str):
+    annotations = 0
+    for line in body.splitlines()[1:-1]:
+        instruction = line.strip().split('#', 1)[0].strip()
+        if instruction.startswith(('.annotation ', '.subannotation ')):
+            annotations += 1
+        elif instruction.startswith(('.end annotation', '.end subannotation')):
+            annotations -= 1
+        elif not annotations and instruction and not instruction.startswith(('.', ':')):
+            yield instruction
+
+
+def _check_query_registers(locals_count: int, returns):
+    # Saved arguments and the original (shifted) parameters must remain encodable.
+    if any(locals_count + n > 15 for n in (1, 3, 4)):
+        raise ValueError('SettingsProvider.query: register exceeds format 35c limit (> 15); unsupported high-register layout')
+    for reg in returns:
+        physical = int(reg[1:]) + (locals_count if reg.startswith('p') else 0)
+        if physical > 15:
+            raise ValueError(f'SettingsProvider.query: return register {reg} exceeds format 35c limit (> 15); unsupported high-register layout')
+
+
+def _verify_query(body: str) -> None:
+    _, locals_count = _query_layout(body)
+    saved_base = locals_count - 3
+    if saved_base < 0:
+        raise ValueError('query arguments were not saved in fresh locals')
+    saved = [f'v{saved_base+n}' for n in range(3)]
+    expected = [f'move-object/from16 {reg}, p{param}' for reg, param in zip(saved, (1, 3, 4))]
+    instructions = list(_query_instructions(body))
+    if instructions[:3] != expected:
+        raise ValueError('query must preserve original URI/selection/args at method entry')
+    # Stock parameter slots can be reused for integers/Strings; saved slots cannot.
+    saved_physical = set(range(saved_base, locals_count))
+    for instruction in instructions[3:]:
+        if instruction.startswith(('invoke-', 'iput', 'sput', 'aput', 'if-', 'goto', 'return', 'throw', 'monitor-', 'packed-switch', 'sparse-switch', 'fill-array-data')):
+            continue
+        destination = re.match(r'\S+\s+([vp]\d+)', instruction)
+        if destination:
+            physical = int(destination[1][1:]) + (locals_count if destination[1].startswith('p') else 0)
+            wide = any(word in instruction.split()[0] for word in ('wide', 'long', 'double'))
+            if physical in saved_physical or (wide and physical+1 in saved_physical):
+                raise ValueError('query saved arguments overwritten')
+    returns = re.findall(r'(?m)^\s*return-object\s+([vp]\d+)\s*$', body)
+    _check_query_registers(locals_count, returns)
+    count = _query_hook_count(body)
+    pattern = (r'invoke-static\s*\{([vp]\d+),\s*' + re.escape(saved[0]) + r',\s*' + re.escape(saved[1]) + r',\s*' + re.escape(saved[2]) + r'\},\s*' + re.escape(QUERY_HOOK_TARGET) + r'\s*\n\s*move-result-object\s+\1\s*\n\s*return-object\s+\1')
+    if not returns or count != len(returns) or len(re.findall(pattern, body)) != count:
+        raise ValueError('every query return must filter the same cursor using saved original arguments')
+
+
 def _patch_query(text: str) -> tuple[str, bool]:
     span = _query_method_span(text)
     if span is None:
@@ -156,56 +209,36 @@ def _patch_query(text: str) -> tuple[str, bool]:
     start, end = span
     body = text[start:end]
     if QUERY_HOOK_TARGET in body:
+        _verify_query(body)
         return text, False
-
-    if re.search(r"(?m)^[ \t]*\.(?:catch|catchall)\b", body):
-        raise ValueError("unsupported SettingsProvider.query control flow")
-
-    newline = "\r\n" if "\r\n" in text else "\n"
-    param_width = 6  # p0..p5
-
-    reg_match = REGISTERS_RE.search(body)
-    loc_match = LOCALS_RE.search(body)
-    if (reg_match is None) == (loc_match is None):
-        raise ValueError("expected exactly one SettingsProvider.query register directive")
-    if reg_match:
-        current_regs = int(reg_match.group("num"))
-        if current_regs < param_width:
-            raise ValueError(f".registers {current_regs} is less than parameter count {param_width}")
-        locals_count = current_regs - param_width
-    else:
-        locals_count = int(loc_match.group("num"))
-
-    p1_num = locals_count + 1
-    p3_num = locals_count + 3
-    p4_num = locals_count + 4
-    if p1_num > 15 or p3_num > 15 or p4_num > 15:
-        raise ValueError("SettingsProvider.query: register exceeds format 35c limit (> 15); unsupported high-register layout")
-
-    return_matches = list(re.finditer(r"(?m)^(?P<indent>[ \t]*)return-object\s+(?P<reg>[vp]\d+)[ \t]*(?:\r?\n|$)", body))
-    if not return_matches:
-        raise ValueError("no return-object found in SettingsProvider.query method")
-
-    for m in return_matches:
-        reg = m.group("reg")
-        reg_num = int(reg[1:]) if reg.startswith("v") else locals_count + int(reg[1:])
-        if reg_num > 15:
-            raise ValueError(f"SettingsProvider.query: return register {reg} exceeds format 35c limit (> 15); unsupported high-register layout")
-
-    patched_body = body
-    for m in reversed(return_matches):
-        indent = m.group("indent")
-        reg = m.group("reg")
-        hook_code = (
-            f"{indent}invoke-static {{{reg}, p1, p3, p4}}, {QUERY_HOOK_TARGET}{newline}"
-            f"{indent}move-result-object {reg}{newline}"
-            f"{indent}return-object {reg}{newline}"
-        )
-        patched_body = patched_body[:m.start()] + hook_code + patched_body[m.end():]
-
-    new_text = text[:start] + patched_body + text[end:]
-    return new_text, True
-
+    directive, old_locals = _query_layout(body)
+    newline = '\r\n' if '\r\n' in text else '\n'
+    # Reject a range crossing the local/parameter boundary: growth would add arguments.
+    for low, high in re.findall(r'\{([vp]\d+)\s*\.\.\s*([vp]\d+)\}', body):
+        physical = lambda reg: int(reg[1:]) + (old_locals if reg.startswith('p') else 0)
+        if physical(low) < old_locals <= physical(high):
+            raise ValueError('unsupported query range crossing local/parameter boundary')
+    def canonicalize(line):
+        parts = re.split(r'("(?:\\.|[^"\\])*")', line)
+        for n in range(0, len(parts), 2):
+            parts[n] = re.sub(r'(?<![\w/$:>])v(\d+)(?![\w/;$(])', lambda m: 'p'+str(int(m[1])-old_locals) if old_locals <= int(m[1]) < old_locals+6 else m[0], parts[n])
+        return ''.join(parts)
+    body = ''.join(canonicalize(line) for line in body.splitlines(keepends=True))
+    directive, _ = _query_layout(body)
+    new_locals = old_locals + 3
+    saved = ', '.join(f'v{old_locals+n}' for n in range(3))
+    captures = ''.join(f'    move-object/from16 v{old_locals+n}, p{param}{newline}' for n,param in enumerate((1,3,4)))
+    body = body[:directive.start()] + f"{directive['indent']}.locals {new_locals}{newline}" + captures + body[directive.end():]
+    returns = list(re.finditer(r'(?m)^(?P<indent>[ \t]*)return-object\s+(?P<reg>[vp]\d+)[ \t]*(?:\r?\n|$)', body))
+    _check_query_registers(new_locals, [m['reg'] for m in returns])
+    if not returns:
+        raise ValueError('no return-object found in SettingsProvider.query method')
+    for match in reversed(returns):
+        indent, reg = match['indent'], match['reg']
+        hook = f'{indent}invoke-static {{{reg}, {saved}}}, {QUERY_HOOK_TARGET}{newline}{indent}move-result-object {reg}{newline}{indent}return-object {reg}{newline}'
+        body = body[:match.start()] + hook + body[match.end():]
+    _verify_query(body)
+    return text[:start] + body + text[end:], True
 
 def patch(text: str) -> tuple[str, bool]:
     """Inject Kaorios settings spoof hook into SettingsProvider.call (and query if present) using register-safe allocation."""

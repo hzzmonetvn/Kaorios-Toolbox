@@ -125,9 +125,9 @@ class TestPatchSettingsProviderA17(unittest.TestCase):
         patched, changed = patcher.patch(STOCK_SMALI + query)
         self.assertTrue(changed)
         self.assertEqual(2, patched.count(patcher.QUERY_HOOK_TARGET))
-        self.assertIn("move-object v3, v4", patched)
-        self.assertIn("invoke-static {v0, p1, p3, p4}", patched)
-        self.assertIn("invoke-static {v1, p1, p3, p4}", patched)
+        self.assertIn("move-object p1, p2", patched)
+        self.assertIn("invoke-static {v0, v2, v3, v4}", patched)
+        self.assertIn("invoke-static {v1, v2, v3, v4}", patched)
         patcher.verify(patched)
         self.assertFalse(patcher.patch(patched)[1])
 
@@ -142,11 +142,54 @@ class TestPatchSettingsProviderA17(unittest.TestCase):
         patched, _ = patcher.patch(STOCK_SMALI + query)
         patcher.verify(patched)
         partial = patched.replace(
-            "    invoke-static {v1, p1, p3, p4}, " + patcher.QUERY_HOOK_TARGET + "\n    move-result-object v1\n",
+            "    invoke-static {v1, v2, v3, v4}, " + patcher.QUERY_HOOK_TARGET + "\n    move-result-object v1\n",
             "",
         )
         with self.assertRaises(ValueError):
             patcher.verify(partial)
+
+    def test_raw_query_parameter_reuse_preserves_original_arguments(self):
+        query = """
+.method public query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;
+    .registers 10
+    const-string p3, "name"
+    const/4 p4, 0x1
+    const-string v5, "v5"
+    const/4 v0, 0x0
+    if-eqz p4, :other
+    return-object v0
+    :other
+    return-object v0
+.end method
+"""
+        patched, _ = patcher.patch(STOCK_SMALI + query)
+        body = patched[patcher._query_method_span(patched)[0]:]
+        self.assertIn('.locals 7', body)
+        captures = ('move-object/from16 v4, p1', 'move-object/from16 v5, p3', 'move-object/from16 v6, p4')
+        for capture in captures:
+            self.assertLess(body.index(capture), body.index('const-string p3'))
+        self.assertIn('const-string p1, "v5"', body)
+        self.assertEqual(2, body.count('invoke-static {v0, v4, v5, v6}'))
+        patcher.verify(patched)
+        self.assertEqual((patched, False), patcher.patch(patched))
+        for corrupt in (
+            patched.replace(captures[0], 'move-object/from16 v4, p3'),
+            patched.replace('const-string p3, "name"', 'const/4 v4, 0x0'),
+            patched.replace('const-string p3, "name"', 'const-wide/16 v3, 0x0'),
+            patched.replace('{v0, v4, v5, v6}', '{v0, p1, p3, p4}'),
+        ):
+            with self.subTest(corrupt=corrupt), self.assertRaises(ValueError):
+                patcher.verify(corrupt)
+
+    def test_query_growth_and_identity_boundaries_fail_closed(self):
+        header = '.method public query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;\n'
+        for body in (
+            '    .locals 9\n    return-object v0\n.end method\n',
+            '    .locals 4\n    invoke-static/range {v3 .. v5}, Lexample/Calls;->call(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V\n    return-object v0\n.end method\n',
+            '    .locals 4\n    invoke-static {}, Landroid/os/Binder;->clearCallingIdentity()J\n    return-object v0\n.end method\n',
+        ):
+            with self.subTest(body=body), self.assertRaises(ValueError):
+                patcher.patch(STOCK_SMALI + header + body)
 
     def test_query_unknown_layout_fails_closed(self):
         header = ".method public query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;\n"

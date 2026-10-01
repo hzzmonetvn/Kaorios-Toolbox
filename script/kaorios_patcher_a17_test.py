@@ -762,5 +762,71 @@ class HighRegistersAndStructuralVerificationTest(unittest.TestCase):
         self.assertIn("still has 'final' modifier", str(ctx.exception))
 
 
+
+class RawSamplePatternTest(unittest.TestCase):
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("raw_pattern_patcher", PATCHER_PY)
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+
+    def alias_method(self, count, owner, data, extra="", suffix=""):
+        return f""".class public Landroid/app/ActivityThread;
+.super Ljava/lang/Object;
+.method private greylist handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V
+    .registers {count}
+    move-object/from16 v{owner}, p0
+    move-object/from16 v{data}, p1
+    const/4 v0, 0x0
+    if-eqz v0, :cond_bound
+    :cond_bound
+    {extra}
+    iput-object v{data}, v{owner}, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+    {suffix}
+    return-void
+.end method
+"""
+
+    def test_raw_sample_entry_alias_patterns(self):
+        # Structural patterns observed in the fresh A13/A14/A15/A16/A17 disassembly.
+        for count, owner, data in [(35,1,2),(35,9,10),(38,9,10),(32,1,9),(39,1,9)]:
+            with self.subTest(count=count, owner=owner, data=data):
+                source = self.alias_method(count, owner, data)
+                output, changed = self.mod.patch_activity_thread(source)
+                self.assertTrue(changed)
+                self.assertIn(f"invoke-static {{v{data}}}, Landroid/security/kaorios/KaoriosHook;->initActivityThread", output)
+                self.mod.verify_target_content("ActivityThread.smali", output)
+                self.assertEqual((output, False), self.mod.patch_activity_thread(output))
+
+    def test_alias_clobber_and_back_edge_fail_closed(self):
+        for extra, suffix in [("const/4 v9, 0x0", ""), ("const-wide/16 v8, 0x0", ""), ("", "goto :cond_bound")]:
+            with self.subTest(extra=extra, suffix=suffix):
+                with self.assertRaises(ValueError):
+                    self.mod.patch_activity_thread(self.alias_method(32,1,9,extra,suffix))
+
+    def test_unproven_receiver_and_misplaced_hook_rejected(self):
+        source = self.alias_method(35,9,10).replace("iput-object v10, v9", "iput-object v10, v4")
+        with self.assertRaises(ValueError): self.mod.patch_activity_thread(source)
+        output, _ = self.mod.patch_activity_thread(self.alias_method(35,9,10))
+        output = output.replace("    invoke-static {v10},", "    const/4 v0, 0x0\n    invoke-static {v10},")
+        with self.assertRaises(ValueError): self.mod.verify_target_content("ActivityThread.smali", output)
+
+    def build_a13(self):
+        fields = ['BRAND','DEVICE','FINGERPRINT','HARDWARE','ID','MANUFACTURER','MODEL','PRODUCT','TAGS','TYPE','USER']
+        return '.class public Landroid/os/Build;\n.super Ljava/lang/Object;\n' + ''.join(f'.field public static final {f}:Ljava/lang/String;\n' for f in fields) + '.field public static final TIME:J\n'
+
+    def test_a13_build_absent_attestation_fields_are_not_fabricated(self):
+        output, changed = self.mod.patch_build(self.build_a13())
+        self.assertTrue(changed)
+        self.mod.verify_target_content('Build.smali',output)
+        self.assertNotIn('BRAND_FOR_ATTESTATION',output)
+        self.assertEqual((output,False),self.mod.patch_build(output))
+
+    def test_build_required_or_wrong_optional_type_remains_unsupported(self):
+        for source in [self.build_a13().replace(' BRAND:', ' OTHER:'), self.build_a13()+'.field public static final BRAND_FOR_ATTESTATION:I\n']:
+            with self.assertRaises(ValueError):
+                output,_=self.mod.patch_build(source)
+                self.mod.verify_target_content('Build.smali',output)
+
 if __name__ == "__main__":
     unittest.main()

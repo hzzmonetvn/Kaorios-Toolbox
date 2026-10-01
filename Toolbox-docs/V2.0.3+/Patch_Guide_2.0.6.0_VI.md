@@ -28,6 +28,8 @@ done
 
 Kết quả là `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Dùng tương tự `work/services/` và `work/settingsprovider/` cho hai archive còn lại. Tìm class trên mọi cây smali của workspace; không ghi đè dataset `tmp/fw/`.
 
+Kiểm chứng raw ngày **2026-10-01**: 15 archive, 48 DEX, 25 full-Dex roundtrip và 50 class auto-target PASS; cả 15 originals không đổi. Xem [ma trận và dữ liệu JSON](Sample_Compatibility_2.0.6.0.md). Input A17 đã có năm hook và payload cũ; `ALREADY_PATCHED` không phải chèn mới. Không dùng sample hoặc payload cũ để triển khai. Số register trong ví dụ số chỉ thuộc sample; `vScratch`, `vHook`, `vCursor`, `vSavedUri` và tên `v...` bằng chữ là **ký hiệu pseudocode**, phải thay bằng register đã resolve trên ROM đích. ABI hiện tại phải khớp DEX đang triển khai, kể cả khi patch sample A13–A16.
+
 ## Included Framework Samples
 
 `tmp/fw/**` chứa sample/reference framework từ một số thế hệ Android/HyperOS. Mỗi sample có `framework.jar`, `services.jar`, `SettingsProvider.apk`. Dataset giúp xem class tồn tại, method descriptor, control flow, register layout, nghiên cứu tương thích và phát triển/test patcher.
@@ -47,6 +49,10 @@ Sample không phải file để flash, framework chuẩn, replacement cho ROM c�
 | ComputerEngine | FOUND | FOUND | FOUND | FOUND | FOUND |
 | AppsFilterBase | FOUND | FOUND | FOUND | FOUND | FOUND |
 | AppsFilterImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
+| IPackageManagerBase | FOUND | FOUND | FOUND | FOUND | FOUND |
+| PackageManagerService | FOUND | FOUND | FOUND | FOUND | FOUND |
+| PackageManagerService$IPackageManagerImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
+| InstallSourceInfo | FOUND | FOUND | FOUND | FOUND | FOUND |
 | SettingsProvider / call + query | FOUND | FOUND | FOUND | FOUND | FOUND |
 | ComputerEngine / PackageStateInternal IIZZ overload | DIFFERENT LAYOUT | DIFFERENT LAYOUT | FOUND | FOUND | FOUND |
 | SettingsProvider.call / getDeviceId() anchor | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND | FOUND |
@@ -90,11 +96,11 @@ Landroid/app/Instrumentation;
 Với cả hai overload, mỗi `return-object` trên đường trả về được hỗ trợ phải có `initContext()` ngay trước nó. Patcher verify mọi đường return; không chỉ patch return cuối theo thứ tự văn bản:
 
 1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
-   Trong virtual instance method, `p0` là `this`, `p1` là `Class<?>`, và `p2` là `Context`:
+   Trong cả năm sample đi kèm, method này **static**, `.registers 3`: `p0=Class=v1`, `p1=Context=v2`, một return. Hook:
    ```smali
-   invoke-static {p2}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+   invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
    ```
-   *(Lưu ý: nếu trên một số ROM OEM được compile dưới dạng static method thì `p0` là `Class` và `p1` là `Context`, truyền `p1`).*
+   Nếu ROM đích có variant instance, resolve lại: `p0=this`, `p1=Class`, `p2=Context`; truyền `p2`, không copy mapping static.
 
 2. `newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;`
    Trong virtual instance method, `p0` là `this`, `p1` là `ClassLoader`, `p2` là `String`, và `p3` là `Context`:
@@ -102,35 +108,28 @@ Với cả hai overload, mỗi `return-object` trên đường trả về đư�
    invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
    ```
 
-Nếu chỉ số parameter register vượt quá 15 (do số `.locals` lớn), dùng `invoke-static/range {pN .. pN}`. Không cần cấp thêm register.
+Nếu chỉ số vật lý của parameter register vượt quá 15 (do số `.locals` lớn), dùng `invoke-static/range {pN .. pN}`. Không cần cấp thêm register.
 
-#### Android 17
+#### ActivityThread: alias entry đã xác minh
 
-Một số build Android 17 dùng thêm hook theo process trong:
+Trong cả năm sample, method là `handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V`. Entry copy `this` và AppBindData sang local; literal `iput-object p1,p0` không có. Patcher chứng minh alias từ entry, từ chối alias bị ghi đè hoặc back edge không an toàn, rồi chèn ngay sau assignment mBoundApplication vào receiver đúng.
 
-```smali
-Landroid/app/ActivityThread;
-```
+| Sample | .registers | AppBindData / this alias |
+|---|---:|---|
+| A13 | 35 | v2 / v1 |
+| A14 | 35 | v10 / v9 |
+| A15 | 38 | v10 / v9 |
+| A16 | 32 | v9 / v1 |
+| A17 | 39 | v9 / v1 |
 
-Method:
-
-```smali
-handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V
-```
-
-Tìm:
+Ví dụ **chỉ thuộc A13 sample**:
 
 ```smali
-iput-object p1, p0, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+iput-object v2, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+invoke-static {v2}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
 ```
 
-Chèn ngay sau:
-
-```smali
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
-```
-
-Chỉ thêm hook này nếu DEX Kaorios đang dùng có method `initActivityThread(Ljava/lang/Object;)V`.
+Không tăng locals. Truyền alias AppBindData thật; nếu chỉ số vật lý >15, dùng range một register sau khi chứng minh alias. DEX triển khai phải export đúng Object ABI này.
 
 ---
 
@@ -289,41 +288,16 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 
 một lần trong `SystemServer.run()V`, sau khi các service nền tảng đã được dựng nhưng trước khi main loop chạy vĩnh viễn.
 
-### Android 13–16
+### Anchor thực tế trong sample
 
-Trên nhiều ROM, anchor phù hợp là ngay trước:
-
-```smali
-Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
-```
-
-Ví dụ:
+Cả năm `run()V` đã tạo system context trước `startOtherServices(...)`, rồi tới `Looper.loop()V`. Patcher ưu tiên loop anchor; hook mới A13–A16 ở ngay trước loop. Hook có sẵn trong A17 nằm trước startOtherServices và được verifier chấp nhận. Fallback startOtherServices chỉ dùng khi layout tương ứng được xác minh; không chọn anchor chỉ từ nhãn Android.
 
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-
-invoke-direct {p0, vX}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
-```
-
-Tên opcode/register có thể khác giữa ROM; quan trọng là đúng call `startOtherServices(...)`.
-
-### Android 17
-
-Patcher A17 hiện tại dùng anchor an toàn hơn trong `run()V`:
-
-```smali
 invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
-Chèn ngay trước:
-
-```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-
-invoke-static {}, Landroid/os/Looper;->loop()V
-```
-
-Không cần tăng register.
+Không cần scratch. Giữ nguyên try/catch boundaries; full-Dex roundtrip của run đã PASS, nhưng bootstrap Binder trên thiết bị vẫn cần test.
 
 ---
 
@@ -373,7 +347,7 @@ Chỉ patch overload trả về `String`; không chèn vào overload trả về 
 
 Vị trí lọc app thay đổi theo Android version và ROM. Hãy patch method Package Manager thực sự quyết định package có bị filter khỏi caller hay không.
 
-#### Android 13–16 / ROM dùng AppsFilter
+#### AppsFilter: đường reference
 
 Class thường gặp:
 
@@ -396,9 +370,9 @@ return v0
 :cond_kaorios_hide_stock
 ```
 
-Phải xác định đúng register thật trên ROM đích.
+Phải xác định đúng register thật trên ROM đích. Trong cả năm sample, AppsFilterImpl kế thừa AppsFilterLocked rồi AppsFilterBase; đường production được roundtrip là ComputerEngine: II ở A13/A14, IIZZ ở A15–A17. Snippet AppsFilter/direct-cache chỉ là reference, chưa được auto-patch hoặc chứng nhận runtime.
 
-#### Android 17 hiện tại
+#### Đường ComputerEngine hiện tại trong sample đi kèm
 
 Class:
 
@@ -418,7 +392,7 @@ và fallback sang:
 shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
 ```
 
-Hook A17 hiện dùng ABI:
+ABI hiện tại dùng cho cả năm sample:
 
 ```smali
 shouldHideAppListForCaller(ILjava/lang/String;I)Z
@@ -476,9 +450,9 @@ Phần này khác rõ giữa implementation/framework cũ và patch A17 hiện t
 
 #### Hook String hai bước của framework cũ
 
-`shouldRemoveSetting(ContentResolver,String,String)` rồi `filterSettingValue(ContentResolver,String,String,String)` là ABI tương thích đã deprecated. Hai bước phải nhận cùng namespace/name và Binder caller gốc trên cùng provider thread. Không chèn trực tiếp vào method trả `SettingsState$Setting` hoặc Bundle. Snippet legacy chung chưa phải strategy đã kiểm chứng cho sample A13–A16. Với DEX hiện tại, layout call/query của các sample này khớp strategy modern bên dưới. Xem [kiểm chứng sample](Sample_Compatibility_2.0.6.0.md); không ép hook legacy vào A17.
+`shouldRemoveSetting(ContentResolver,String,String)` rồi `filterSettingValue(ContentResolver,String,String,String)` là ABI tương thích đã deprecated. Hai bước phải nhận cùng namespace/name và Binder caller gốc trên cùng provider thread. Không chèn trực tiếp vào method trả `SettingsState$Setting` hoặc Bundle. Các getGlobal/getSecure/getSystemSetting đã inspect trả SettingsState$Setting nên String hook trực tiếp là NOT_APPLICABLE trong cả năm sample. Với DEX hiện tại, layout call/query của các sample này khớp strategy modern bên dưới. Xem [kiểm chứng sample](Sample_Compatibility_2.0.6.0.md); không ép hook legacy vào A17.
 
-#### Android 17 hiện tại
+#### Strategy call/query hiện tại trong cả năm sample
 
 Patcher A17 hiện patch:
 
@@ -496,8 +470,8 @@ filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 
 `call(...)` là instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. Patcher tìm anchor ngữ nghĩa an toàn theo thứ tự:
 
-1. Anchor chính: `getDeviceId()I` (ưu tiên trên các bản ROM Android 17 / HyperOS 4 mới hơn, nơi định tuyến virtual device chạy trước các thao tác binder và thiết lập ngữ cảnh thực thi đích mà không gây tác dụng phụ).
-2. Fallback Anchor: `getRequestingUserId(Landroid/os/Bundle;)I` (cho Android 13–16 và các bản ROM không có định tuyến virtual device).
+1. `getDeviceId()I`: có trong call của sample A17, ưu tiên khi nhận diện layout an toàn.
+2. `getRequestingUserId(Landroid/os/Bundle;)I`: fallback trong sample A13–A16, cũng có ở A17. Không coi anchor là bảo đảm theo phiên bản.
 
 > [!IMPORTANT]
 > **Bảo Toàn Định Danh Người Gọi (Caller Identity Preservation):**  
@@ -530,26 +504,25 @@ vHook = v(R - 4)
 
 #### 2. Method: `query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;`
 
-ABI hook query:
+Trong cả năm query thật, stock code tái sử dụng p1/p3/p4 cho projection/table/name/boolean tạm. **Không truyền trực tiếp p1,p3,p4 ở return.** Trước khi tăng locals, canonicalize mọi alias parameter; cấp ba local mới rồi lưu URI/selection/args gốc tại entry, trước stock instructions.
+
+Ký hiệu pseudocode: stock locals=L; vSavedUri=vL, vSavedSelection=v(L+1), vSavedArgs=v(L+2); locals mới=L+3.
 
 ```smali
-filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+move-object/from16 vSavedUri, p1
+move-object/from16 vSavedSelection, p3
+move-object/from16 vSavedArgs, p4
+# ... stock body; p-register có thể đã bị tái sử dụng ...
+invoke-static {vCursor, vSavedUri, vSavedSelection, vSavedArgs}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+move-result-object vCursor
+return-object vCursor
 ```
 
-Để hỗ trợ spoof giá trị settings khi app gọi qua đường cursor query, `SettingsProvider.query(...)` yêu cầu chèn post-processing hook tại toàn bộ các điểm thoát `return-object`.
+Mọi return được hỗ trợ phải dùng đúng cursor register của stock và ba bản lưu không bị ghi đè. R10 có p1/p3/p4=v5/v7/v8: tăng thành .locals 7, lưu v4/v5/v6. R11 có p1/p3/p4=v6/v8/v9: tăng thành .locals 8, lưu v5/v6/v7. Đây là số sample, không phải số để copy sang ROM khác. Số return là 7/7/7/7/8; cả full DEX đã roundtrip. Hook cũ không lưu args bị verifier từ chối; quay về input sạch trước khi patch lại.
 
-Trước mỗi `return-object <cursor_reg>`, chèn:
+Patcher vẫn giới hạn bảo thủ format 35c: p1/p3/p4 sau growth và cursor return phải <=15. Lỗi `register exceeds format 35c limit (> 15)` (hoặc `return register ... exceeds format 35c limit (> 15)`) là UNSUPPORTED_LAYOUT. Cursor cùng saved args không được bảo đảm liên tiếp/đúng thứ tự; không đổi thẳng sang invoke-static/range khi chưa move đủ bốn argument vào scratch liên tiếp và verify layout mới. Không ép patch.
 
-```smali
-invoke-static {<cursor_reg>, p1, p3, p4}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
-move-result-object <cursor_reg>
-return-object <cursor_reg>
-```
-
-
-Mỗi đường return được hỗ trợ phải có `invoke hook` → `move-result-object` vào cùng cursor register → `return-object` chính register đó. Try/catch, CFG phức tạp hoặc nhánh không được nhận diện có thể khiến patcher dừng an toàn; không chỉ patch return cuối theo văn bản.
-
-Nếu chỉ số vật lý của `p1`, `p3`, `p4` hoặc cursor register >15, patcher dừng với lỗi `register exceeds format 35c limit (> 15)` (cursor có thể hiện `return register ... exceeds format 35c limit (> 15)`). Xử lý là `UNSUPPORTED_LAYOUT`. Các argument `cursorReg, p1, p3, p4` không liên tiếp; không thể đổi thẳng sang `invoke-static/range` nếu chưa move chúng vào scratch liên tiếp và verify lại. Không ép patch.
+Try/catch, clearCallingIdentity hoặc invoke-range cắt qua ranh giới local/parameter không được hỗ trợ thì fail closed. Không patch chỉ return cuối. Trong cả năm call/query sample không có identity clear/restore; yêu cầu giữ caller vẫn áp dụng khi gặp layout khác. Assembly không thay thế kiểm chứng kiểu/nguồn argument; runtime Binder/SELinux còn cần thiết bị.
 
 #### 3. Yêu cầu SELinux cho AdvancedPolicy Service
 
@@ -559,6 +532,7 @@ Service `AdvancedPolicyService` hoạt động như một system Binder service 
 3. **system_server**: Cho phép `service_manager { add find }` đối với `kaorios_advanced_policy_service`.
 4. **Domain của SettingsProvider** (thường là `system_app`): Cho phép `service_manager { find }` đối với `kaorios_advanced_policy_service`.
 5. **Binder Call**: Cho phép `binder { call }` giữa domain của SettingsProvider và `system_server`.
+6. **Manager runtime status**: Domain thực tế của Toolbox cũng cần service_manager find và Binder call tới system_server. Không suy ra permission từ static sample; xác minh domain/policy trên thiết bị.
 
 Sử dụng tool kiểm tra: `script/check-advanced-policy-sepolicy.sh` hoặc `script/check-advanced-policy-sepolicy.py`.
 
@@ -607,7 +581,10 @@ Android 13–17 và ROM OEM có thể thay đổi method/register giữa các b�
 
 ## Rebuild và tích hợp ROM
 
-1. Assemble mỗi cây smali đã sửa thành đúng DEX tương ứng, ví dụ `smali a work/framework/smali_classes2 -o work/framework/output/classes2.dex` (tạo thư mục output trước).
+Dùng toolchain pinned trong [sample report](Sample_Compatibility_2.0.6.0.md): smali/baksmali/dexlib2/util 3.0.8, JCommander 1.64. Full framework có hidden-API flags nên không dùng API mặc định 15. Với tool này, input DEX 039 dùng assembler API 29, DEX 040 dùng API 34 để giữ format gốc; API >=35 có lỗi writer DEX 041. Xác nhận output tồn tại, magic giữ nguyên, re-disassemble và verify full DEX; không sửa binary header để che lỗi. Chọn API assembler là chọn format/opcode, không phải đổi Android/SDK của ROM.
+
+
+1. Assemble mỗi cây smali đã sửa thành đúng DEX tương ứng, ví dụ cho input DEX 039: `smali a --api 29 work/framework/smali_classes2 -o work/framework/output/classes2.dex` (tạo thư mục output trước).
 2. Thay chỉ các `classes*.dex` tương ứng trong bản sao archive đích.
 3. Bảo toàn mọi nội dung archive còn lại.
 4. Verify archive, kiểm tra entry và DEX vừa thay.

@@ -28,6 +28,8 @@ done
 
 The output trees are `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Use `work/services/` and `work/settingsprovider/` for the other archives. Search all smali trees in the workspace; do not overwrite the `tmp/fw/` dataset.
 
+Raw audit **2026-10-01**: 15 archives, 48 DEX, 25 full-Dex roundtrips and 50 auto-target classes PASS; all 15 originals unchanged. See the [matrix and JSON evidence](Sample_Compatibility_2.0.6.0.md). The A17 input already has five hooks and an older payload: ALREADY_PATCHED is not fresh insertion. Do not deploy the samples or their old payload. Numeric registers in examples belong only to the stated sample; `vScratch`, `vHook`, `vCursor`, `vSavedUri` and other lettered `v...` names are **pseudocode placeholders**, to be replaced with resolved target registers. Current hook ABI must match the DEX being shipped, including for A13–A16 call sites.
+
 ## Included Framework Samples
 
 `tmp/fw/**` contains sample/reference frameworks from several Android/HyperOS generations. Each sample includes `framework.jar`, `services.jar`, and `SettingsProvider.apk`. Use them to inspect class presence, method descriptors, control flow and register layout, research compatibility, and develop/test the patcher.
@@ -47,6 +49,10 @@ These are not files to flash, a canonical framework, replacements for your ROM, 
 | ComputerEngine | FOUND | FOUND | FOUND | FOUND | FOUND |
 | AppsFilterBase | FOUND | FOUND | FOUND | FOUND | FOUND |
 | AppsFilterImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
+| IPackageManagerBase | FOUND | FOUND | FOUND | FOUND | FOUND |
+| PackageManagerService | FOUND | FOUND | FOUND | FOUND | FOUND |
+| PackageManagerService$IPackageManagerImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
+| InstallSourceInfo | FOUND | FOUND | FOUND | FOUND | FOUND |
 | SettingsProvider / call + query | FOUND | FOUND | FOUND | FOUND | FOUND |
 | ComputerEngine / PackageStateInternal IIZZ overload | DIFFERENT LAYOUT | DIFFERENT LAYOUT | FOUND | FOUND | FOUND |
 | SettingsProvider.call / getDeviceId() anchor | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND | FOUND |
@@ -90,11 +96,11 @@ Landroid/app/Instrumentation;
 For both overloads, every supported `return-object` must have `initContext()` immediately before it. The patcher verifies every return path; do not patch only the final textual return:
 
 1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
-   In virtual instance methods, `p0` is `this`, `p1` is `Class<?>`, and `p2` is `Context`:
+   In all five included samples this method is **static**, `.registers 3`: `p0=Class=v1`, `p1=Context=v2`, one return. Hook:
    ```smali
-   invoke-static {p2}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+   invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
    ```
-   *(Note: if compiled as a static method in an OEM ROM, `p0` is `Class` and `p1` is `Context`, pass `p1`).*
+   If a target ROM has an instance variant, resolve it again: `p0=this`, `p1=Class`, `p2=Context`; pass `p2`, not the static mapping.
 
 2. `newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;`
    In virtual instance methods, `p0` is `this`, `p1` is `ClassLoader`, `p2` is `String`, and `p3` is `Context`:
@@ -102,35 +108,28 @@ For both overloads, every supported `return-object` must have `initContext()` im
    invoke-static {p3}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
    ```
 
-If the parameter register number exceeds 15 (due to high `.locals`), use `invoke-static/range {pN .. pN}`. No extra register is required.
+If the physical parameter register index exceeds 15 (due to high `.locals`), use `invoke-static/range {pN .. pN}`. No extra register is required.
 
-#### Android 17
+#### ActivityThread: verified entry aliases
 
-Some Android 17 builds also use a process hook in:
+In all five samples the method is `handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V`. Entry moves copy `this` and AppBindData into locals; the literal `iput-object p1,p0` is absent. The patcher proves the entry aliases, rejects overwritten aliases or unsafe back edges, and hooks immediately after assigning mBoundApplication on the proven receiver.
 
-```smali
-Landroid/app/ActivityThread;
-```
+| Sample | .registers | AppBindData / this alias |
+|---|---:|---|
+| A13 | 35 | v2 / v1 |
+| A14 | 35 | v10 / v9 |
+| A15 | 38 | v10 / v9 |
+| A16 | 32 | v9 / v1 |
+| A17 | 39 | v9 / v1 |
 
-Method:
-
-```smali
-handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V
-```
-
-Find:
+Example **from the A13 sample only**:
 
 ```smali
-iput-object p1, p0, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+iput-object v2, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+invoke-static {v2}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
 ```
 
-Insert immediately after it:
-
-```smali
-invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
-```
-
-Only add this when the Kaorios DEX being used exposes `initActivityThread(Ljava/lang/Object;)V`.
+No local growth is needed. Pass the actual AppBindData alias; a physical index >15 requires a single-register range after proving the alias. The deployed DEX must export this Object ABI.
 
 ---
 
@@ -289,41 +288,16 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 
 once inside `SystemServer.run()V`, after core services are initialized but before the main loop runs forever.
 
-### Android 13–16
+### Actual sample anchors
 
-On many builds, a suitable anchor is immediately before:
-
-```smali
-Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
-```
-
-Example:
+All five `run()V` methods create system context before `startOtherServices(...)`, then enter `Looper.loop()V`. The patcher prefers the loop anchor; new A13–A16 hooks are immediately before it. The existing A17 hook before startOtherServices is accepted by the verifier. The startOtherServices fallback requires a verified corresponding layout; do not select an anchor just from an Android label.
 
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-
-invoke-direct {p0, vX}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
-```
-
-Opcode/registers may differ by ROM; match the actual `startOtherServices(...)` call.
-
-### Android 17
-
-The current A17 patcher uses the safer `run()V` anchor:
-
-```smali
 invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
-Insert immediately before it:
-
-```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-
-invoke-static {}, Landroid/os/Looper;->loop()V
-```
-
-No extra register is required.
+No scratch is needed. Preserve try/catch boundaries. Full-Dex run roundtrips passed; actual Binder bootstrap still needs device testing.
 
 ---
 
@@ -373,7 +347,7 @@ Use only the overload returning `String`, not one returning `Pair`.
 
 The filtering path changes between Android versions and OEM implementations. Patch the Package Manager method that actually decides whether a package is filtered from the caller.
 
-#### Android 13–16 / AppsFilter-based ROMs
+#### Reference-only AppsFilter paths
 
 Common classes:
 
@@ -395,9 +369,9 @@ return v0
 :cond_kaorios_hide_stock
 ```
 
-Resolve the real registers on the target ROM.
+Resolve the real registers on the target ROM. In all five samples, AppsFilterImpl extends AppsFilterLocked, then AppsFilterBase; the production path roundtripped here is ComputerEngine: II in A13/A14, IIZZ in A15–A17. Direct/cache AppsFilter snippets remain references, without automatic patch or runtime certification.
 
-#### Current Android 17 path
+#### Current ComputerEngine path in the included samples
 
 Class:
 
@@ -417,7 +391,7 @@ and falls back to:
 shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
 ```
 
-Current A17 ABI:
+Current ABI used for all five samples:
 
 ```smali
 shouldHideAppListForCaller(ILjava/lang/String;I)Z
@@ -450,7 +424,7 @@ return vHook
 
 Allocate one extra local for `vHook`.
 
-Do not mix the Android 13–16 ABI with the current Android 17 ABI. Verify the actual KaoriosHook signature in the DEX you are shipping.
+Use the current ABI exported by the shipped DEX. Android generation labels do not select an older hook ABI. In these samples, the auto-patcher uses the II fallback on A13/A14 and IIZZ on A15–A17. AppsFilterImpl inherits through AppsFilterLocked from AppsFilterBase; direct/cache injection in those reference classes was not patched or certified here.
 
 ---
 
@@ -495,8 +469,8 @@ filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 
 `call(...)` is an instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. The patcher searches for a safe semantic anchor in this order:
 
-1. Primary Anchor: `getDeviceId()I` (preferred on newer Android 17 / HyperOS 4 ROMs where virtual device routing precedes binder operations and establishes target execution context without side effects).
-2. Fallback Anchor: `getRequestingUserId(Landroid/os/Bundle;)I` (for Android 13–16 and ROMs without virtual device routing).
+1. `getDeviceId()I`: present in the included A17 call method, preferred when the safe layout is recognized.
+2. `getRequestingUserId(Landroid/os/Bundle;)I`: the included A13–A16 fallback; also present in A17. Neither anchor is a universal version guarantee.
 
 > [!IMPORTANT]
 > **Caller Identity Preservation:**  
@@ -529,27 +503,25 @@ new .locals = R - 4 + 1
 
 #### 2. Method: `query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;`
 
-Current query hook ABI:
+All five real query bodies reuse p1/p3/p4 for projection/table/name/boolean temporaries. **Do not pass p1,p3,p4 directly at return.** Canonicalize all stock parameter aliases before local growth, allocate three fresh locals, and save the original URI/selection/args at entry before stock instructions.
+
+Pseudocode: stock locals=L; vSavedUri=vL, vSavedSelection=v(L+1), vSavedArgs=v(L+2); new locals=L+3.
 
 ```smali
-filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+move-object/from16 vSavedUri, p1
+move-object/from16 vSavedSelection, p3
+move-object/from16 vSavedArgs, p4
+# ... stock body; parameter slots may now have unrelated values ...
+invoke-static {vCursor, vSavedUri, vSavedSelection, vSavedArgs}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+move-result-object vCursor
+return-object vCursor
 ```
 
-To support cursor-based settings queries per calling app, `SettingsProvider.query(...)` requires post-processing hook insertion on every supported `return-object` path.
+Every supported return must use its original cursor register and the three unchanged saved arguments. R10 starts with p1/p3/p4=v5/v7/v8: grow to .locals 7, save in v4/v5/v6. R11 starts with p1/p3/p4=v6/v8/v9: grow to .locals 8, save in v5/v6/v7. These are sample numbers, not registers to copy into another ROM. Return counts are 7/7/7/7/8; full DEX roundtrips passed. Old unsaved hooks are rejected; restore clean input before repatching.
 
-Each supported return path must pair the hook, `move-result-object`, and `return-object` using the same cursor register:
+The patcher retains conservative 35c limits: p1/p3/p4 after growth and the cursor return must be <=15. `register exceeds format 35c limit (> 15)` (or `return register ... exceeds format 35c limit (> 15)`) means UNSUPPORTED_LAYOUT. The cursor and saved arguments are not guaranteed contiguous in ABI order; do not switch directly to invoke-static/range without first moving all four arguments to contiguous scratch and verifying that layout. Do not force a patch.
 
-```smali
-invoke-static {<cursor_reg>, p1, p3, p4}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
-move-result-object <cursor_reg>
-return-object <cursor_reg>
-```
-
-Try/catch, complex CFG, or unsupported branch structures may fail closed. Do not manually patch only the final textual return.
-
-If the physical index of `p1`, `p3`, `p4`, or the returned cursor register exceeds 15, the patcher fails closed with `register exceeds format 35c limit (> 15)` (the cursor variant says `return register ... exceeds format 35c limit (> 15)`). Treat this as `UNSUPPORTED_LAYOUT`. Arguments `cursorReg, p1, p3, p4` are non-contiguous; switching directly to `invoke-static/range` cannot encode them without first moving them into contiguous scratch registers and verifying that layout. Do not force the patch.
-
-Stock cursor semantics and nullity are preserved if the hook returns the original cursor or null.
+Unsupported try/catch, clearCallingIdentity, or ranges crossing the local/parameter boundary fail closed. Do not patch only the final return. None of the five sample call/query methods clears/restores identity; preserve the caller when evaluating other layouts too. Assembly does not replace argument type/provenance validation, and Binder/SELinux still need device checks.
 
 #### 3. AdvancedPolicy SELinux Requirements
 
@@ -560,7 +532,7 @@ The `AdvancedPolicyService` operates as a registered system Binder service (`kao
 4. **SettingsProvider Domain** (e.g. `system_app`): Allowed `service_manager { find }` for `kaorios_advanced_policy_service`.
 5. **Binder Call**: Allowed `binder { call }` between the SettingsProvider domain and `system_server`.
 
-Inspect compliance with `script/check-advanced-policy-sepolicy.sh` or `script/check-advanced-policy-sepolicy.py`.
+Inspect compliance with `script/check-advanced-policy-sepolicy.sh` or `script/check-advanced-policy-sepolicy.py`. Manager runtime-status reads also need find/call access for the manager’s actual domain. These 15 archives do not contain ROM sepolicy and cannot certify it; unavailable status must remain unavailable.
 
 #### 4. Post-Patch Verification Requirement
 
@@ -607,7 +579,10 @@ Android 13–17 and OEM updates can move methods/registers, so follow the equiva
 
 ## Rebuild and ROM integration
 
-1. Assemble each modified smali tree back into its matching DEX, for example `smali a work/framework/smali_classes2 -o work/framework/output/classes2.dex` (create the output directory first).
+Use the pinned toolchain in the [sample report](Sample_Compatibility_2.0.6.0.md): smali/baksmali/dexlib2/util 3.0.8, JCommander 1.64. Full framework hidden-API flags require more than default API 15. With this tool, assemble input DEX 039 with API 29, input DEX 040 with API 34 to preserve stock format; API >=35 has a DEX 041 writer defect. Require a produced DEX with unchanged magic, re-disassemble and verify the full DEX; do not repair binary headers to conceal errors. Assembler API selects format/opcodes, not the ROM Android/SDK version.
+
+
+1. Assemble each modified smali tree back into its matching DEX, for an input DEX 039, for example `smali a --api 29 work/framework/smali_classes2 -o work/framework/output/classes2.dex` (create the output directory first).
 2. Replace only the corresponding `classes*.dex` entries in a copy of the target archive.
 3. Preserve all other archive contents.
 4. Verify the archive entries and replaced DEX files.

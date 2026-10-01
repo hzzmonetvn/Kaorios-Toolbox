@@ -184,6 +184,39 @@ class TestCheckFrameworkSamples(unittest.TestCase):
             (child / "ComputerEngine.smali").write_text(f".class public Ldifferent{index};")
         self.assertEqual("UNSUPPORTED_ANALYSIS", audit_computer_engine(root)["status"])
 
+    def test_refresh_wide_parameter_and_array_word_layout(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("sample_refresh_layout", SCRIPT_PATH.with_name("refresh-sample-compatibility.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        layout = module.method_layout(".method public f(J[DLjava/lang/String;D)V\n .registers 12\n return-void\n.end method")
+        self.assertEqual(7, layout['parameter_words'])
+        self.assertEqual({'p'+str(n):'v'+str(n+5) for n in range(7)}, layout['physical_parameters'])
+        self.assertEqual(1, layout['return_count'])
+        static = module.method_layout(".method public static f(JLjava/lang/String;)V\n .locals 2\n return-void\n.end method")
+        self.assertEqual(3, static['parameter_words'])
+        self.assertEqual('v2', static['physical_parameters']['p0'])
+
+    def test_refresh_archive_copy_preserves_every_untouched_entry(self):
+        import importlib.util, zipfile
+        spec = importlib.util.spec_from_file_location("sample_refresh_archive", SCRIPT_PATH.with_name("refresh-sample-compatibility.py"))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        root = Path(self.temp_dir)
+        source = root/'source.jar'
+        with zipfile.ZipFile(source,'w') as archive:
+            for name in ['classes.dex','classes2.dex','META-INF/MANIFEST.MF','res/data']:
+                archive.writestr(name, name.encode())
+        replacement = root/'rebuilt.dex'
+        replacement.write_bytes(b'changed dex')
+        result = module.rebuild_archive(source,root/'patched.jar',{'classes2.dex':replacement})
+        self.assertEqual('PATCHED_ARCHIVE_REBUILD_PASS',result['status'])
+        with zipfile.ZipFile(root/'patched.jar') as archive:
+            self.assertEqual(b'classes.dex',archive.read('classes.dex'))
+            self.assertEqual(b'changed dex',archive.read('classes2.dex'))
+            self.assertEqual(b'res/data',archive.read('res/data'))
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -562,6 +562,8 @@ def verify_target_content(filename: str, content: str) -> None:
         for f in fields_null:
             m = re.search(rf'\.field public static[^\n]* {f}:Ljava/lang/String;', content)
             if not m:
+                if f.endswith("_FOR_ATTESTATION") and not re.search(rf'\.field[^\n]* {f}:', content):
+                    continue  # These fields are absent in the included Android 13 sample.
                 raise ValueError(f"Build.smali post-patch: field {f} not found")
             if "final" in m.group(0):
                 raise ValueError(f"Build.smali post-patch: field {f} still has 'final' modifier — patch did not apply")
