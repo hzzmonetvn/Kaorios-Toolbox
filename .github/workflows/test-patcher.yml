@@ -10,6 +10,8 @@ on:
       - 'script/verify-*.py'
       - 'script/check-*.py'
       - 'script/refresh-sample-compatibility.py'
+      - 'script/validate*.py'
+      - 'Toolbox-data/Keybox.xml'
       - 'Toolbox-Update/scripts/**'
       - 'Toolbox-data/Pif-props.json'
       - 'Toolbox-data/app-props.json'
@@ -23,6 +25,8 @@ on:
       - 'script/verify-*.py'
       - 'script/check-*.py'
       - 'script/refresh-sample-compatibility.py'
+      - 'script/validate*.py'
+      - 'Toolbox-data/Keybox.xml'
       - 'Toolbox-Update/scripts/**'
       - 'Toolbox-data/Pif-props.json'
       - 'Toolbox-data/app-props.json'
@@ -45,10 +49,7 @@ jobs:
 
       - name: Syntax check all Python scripts
         run: |
-          python -m py_compile script/kaorios_patcher_a17.py script/refresh-sample-compatibility.py
-          for f in script/patch-*.py script/verify-*.py script/check-*.py; do
-            [ -f "$f" ] && python -m py_compile "$f"
-          done
+          python -m py_compile script/*.py
 
       - name: Syntax check shell scripts
         run: |
@@ -56,12 +57,15 @@ jobs:
             [ -f "$f" ] && bash -n "$f"
           done
 
-      - name: Validate Toolbox-data JSON
+      - name: Validate Toolbox-data assets
         run: |
           for f in Toolbox-data/*.json; do
             [ -f "$f" ] && python -m json.tool "$f" > /dev/null
           done
           python script/validate_toolbox_data.py Toolbox-data
+
+      - name: Run Keybox structural validation tests
+        run: python script/validate_keybox_test.py -v
 
       - name: Run PIF updater unit tests
         run: bash Toolbox-Update/scripts/update_pif_test.sh

@@ -119,3 +119,7 @@ Help us translate Kaorios-Toolbox into your language! 🌐
 - **Payload Dumper** — [rcmiku](https://github.com/rcmiku/Payload-Dumper-Compose).
 - **AOSP Framework**
 - **Trickystore**
+
+### Keybox validation
+
+Keybox Hub XML supports EC-only, RSA-only or both. Check structure locally with `python3 script/validate_keybox.py <Keybox.xml>`; cryptographic and device validation remain separate. See the guide in [English](Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0_VI.md).

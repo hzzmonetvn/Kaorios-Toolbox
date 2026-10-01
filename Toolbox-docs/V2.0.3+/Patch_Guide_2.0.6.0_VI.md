@@ -625,3 +625,7 @@ Generation là token `kaorios_time` của snapshot. Client so với epoch đã �
 Probe Settings không xác nhận package visibility hoặc installer hooks. Hide Features dùng master desired để cấu hình rule, hiển thị package hook **chưa kiểm chứng**; installer giữ cảnh báo cần verified ROM hooks riêng. Không cài package thử, đổi install source hoặc ghi HMA config để probe. Target thường đã cài nhưng stock installer null vẫn có thể trả `com.android.vending` theo rule caller; early null InstallSourceInfo và target không tồn tại giữ stock. Chỉ installing package field được lọc.
 
 Xem [sample evidence và checklist thiết bị](Sample_Compatibility_2.0.6.0.md). Settings và Installer roadmap vẫn PARTIAL / NEEDS_DEVICE_TEST.
+
+## Tải và nhập Keybox
+
+Xem [hướng dẫn Keybox](Keybox_Guide_2.0.6.0_VI.md) về XML Hub, hỗ trợ EC-only/RSA-only, mã lỗi an toàn và giữ bản tốt gần nhất. Layout hook certificate-chain đã kiểm chứng không chứng minh Keybox được cung cấp hợp lệ về crypto hay đã thử trên thiết bị.

@@ -5,6 +5,8 @@ import os
 import re
 import sys
 
+from validate_keybox import KeyboxError, validate_file
+
 STRING_FIELDS = {
     "MANUFACTURER",
     "MODEL",
@@ -156,6 +158,14 @@ def main() -> None:
     validate_pif_props(data_dir)
     validate_app_props(data_dir)
     validate_device_model(data_dir)
+    keybox = os.path.join(data_dir, "Keybox.xml")
+    if os.path.isfile(keybox):
+        try:
+            validate_file(keybox)
+        except (KeyboxError, OSError) as error:
+            code = str(error) if isinstance(error, KeyboxError) else "FILE_READ_ERROR"
+            print(f"ERROR Keybox.xml: {code}", file=sys.stderr)
+            sys.exit(1)
     print("Published Toolbox-data schema validation passed.")
 
 

@@ -623,3 +623,7 @@ Generation is the snapshot's `kaorios_time` token. The client compares it with t
 Settings probes do not verify package visibility or installer hooks. Hide Features uses master intent to configure rules and labels package hook status **not verified**; installer retains its separate verified-ROM-hook warning. No temporary package installation, install-source mutation or HMA config write is used to probe these domains. An installed non-system target with a null stock installer can still return `com.android.vending` under the caller rule; early null InstallSourceInfo and unknown targets retain stock behavior. Only the installing package field is filtered.
 
 See [sample evidence and the device checklist](Sample_Compatibility_2.0.6.0.md). Settings and Installer roadmaps remain PARTIAL / NEEDS_DEVICE_TEST.
+
+## Keybox download and import
+
+See the [Keybox guide](Keybox_Guide_2.0.6.0.md) for Hub XML, EC-only/RSA-only support, safe validation errors and last-known-good behavior. A verified certificate-chain hook layout does not prove the supplied Keybox is cryptographically valid or device-tested.
