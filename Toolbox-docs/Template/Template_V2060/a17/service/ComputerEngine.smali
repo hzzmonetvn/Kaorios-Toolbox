@@ -15652,11 +15652,20 @@
 .end method
 
 .method public getInstallSourceInfo(Ljava/lang/String;I)Landroid/content/pm/InstallSourceInfo;
-    .registers 14
+    .locals 19
+
     .param p1, "packageName"    # Ljava/lang/String;
     .param p2, "userId"    # I
 
     .line 5253
+    move-object/16 v11, p0
+    move-object/16 v12, p1
+    move/16 v13, p2
+    const/16 v14, 0x0
+    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
+    move-result v15
+    move-object/16 v17, v12
+    move/16 v16, v13
     invoke-static {}, Landroid/os/Binder;->getCallingUid()I
 
     move-result v1
@@ -15669,22 +15678,22 @@
 
     const/4 v3, 0x0
 
-    move-object v0, p0
+    move-object v0, v11
 
-    move v2, p2
+    move v2, v13
 
-    .end local p2    # "userId":I
+    .end local v13    # "userId":I
     .local v2, "userId":I
     invoke-virtual/range {v0 .. v5}, Lcom/android/server/pm/ComputerEngine;->enforceCrossUserPermission(IIZZLjava/lang/String;)V
 
     .line 5262
-    invoke-direct {p0, p1, v1, v2}, Lcom/android/server/pm/ComputerEngine;->getInstallSource(Ljava/lang/String;II)Lcom/android/server/pm/InstallSource;
+    invoke-direct {v11, v12, v1, v2}, Lcom/android/server/pm/ComputerEngine;->getInstallSource(Ljava/lang/String;II)Lcom/android/server/pm/InstallSource;
 
-    move-result-object p2
+    move-result-object v13
 
     .line 5263
-    .local p2, "installSource":Lcom/android/server/pm/InstallSource;
-    if-nez p2, :cond_15
+    .local v13, "installSource":Lcom/android/server/pm/InstallSource;
+    if-nez v13, :cond_15
 
     .line 5264
     const/4 v0, 0x0
@@ -15693,14 +15702,14 @@
 
     .line 5267
     :cond_15
-    iget-object v0, p2, Lcom/android/server/pm/InstallSource;->mInstallerPackageName:Ljava/lang/String;
+    iget-object v0, v13, Lcom/android/server/pm/InstallSource;->mInstallerPackageName:Ljava/lang/String;
 
     .line 5268
     .local v0, "installerPackageName":Ljava/lang/String;
     if-eqz v0, :cond_2a
 
     .line 5269
-    iget-object v3, p0, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
+    iget-object v3, v11, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
 
     invoke-virtual {v3, v0}, Lcom/android/server/pm/ComputerEngine$Settings;->getPackage(Ljava/lang/String;)Lcom/android/server/pm/pkg/PackageStateInternal;
 
@@ -15711,7 +15720,7 @@
     if-eqz v3, :cond_27
 
     .line 5271
-    invoke-virtual {p0, v3, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
+    invoke-virtual {v11, v3, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
 
     move-result v4
 
@@ -15733,7 +15742,7 @@
     .end local v0    # "installerPackageName":Ljava/lang/String;
     .local v8, "installerPackageName":Ljava/lang/String;
     :goto_2b
-    iget-object v0, p2, Lcom/android/server/pm/InstallSource;->mUpdateOwnerPackageName:Ljava/lang/String;
+    iget-object v0, v13, Lcom/android/server/pm/InstallSource;->mUpdateOwnerPackageName:Ljava/lang/String;
 
     .line 5277
     .local v0, "updateOwnerPackageName":Ljava/lang/String;
@@ -15744,7 +15753,7 @@
     if-eqz v0, :cond_58
 
     .line 5278
-    iget-object v5, p0, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
+    iget-object v5, v11, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
 
     invoke-virtual {v5, v0}, Lcom/android/server/pm/ComputerEngine$Settings;->getPackage(Ljava/lang/String;)Lcom/android/server/pm/pkg/PackageStateInternal;
 
@@ -15757,7 +15766,7 @@
     if-eq v1, v6, :cond_44
 
     .line 5280
-    invoke-virtual {p0, v0, v1}, Lcom/android/server/pm/ComputerEngine;->isCallerSameApp(Ljava/lang/String;I)Z
+    invoke-virtual {v11, v0, v1}, Lcom/android/server/pm/ComputerEngine;->isCallerSameApp(Ljava/lang/String;I)Z
 
     move-result v6
 
@@ -15780,7 +15789,7 @@
     if-eqz v5, :cond_55
 
     .line 5286
-    invoke-virtual {p0, v5, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
+    invoke-virtual {v11, v5, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
 
     move-result v7
 
@@ -15789,7 +15798,7 @@
     if-nez v6, :cond_58
 
     .line 5287
-    invoke-direct {p0, v2}, Lcom/android/server/pm/ComputerEngine;->isCallerFromManagedUserOrProfile(I)Z
+    invoke-direct {v11, v2}, Lcom/android/server/pm/ComputerEngine;->isCallerFromManagedUserOrProfile(I)Z
 
     move-result v7
 
@@ -15812,12 +15821,12 @@
     .end local v0    # "updateOwnerPackageName":Ljava/lang/String;
     .local v9, "updateOwnerPackageName":Ljava/lang/String;
     :goto_59
-    iget-boolean v0, p2, Lcom/android/server/pm/InstallSource;->mIsInitiatingPackageUninstalled:Z
+    iget-boolean v0, v13, Lcom/android/server/pm/InstallSource;->mIsInitiatingPackageUninstalled:Z
 
     if-eqz v0, :cond_72
 
     .line 5297
-    invoke-virtual {p0, v1}, Lcom/android/server/pm/ComputerEngine;->getInstantAppPackageName(I)Ljava/lang/String;
+    invoke-virtual {v11, v1}, Lcom/android/server/pm/ComputerEngine;->getInstantAppPackageName(I)Ljava/lang/String;
 
     move-result-object v0
 
@@ -15830,14 +15839,14 @@
     :cond_64
     if-nez v3, :cond_6f
 
-    invoke-virtual {p0, p1, v1}, Lcom/android/server/pm/ComputerEngine;->isCallerSameApp(Ljava/lang/String;I)Z
+    invoke-virtual {v11, v12, v1}, Lcom/android/server/pm/ComputerEngine;->isCallerSameApp(Ljava/lang/String;I)Z
 
     move-result v0
 
     if-eqz v0, :cond_6f
 
     .line 5299
-    iget-object v0, p2, Lcom/android/server/pm/InstallSource;->mInitiatingPackageName:Ljava/lang/String;
+    iget-object v0, v13, Lcom/android/server/pm/InstallSource;->mInitiatingPackageName:Ljava/lang/String;
 
     .local v0, "initiatingPackageName":Ljava/lang/String;
     goto :goto_70
@@ -15858,9 +15867,9 @@
     .line 5304
     .end local v0    # "initiatingPackageName":Ljava/lang/String;
     :cond_72
-    iget-object v0, p2, Lcom/android/server/pm/InstallSource;->mInitiatingPackageName:Ljava/lang/String;
+    iget-object v0, v13, Lcom/android/server/pm/InstallSource;->mInitiatingPackageName:Ljava/lang/String;
 
-    iget-object v3, p2, Lcom/android/server/pm/InstallSource;->mInstallerPackageName:Ljava/lang/String;
+    iget-object v3, v13, Lcom/android/server/pm/InstallSource;->mInstallerPackageName:Ljava/lang/String;
 
     invoke-static {v0, v3}, Ljava/util/Objects;->equals(Ljava/lang/Object;Ljava/lang/Object;)Z
 
@@ -15879,11 +15888,11 @@
     .line 5310
     .end local v0    # "initiatingPackageName":Ljava/lang/String;
     :cond_7f
-    iget-object v0, p2, Lcom/android/server/pm/InstallSource;->mInitiatingPackageName:Ljava/lang/String;
+    iget-object v0, v13, Lcom/android/server/pm/InstallSource;->mInitiatingPackageName:Ljava/lang/String;
 
     .line 5311
     .restart local v0    # "initiatingPackageName":Ljava/lang/String;
-    iget-object v3, p0, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
+    iget-object v3, v11, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
 
     invoke-virtual {v3, v0}, Lcom/android/server/pm/ComputerEngine$Settings;->getPackage(Ljava/lang/String;)Lcom/android/server/pm/pkg/PackageStateInternal;
 
@@ -15894,7 +15903,7 @@
     if-eqz v3, :cond_92
 
     .line 5313
-    invoke-virtual {p0, v3, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
+    invoke-virtual {v11, v3, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
 
     move-result v4
 
@@ -15919,14 +15928,14 @@
     .end local v3    # "ps":Lcom/android/server/pm/pkg/PackageStateInternal;
     .local v5, "initiatingPackageName":Ljava/lang/String;
     :goto_94
-    iget-object v0, p2, Lcom/android/server/pm/InstallSource;->mOriginatingPackageName:Ljava/lang/String;
+    iget-object v0, v13, Lcom/android/server/pm/InstallSource;->mOriginatingPackageName:Ljava/lang/String;
 
     .line 5320
     .local v0, "originatingPackageName":Ljava/lang/String;
     if-eqz v0, :cond_a7
 
     .line 5321
-    iget-object v3, p0, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
+    iget-object v3, v11, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
 
     invoke-virtual {v3, v0}, Lcom/android/server/pm/ComputerEngine$Settings;->getPackage(Ljava/lang/String;)Lcom/android/server/pm/pkg/PackageStateInternal;
 
@@ -15937,7 +15946,7 @@
     if-eqz v3, :cond_a6
 
     .line 5323
-    invoke-virtual {p0, v3, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
+    invoke-virtual {v11, v3, v1, v2}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalled(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
 
     move-result v4
 
@@ -15952,7 +15961,7 @@
     :cond_a7
     if-eqz v0, :cond_b6
 
-    iget-object v3, p0, Lcom/android/server/pm/ComputerEngine;->mContext:Landroid/content/Context;
+    iget-object v3, v11, Lcom/android/server/pm/ComputerEngine;->mContext:Landroid/content/Context;
 
     const-string v4, "android.permission.INSTALL_PACKAGES"
 
@@ -15976,7 +15985,7 @@
     .end local v0    # "originatingPackageName":Ljava/lang/String;
     .local v7, "originatingPackageName":Ljava/lang/String;
     :goto_b7
-    iget-object v0, p2, Lcom/android/server/pm/InstallSource;->mInitiatingPackageSignatures:Lcom/android/server/pm/PackageSignatures;
+    iget-object v0, v13, Lcom/android/server/pm/InstallSource;->mInitiatingPackageSignatures:Lcom/android/server/pm/PackageSignatures;
 
     .line 5340
     .local v0, "signatures":Lcom/android/server/pm/PackageSignatures;
@@ -16014,8 +16023,11 @@
     :goto_ce
     new-instance v4, Landroid/content/pm/InstallSourceInfo;
 
-    iget v10, p2, Lcom/android/server/pm/InstallSource;->mPackageSource:I
+    iget v10, v13, Lcom/android/server/pm/InstallSource;->mPackageSource:I
 
+    move-object/16 v18, v8
+    invoke-static/range {v14 .. v18}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v8
     invoke-direct/range {v4 .. v10}, Landroid/content/pm/InstallSourceInfo;-><init>(Ljava/lang/String;Landroid/content/pm/SigningInfo;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V
 
     return-object v4
@@ -16802,24 +16814,33 @@
 .end method
 
 .method public getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;
-    .registers 9
+    .locals 13
+
     .param p1, "packageName"    # Ljava/lang/String;
     .param p2, "userId"    # I
 
     .line 5215
+    move-object/16 v5, p0
+    move-object/16 v6, p1
+    move/16 v7, p2
+    const/16 v8, 0x0
+    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
+    move-result v9
+    move-object/16 v11, v6
+    move/16 v10, v7
     invoke-static {}, Landroid/os/Binder;->getCallingUid()I
 
     move-result v0
 
     .line 5216
     .local v0, "callingUid":I
-    invoke-direct {p0, p1, v0, p2}, Lcom/android/server/pm/ComputerEngine;->getInstallSource(Ljava/lang/String;II)Lcom/android/server/pm/InstallSource;
+    invoke-direct {v5, v6, v0, v7}, Lcom/android/server/pm/ComputerEngine;->getInstallSource(Ljava/lang/String;II)Lcom/android/server/pm/InstallSource;
 
     move-result-object v1
 
     .line 5217
     .local v1, "installSource":Lcom/android/server/pm/InstallSource;
-    if-eqz v1, :cond_27
+    if-eqz v1, :cond_22
 
     .line 5220
     iget-object v2, v1, Lcom/android/server/pm/InstallSource;->mInstallerPackageName:Ljava/lang/String;
@@ -16829,7 +16850,7 @@
     if-eqz v2, :cond_21
 
     .line 5222
-    iget-object v3, p0, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
+    iget-object v3, v5, Lcom/android/server/pm/ComputerEngine;->mSettings:Lcom/android/server/pm/ComputerEngine$Settings;
 
     invoke-virtual {v3, v2}, Lcom/android/server/pm/ComputerEngine$Settings;->getPackage(Ljava/lang/String;)Lcom/android/server/pm/pkg/PackageStateInternal;
 
@@ -16845,7 +16866,7 @@
     move-result v4
 
     .line 5223
-    invoke-virtual {p0, v3, v0, v4}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalledNotArchived(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
+    invoke-virtual {v5, v3, v0, v4}, Lcom/android/server/pm/ComputerEngine;->shouldFilterApplicationIncludingUninstalledNotArchived(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z
 
     move-result v4
 
@@ -16858,21 +16879,14 @@
     .line 5228
     .end local v3    # "ps":Lcom/android/server/pm/pkg/PackageStateInternal;
     :cond_21
-    :try_start_21
-    const/4 v5, 0x0
-
-    invoke-static {v5, v0, p2, p1, v2}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-
+    move-object/16 v12, v2
+    invoke-static/range {v8 .. v12}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
     move-result-object v2
-    :try_end_26
-    .catch Ljava/lang/Throwable; {:try_start_21 .. :try_end_26} :catch_27
-
     return-object v2
 
     .line 5218
     .end local v2    # "installerPackageName":Ljava/lang/String;
-    :catch_27
-    :cond_27
+    :cond_22
     new-instance v2, Ljava/lang/IllegalArgumentException;
 
     new-instance v3, Ljava/lang/StringBuilder;
@@ -16885,7 +16899,7 @@
 
     move-result-object v3
 
-    invoke-virtual {v3, p1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v3, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 
     move-result-object v3
 
@@ -29011,7 +29025,7 @@
 .end method
 
 .method public final shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z
-    .registers 17
+    .locals 10
     .param p1, "ps"    # Lcom/android/server/pm/pkg/PackageStateInternal;
     .param p2, "callingUid"    # I
     .param p3, "component"    # Landroid/content/ComponentName;
@@ -29019,6 +29033,16 @@
     .param p5, "userId"    # I
     .param p6, "filterUninstall"    # Z
     .param p7, "filterArchived"    # Z
+    if-eqz p1, :cond_kaorios_ps_null
+    invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
+    move-result-object v9
+    if-eqz v9, :cond_kaorios_ps_null
+    invoke-static {p2, v9, p5}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
+    move-result v9
+    if-eqz v9, :cond_kaorios_ps_null
+    const/4 v9, 0x1
+    return v9
+    :cond_kaorios_ps_null
 
     .line 2592
     move v5, p5

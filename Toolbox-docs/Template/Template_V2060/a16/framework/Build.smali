@@ -17,21 +17,21 @@
 
 
 # static fields
-.field public static final whitelist BACKPORTED_FIX_STATUS_FIXED:I = 0x1
+.field public static final blacklist BACKPORTED_FIX_STATUS_FIXED:I = 0x1
 
-.field public static final whitelist BACKPORTED_FIX_STATUS_NOT_APPLICABLE:I = 0x2
+.field public static final blacklist BACKPORTED_FIX_STATUS_NOT_APPLICABLE:I = 0x2
 
-.field public static final whitelist BACKPORTED_FIX_STATUS_NOT_FIXED:I = 0x3
+.field public static final blacklist BACKPORTED_FIX_STATUS_NOT_FIXED:I = 0x3
 
-.field public static final whitelist BACKPORTED_FIX_STATUS_UNKNOWN:I = 0x0
+.field public static final blacklist BACKPORTED_FIX_STATUS_UNKNOWN:I = 0x0
 
 .field public static final whitelist BOARD:Ljava/lang/String;
 
 .field public static final whitelist BOOTLOADER:Ljava/lang/String;
 
-.field public static whitelist BRAND:Ljava/lang/String; = null
+.field public static final whitelist BRAND:Ljava/lang/String;
 
-.field public static blacklist BRAND_FOR_ATTESTATION:Ljava/lang/String; = null
+.field public static final blacklist BRAND_FOR_ATTESTATION:Ljava/lang/String;
 
 .field public static final whitelist CPU_ABI:Ljava/lang/String;
     .annotation runtime Ljava/lang/Deprecated;
@@ -43,15 +43,15 @@
     .end annotation
 .end field
 
-.field public static whitelist DEVICE:Ljava/lang/String; = null
+.field public static final whitelist DEVICE:Ljava/lang/String;
 
-.field public static blacklist DEVICE_FOR_ATTESTATION:Ljava/lang/String; = null
+.field public static final blacklist DEVICE_FOR_ATTESTATION:Ljava/lang/String;
 
 .field public static final whitelist DISPLAY:Ljava/lang/String;
 
-.field public static whitelist FINGERPRINT:Ljava/lang/String; = null
+.field public static final whitelist FINGERPRINT:Ljava/lang/String;
 
-.field public static whitelist HARDWARE:Ljava/lang/String; = null
+.field public static final whitelist HARDWARE:Ljava/lang/String;
 
 .field public static final whitelist HOST:Ljava/lang/String;
 
@@ -61,7 +61,7 @@
 
 .field public static final blacklist HW_TIMEOUT_MULTIPLIER:I
 
-.field public static whitelist ID:Ljava/lang/String; = null
+.field public static final whitelist ID:Ljava/lang/String;
 
 .field public static final blacklist IS_ARC:Z
 
@@ -79,21 +79,23 @@
 
 .field public static final blacklist IS_TIMINGTRACE:Z
 
+.field public static final greylist-max-o IS_TREBLE_ENABLED:Z
+
 .field public static final greylist-max-o IS_USER:Z
 
 .field public static final greylist-max-o IS_USERDEBUG:Z
 
-.field public static whitelist MANUFACTURER:Ljava/lang/String; = null
+.field public static final whitelist MANUFACTURER:Ljava/lang/String;
 
-.field public static blacklist MANUFACTURER_FOR_ATTESTATION:Ljava/lang/String; = null
+.field public static final blacklist MANUFACTURER_FOR_ATTESTATION:Ljava/lang/String;
 
 .field public static final blacklist MI_FAKE_32BIT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
 .field public static final blacklist MI_FAKE_32BIT_SUPPORTED_ABIS:[Ljava/lang/String;
 
-.field public static whitelist MODEL:Ljava/lang/String; = null
+.field public static final whitelist MODEL:Ljava/lang/String;
 
-.field public static blacklist MODEL_FOR_ATTESTATION:Ljava/lang/String; = null
+.field public static final blacklist MODEL_FOR_ATTESTATION:Ljava/lang/String;
 
 .field public static final blacklist MTK_HBT_ON_64BIT_ONLY_CHIP:Z
 
@@ -110,9 +112,9 @@
     .end annotation
 .end field
 
-.field public static whitelist PRODUCT:Ljava/lang/String; = null
+.field public static final whitelist PRODUCT:Ljava/lang/String;
 
-.field public static blacklist PRODUCT_FOR_ATTESTATION:Ljava/lang/String; = null
+.field public static final blacklist PRODUCT_FOR_ATTESTATION:Ljava/lang/String;
 
 .field public static final whitelist RADIO:Ljava/lang/String;
     .annotation runtime Ljava/lang/Deprecated;
@@ -130,10 +132,6 @@
 
 .field public static final whitelist SOC_MODEL:Ljava/lang/String;
 
-.field public static final whitelist STRONGBOX_MANUFACTURER:Ljava/lang/String;
-
-.field public static final whitelist STRONGBOX_MODEL:Ljava/lang/String;
-
 .field public static final whitelist SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
 .field public static final whitelist SUPPORTED_64_BIT_ABIS:[Ljava/lang/String;
@@ -142,17 +140,15 @@
 
 .field private static final greylist-max-o TAG:Ljava/lang/String; = "Build"
 
-.field public static whitelist TAGS:Ljava/lang/String; = null
+.field public static final whitelist TAGS:Ljava/lang/String;
 
-.field public static whitelist TIME:J = 0x0L
+.field public static final whitelist TIME:J
 
-.field public static whitelist TYPE:Ljava/lang/String; = null
+.field public static final whitelist TYPE:Ljava/lang/String;
 
 .field public static final whitelist UNKNOWN:Ljava/lang/String; = "unknown"
 
-.field public static whitelist USER:Ljava/lang/String; = null
-
-.field public static final blacklist VBMETA_PUBLIC_KEY_DIGEST:Ljava/lang/String;
+.field public static final whitelist USER:Ljava/lang/String;
 
 .field public static final blacklist VENDOR_API_2024_Q2:I = 0x316a4
 
@@ -181,7 +177,7 @@
 .method static constructor blacklist <clinit>()V
     .registers 7
 
-    .line 71
+    .line 72
     const-string/jumbo v0, "ro.build.id"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -190,7 +186,7 @@
 
     sput-object v0, Landroid/os/Build;->ID:Ljava/lang/String;
 
-    .line 74
+    .line 75
     const-string/jumbo v0, "ro.build.display.id"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -199,7 +195,7 @@
 
     sput-object v0, Landroid/os/Build;->DISPLAY:Ljava/lang/String;
 
-    .line 77
+    .line 78
     const-string/jumbo v0, "ro.product.name"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -208,7 +204,7 @@
 
     sput-object v0, Landroid/os/Build;->PRODUCT:Ljava/lang/String;
 
-    .line 87
+    .line 88
     const-string/jumbo v0, "name"
 
     invoke-static {v0}, Landroid/os/Build;->getVendorDeviceIdProperty(Ljava/lang/String;)Ljava/lang/String;
@@ -217,7 +213,7 @@
 
     sput-object v0, Landroid/os/Build;->PRODUCT_FOR_ATTESTATION:Ljava/lang/String;
 
-    .line 90
+    .line 91
     const-string/jumbo v0, "ro.product.device"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -226,10 +222,10 @@
 
     sput-object v0, Landroid/os/Build;->DEVICE:Ljava/lang/String;
 
-    .line 100
+    .line 101
     nop
 
-    .line 101
+    .line 102
     const-string v0, "device"
 
     invoke-static {v0}, Landroid/os/Build;->getVendorDeviceIdProperty(Ljava/lang/String;)Ljava/lang/String;
@@ -238,7 +234,7 @@
 
     sput-object v0, Landroid/os/Build;->DEVICE_FOR_ATTESTATION:Ljava/lang/String;
 
-    .line 104
+    .line 105
     const-string/jumbo v0, "ro.product.board"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -247,7 +243,7 @@
 
     sput-object v0, Landroid/os/Build;->BOARD:Ljava/lang/String;
 
-    .line 123
+    .line 124
     const-string/jumbo v0, "ro.product.manufacturer"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -256,10 +252,10 @@
 
     sput-object v0, Landroid/os/Build;->MANUFACTURER:Ljava/lang/String;
 
-    .line 133
+    .line 134
     nop
 
-    .line 134
+    .line 135
     const-string/jumbo v0, "manufacturer"
 
     invoke-static {v0}, Landroid/os/Build;->getVendorDeviceIdProperty(Ljava/lang/String;)Ljava/lang/String;
@@ -268,7 +264,7 @@
 
     sput-object v0, Landroid/os/Build;->MANUFACTURER_FOR_ATTESTATION:Ljava/lang/String;
 
-    .line 137
+    .line 138
     const-string/jumbo v0, "ro.product.brand"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -277,7 +273,7 @@
 
     sput-object v0, Landroid/os/Build;->BRAND:Ljava/lang/String;
 
-    .line 147
+    .line 148
     const-string v0, "brand"
 
     invoke-static {v0}, Landroid/os/Build;->getVendorDeviceIdProperty(Ljava/lang/String;)Ljava/lang/String;
@@ -286,7 +282,7 @@
 
     sput-object v0, Landroid/os/Build;->BRAND_FOR_ATTESTATION:Ljava/lang/String;
 
-    .line 150
+    .line 151
     const-string/jumbo v0, "ro.product.model"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -295,7 +291,7 @@
 
     sput-object v0, Landroid/os/Build;->MODEL:Ljava/lang/String;
 
-    .line 160
+    .line 161
     const-string/jumbo v0, "model"
 
     invoke-static {v0}, Landroid/os/Build;->getVendorDeviceIdProperty(Ljava/lang/String;)Ljava/lang/String;
@@ -304,7 +300,7 @@
 
     sput-object v0, Landroid/os/Build;->MODEL_FOR_ATTESTATION:Ljava/lang/String;
 
-    .line 164
+    .line 165
     invoke-static {}, Landroid/sysprop/SocProperties;->soc_manufacturer()Ljava/util/Optional;
 
     move-result-object v0
@@ -319,7 +315,7 @@
 
     sput-object v0, Landroid/os/Build;->SOC_MANUFACTURER:Ljava/lang/String;
 
-    .line 168
+    .line 169
     invoke-static {}, Landroid/sysprop/SocProperties;->soc_model()Ljava/util/Optional;
 
     move-result-object v0
@@ -332,33 +328,7 @@
 
     sput-object v0, Landroid/os/Build;->SOC_MODEL:Ljava/lang/String;
 
-    .line 176
-    nop
-
-    .line 177
-    const-string/jumbo v0, "ro.strongbox.manufacturer"
-
-    const-string/jumbo v2, "unsupported"
-
-    invoke-static {v0, v2}, Landroid/os/SystemProperties;->get(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-
-    move-result-object v0
-
-    sput-object v0, Landroid/os/Build;->STRONGBOX_MANUFACTURER:Ljava/lang/String;
-
-    .line 185
-    nop
-
-    .line 186
-    const-string/jumbo v0, "ro.strongbox.model"
-
-    invoke-static {v0, v2}, Landroid/os/SystemProperties;->get(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-
-    move-result-object v0
-
-    sput-object v0, Landroid/os/Build;->STRONGBOX_MODEL:Ljava/lang/String;
-
-    .line 189
+    .line 172
     const-string/jumbo v0, "ro.bootloader"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -367,31 +337,19 @@
 
     sput-object v0, Landroid/os/Build;->BOOTLOADER:Ljava/lang/String;
 
-    .line 202
-    nop
-
-    .line 203
-    const-string/jumbo v0, "ro.boot.vbmeta.public_key_digest"
-
-    invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
-
-    move-result-object v0
-
-    sput-object v0, Landroid/os/Build;->VBMETA_PUBLIC_KEY_DIGEST:Ljava/lang/String;
-
-    .line 215
+    .line 184
     invoke-static {}, Landroid/sysprop/TelephonyProperties;->baseband_version()Ljava/util/List;
 
     move-result-object v0
 
-    .line 214
+    .line 183
     invoke-static {v0, v1}, Landroid/os/Build;->joinListOrElse(Ljava/util/List;Ljava/lang/String;)Ljava/lang/String;
 
     move-result-object v0
 
     sput-object v0, Landroid/os/Build;->RADIO:Ljava/lang/String;
 
-    .line 218
+    .line 187
     const-string/jumbo v0, "ro.hardware"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -400,7 +358,7 @@
 
     sput-object v0, Landroid/os/Build;->HARDWARE:Ljava/lang/String;
 
-    .line 228
+    .line 197
     const-string/jumbo v0, "ro.boot.hardware.sku"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -409,7 +367,7 @@
 
     sput-object v0, Landroid/os/Build;->SKU:Ljava/lang/String;
 
-    .line 241
+    .line 210
     const-string/jumbo v0, "ro.boot.product.hardware.sku"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -418,7 +376,7 @@
 
     sput-object v0, Landroid/os/Build;->ODM_SKU:Ljava/lang/String;
 
-    .line 249
+    .line 218
     const-string/jumbo v0, "ro.boot.qemu"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -433,7 +391,7 @@
 
     sput-boolean v0, Landroid/os/Build;->IS_EMULATOR:Z
 
-    .line 257
+    .line 226
     const-string/jumbo v0, "ro.miui.ui.version.code"
 
     invoke-static {v0}, Landroid/os/Build;->getLong(Ljava/lang/String;)J
@@ -448,19 +406,19 @@
 
     const/4 v2, 0x1
 
-    if-lez v0, :cond_ff
+    if-lez v0, :cond_de
 
     move v0, v2
 
-    goto :goto_100
+    goto :goto_df
 
-    :cond_ff
+    :cond_de
     move v0, v1
 
-    :goto_100
+    :goto_df
     sput-boolean v0, Landroid/os/Build;->IS_MIUI:Z
 
-    .line 270
+    .line 239
     const-string/jumbo v0, "no.such.thing"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -469,12 +427,12 @@
 
     sput-object v0, Landroid/os/Build;->SERIAL:Ljava/lang/String;
 
-    .line 331
+    .line 300
     sget-boolean v0, Lcom/mediatek/internal/os/PolicySelector;->MTK_HBT_ON_64BIT_ONLY_CHIP:Z
 
     sput-boolean v0, Landroid/os/Build;->MTK_HBT_ON_64BIT_ONLY_CHIP:Z
 
-    .line 340
+    .line 309
     const-string/jumbo v0, "ro.product.cpu.abilist"
 
     const-string v3, ","
@@ -485,31 +443,31 @@
 
     sput-object v0, Landroid/os/Build;->SUPPORTED_ABIS:[Ljava/lang/String;
 
-    .line 346
+    .line 315
     sget-boolean v0, Landroid/os/Build;->MTK_HBT_ON_64BIT_ONLY_CHIP:Z
 
     const-string/jumbo v4, "ro.system.product.cpu.abilist"
 
-    if-eqz v0, :cond_126
+    if-eqz v0, :cond_105
 
-    .line 347
+    .line 316
     invoke-static {v4, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
 
     move-result-object v0
 
-    goto :goto_128
+    goto :goto_107
 
-    .line 348
-    :cond_126
+    .line 317
+    :cond_105
     sget-object v0, Landroid/os/Build;->SUPPORTED_ABIS:[Ljava/lang/String;
 
-    :goto_128
+    :goto_107
     sput-object v0, Landroid/os/Build;->MTK_HBT_SUPPORTED_ABIS:[Ljava/lang/String;
 
-    .line 356
+    .line 325
     nop
 
-    .line 357
+    .line 326
     const-string/jumbo v0, "ro.product.cpu.abilist32"
 
     invoke-static {v0, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
@@ -518,38 +476,38 @@
 
     sput-object v0, Landroid/os/Build;->SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
-    .line 363
+    .line 332
     sget-boolean v0, Landroid/os/Build;->MTK_HBT_ON_64BIT_ONLY_CHIP:Z
 
     const-string/jumbo v5, "ro.system.product.cpu.abilist32"
 
-    if-eqz v0, :cond_140
+    if-eqz v0, :cond_11f
 
-    .line 364
+    .line 333
     invoke-static {v5, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
 
     move-result-object v0
 
-    goto :goto_142
+    goto :goto_121
 
-    .line 365
-    :cond_140
+    .line 334
+    :cond_11f
     sget-object v0, Landroid/os/Build;->SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
-    :goto_142
+    :goto_121
     sput-object v0, Landroid/os/Build;->MTK_HBT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
-    .line 372
+    .line 341
     invoke-static {}, Lcom/mediatek/internal/os/ZygoteConfigExt;->isApp32BoostEnabled()Z
 
     move-result v0
 
     sput-boolean v0, Landroid/os/Build;->MTK_HBT_SUPPORT:Z
 
-    .line 381
+    .line 350
     nop
 
-    .line 382
+    .line 351
     const-string/jumbo v0, "ro.product.cpu.abilist64"
 
     invoke-static {v0, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
@@ -558,27 +516,27 @@
 
     sput-object v0, Landroid/os/Build;->SUPPORTED_64_BIT_ABIS:[Ljava/lang/String;
 
-    .line 395
+    .line 364
     invoke-static {v4, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
 
     move-result-object v0
 
     sput-object v0, Landroid/os/Build;->MI_FAKE_32BIT_SUPPORTED_ABIS:[Ljava/lang/String;
 
-    .line 401
+    .line 370
     nop
 
-    .line 402
+    .line 371
     invoke-static {v5, v3}, Landroid/os/Build;->getStringList(Ljava/lang/String;Ljava/lang/String;)[Ljava/lang/String;
 
     move-result-object v0
 
     sput-object v0, Landroid/os/Build;->MI_FAKE_32BIT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
-    .line 408
+    .line 377
     nop
 
-    .line 409
+    .line 378
     const-string/jumbo v0, "ro.vendor.mi_fake_32bit_support"
 
     invoke-static {v0, v1}, Landroid/os/SystemProperties;->getBoolean(Ljava/lang/String;Z)Z
@@ -587,84 +545,84 @@
 
     sput-boolean v0, Landroid/os/Build;->IS_SUPPORT_MI_FAKE_32BIT:Z
 
-    .line 419
+    .line 388
     invoke-static {}, Landroid/os/Process;->is64Bit()Z
 
     move-result v0
 
-    if-eqz v0, :cond_174
+    if-eqz v0, :cond_153
 
-    .line 420
+    .line 389
     sget-object v0, Landroid/os/Build;->SUPPORTED_64_BIT_ABIS:[Ljava/lang/String;
 
     .local v0, "abiList":[Ljava/lang/String;
-    goto :goto_18a
+    goto :goto_169
 
-    .line 423
+    .line 392
     .end local v0    # "abiList":[Ljava/lang/String;
-    :cond_174
-    invoke-static {}, Lcom/android/internal/hidden_from_bootclasspath/xiaomi/platform/flags/Flags;->mtkEnabled()Z
+    :cond_153
+    invoke-static {}, Lxiaomi/platform/flags/Flags;->mtkEnabled()Z
 
     move-result v0
 
-    if-eqz v0, :cond_181
+    if-eqz v0, :cond_160
 
     sget-boolean v0, Landroid/os/Build;->MTK_HBT_ON_64BIT_ONLY_CHIP:Z
 
-    if-eqz v0, :cond_181
+    if-eqz v0, :cond_160
 
-    .line 424
+    .line 393
     sget-object v0, Landroid/os/Build;->MTK_HBT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
     .restart local v0    # "abiList":[Ljava/lang/String;
-    goto :goto_18a
+    goto :goto_169
 
-    .line 425
+    .line 394
     .end local v0    # "abiList":[Ljava/lang/String;
-    :cond_181
+    :cond_160
     sget-boolean v0, Landroid/os/Build;->IS_SUPPORT_MI_FAKE_32BIT:Z
 
-    if-eqz v0, :cond_188
+    if-eqz v0, :cond_167
 
-    .line 426
+    .line 395
     sget-object v0, Landroid/os/Build;->MI_FAKE_32BIT_SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
     .restart local v0    # "abiList":[Ljava/lang/String;
-    goto :goto_18a
+    goto :goto_169
 
-    .line 428
+    .line 397
     .end local v0    # "abiList":[Ljava/lang/String;
-    :cond_188
+    :cond_167
     sget-object v0, Landroid/os/Build;->SUPPORTED_32_BIT_ABIS:[Ljava/lang/String;
 
-    .line 433
+    .line 402
     .restart local v0    # "abiList":[Ljava/lang/String;
-    :goto_18a
+    :goto_169
     aget-object v3, v0, v1
 
     sput-object v3, Landroid/os/Build;->CPU_ABI:Ljava/lang/String;
 
-    .line 434
+    .line 403
     array-length v3, v0
 
-    if-le v3, v2, :cond_196
+    if-le v3, v2, :cond_175
 
-    .line 435
+    .line 404
     aget-object v3, v0, v2
 
     sput-object v3, Landroid/os/Build;->CPU_ABI2:Ljava/lang/String;
 
-    goto :goto_19a
+    goto :goto_179
 
-    .line 437
-    :cond_196
+    .line 406
+    :cond_175
     const-string v3, ""
 
     sput-object v3, Landroid/os/Build;->CPU_ABI2:Ljava/lang/String;
 
-    .line 1722
+    .line 1699
     .end local v0    # "abiList":[Ljava/lang/String;
-    :goto_19a
+    :goto_179
     const-string/jumbo v0, "ro.build.type"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -673,7 +631,7 @@
 
     sput-object v0, Landroid/os/Build;->TYPE:Ljava/lang/String;
 
-    .line 1725
+    .line 1702
     const-string/jumbo v0, "ro.build.tags"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -682,17 +640,17 @@
 
     sput-object v0, Landroid/os/Build;->TAGS:Ljava/lang/String;
 
-    .line 1728
+    .line 1705
     invoke-static {}, Landroid/os/Build;->deriveFingerprint()Ljava/lang/String;
 
     move-result-object v0
 
     sput-object v0, Landroid/os/Build;->FINGERPRINT:Ljava/lang/String;
 
-    .line 1847
+    .line 1824
     nop
 
-    .line 1848
+    .line 1825
     const-string/jumbo v0, "ro.hw_low_multiplier"
 
     invoke-static {v0, v2}, Landroid/os/SystemProperties;->getInt(Ljava/lang/String;I)I
@@ -701,10 +659,10 @@
 
     sput v0, Landroid/os/Build;->HW_LOW_MULTIPLIER:I
 
-    .line 1858
+    .line 1835
     nop
 
-    .line 1859
+    .line 1836
     const-string/jumbo v0, "ro.hw_medium_multiplier"
 
     invoke-static {v0, v2}, Landroid/os/SystemProperties;->getInt(Ljava/lang/String;I)I
@@ -713,10 +671,10 @@
 
     sput v0, Landroid/os/Build;->HW_MIDDLE_TIMEOUT_MULTIPLIER:I
 
-    .line 1871
+    .line 1848
     nop
 
-    .line 1872
+    .line 1849
     const-string/jumbo v0, "ro.hw_timeout_multiplier"
 
     invoke-static {v0, v2}, Landroid/os/SystemProperties;->getInt(Ljava/lang/String;I)I
@@ -725,7 +683,19 @@
 
     sput v0, Landroid/os/Build;->HW_TIMEOUT_MULTIPLIER:I
 
-    .line 1994
+    .line 1856
+    nop
+
+    .line 1857
+    const-string/jumbo v0, "ro.treble.enabled"
+
+    invoke-static {v0, v1}, Landroid/os/SystemProperties;->getBoolean(Ljava/lang/String;Z)Z
+
+    move-result v0
+
+    sput-boolean v0, Landroid/os/Build;->IS_TREBLE_ENABLED:Z
+
+    .line 2032
     const-string/jumbo v0, "ro.build.date.utc"
 
     invoke-static {v0}, Landroid/os/Build;->getLong(Ljava/lang/String;)J
@@ -738,7 +708,7 @@
 
     sput-wide v3, Landroid/os/Build;->TIME:J
 
-    .line 1995
+    .line 2033
     const-string/jumbo v0, "ro.build.user"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -747,7 +717,7 @@
 
     sput-object v0, Landroid/os/Build;->USER:Ljava/lang/String;
 
-    .line 1996
+    .line 2034
     const-string/jumbo v0, "ro.build.host"
 
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -756,51 +726,51 @@
 
     sput-object v0, Landroid/os/Build;->HOST:Ljava/lang/String;
 
-    .line 2007
+    .line 2045
     nop
 
-    .line 2008
+    .line 2046
     const-string/jumbo v0, "ro.debuggable"
 
     invoke-static {v0, v1}, Landroid/os/SystemProperties;->getInt(Ljava/lang/String;I)I
 
     move-result v0
 
-    if-ne v0, v2, :cond_1fa
+    if-ne v0, v2, :cond_1e3
 
     move v0, v2
 
-    goto :goto_1fb
+    goto :goto_1e4
 
-    :cond_1fa
+    :cond_1e3
     move v0, v1
 
-    :goto_1fb
+    :goto_1e4
     sput-boolean v0, Landroid/os/Build;->IS_DEBUGGABLE:Z
 
-    .line 2017
+    .line 2055
     nop
 
-    .line 2018
+    .line 2056
     const-string/jumbo v0, "ro.mi.development"
 
     invoke-static {v0, v1}, Landroid/os/SystemProperties;->getInt(Ljava/lang/String;I)I
 
     move-result v0
 
-    if-ne v0, v2, :cond_209
+    if-ne v0, v2, :cond_1f2
 
     move v0, v2
 
-    goto :goto_20a
+    goto :goto_1f3
 
-    :cond_209
+    :cond_1f2
     move v0, v1
 
-    :goto_20a
+    :goto_1f3
     sput-boolean v0, Landroid/os/Build;->IS_DEVELOPMENT:Z
 
-    .line 2036
+    .line 2074
     const-string v0, "eng"
 
     sget-object v3, Landroid/os/Build;->TYPE:Ljava/lang/String;
@@ -811,7 +781,7 @@
 
     sput-boolean v0, Landroid/os/Build;->IS_ENG:Z
 
-    .line 2038
+    .line 2076
     const-string/jumbo v0, "userdebug"
 
     sget-object v3, Landroid/os/Build;->TYPE:Ljava/lang/String;
@@ -822,7 +792,7 @@
 
     sput-boolean v0, Landroid/os/Build;->IS_USERDEBUG:Z
 
-    .line 2040
+    .line 2078
     const-string/jumbo v0, "user"
 
     sget-object v3, Landroid/os/Build;->TYPE:Ljava/lang/String;
@@ -833,30 +803,30 @@
 
     sput-boolean v0, Landroid/os/Build;->IS_USER:Z
 
-    .line 2043
+    .line 2081
     nop
 
-    .line 2044
+    .line 2082
     const-string/jumbo v0, "persist.debug.timing.enable"
 
     invoke-static {v0, v1}, Landroid/os/SystemProperties;->getInt(Ljava/lang/String;I)I
 
     move-result v0
 
-    if-ne v0, v2, :cond_237
+    if-ne v0, v2, :cond_220
 
-    goto :goto_238
+    goto :goto_221
 
-    :cond_237
+    :cond_220
     move v2, v1
 
-    :goto_238
+    :goto_221
     sput-boolean v2, Landroid/os/Build;->IS_TIMINGTRACE:Z
 
-    .line 2063
+    .line 2101
     nop
 
-    .line 2064
+    .line 2102
     const-string/jumbo v0, "ro.boot.container"
 
     invoke-static {v0, v1}, Landroid/os/SystemProperties;->getBoolean(Ljava/lang/String;Z)Z
@@ -865,14 +835,14 @@
 
     sput-boolean v0, Landroid/os/Build;->IS_ARC:Z
 
-    .line 2063
+    .line 2101
     return-void
 .end method
 
 .method public constructor whitelist <init>()V
     .registers 1
 
-    .line 64
+    .line 65
     invoke-direct {p0}, Ljava/lang/Object;-><init>()V
 
     return-void
@@ -881,14 +851,14 @@
 .method private static greylist-max-o deriveFingerprint()Ljava/lang/String;
     .registers 5
 
-    .line 1806
+    .line 1783
     const-string/jumbo v0, "ro.build.fingerprint"
 
     invoke-static {v0}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
 
     move-result-object v0
 
-    .line 1807
+    .line 1784
     .local v0, "finger":Ljava/lang/String;
     invoke-static {v0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
 
@@ -896,7 +866,7 @@
 
     if-eqz v1, :cond_8e
 
-    .line 1808
+    .line 1785
     new-instance v1, Ljava/lang/StringBuilder;
 
     invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
@@ -917,7 +887,7 @@
 
     move-result-object v1
 
-    .line 1809
+    .line 1786
     const-string/jumbo v3, "ro.product.name"
 
     invoke-static {v3}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -932,7 +902,7 @@
 
     move-result-object v1
 
-    .line 1810
+    .line 1787
     const-string/jumbo v3, "ro.product.device"
 
     invoke-static {v3}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -949,7 +919,7 @@
 
     move-result-object v1
 
-    .line 1811
+    .line 1788
     const-string/jumbo v4, "ro.build.version.release"
 
     invoke-static {v4}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -964,7 +934,7 @@
 
     move-result-object v1
 
-    .line 1812
+    .line 1789
     const-string/jumbo v4, "ro.build.id"
 
     invoke-static {v4}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -979,7 +949,7 @@
 
     move-result-object v1
 
-    .line 1813
+    .line 1790
     const-string/jumbo v4, "ro.build.version.incremental"
 
     invoke-static {v4}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -994,7 +964,7 @@
 
     move-result-object v1
 
-    .line 1814
+    .line 1791
     const-string/jumbo v3, "ro.build.type"
 
     invoke-static {v3}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -1009,7 +979,7 @@
 
     move-result-object v1
 
-    .line 1815
+    .line 1792
     const-string/jumbo v2, "ro.build.tags"
 
     invoke-static {v2}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
@@ -1024,7 +994,7 @@
 
     move-result-object v0
 
-    .line 1817
+    .line 1794
     :cond_8e
     return-object v0
 .end method
@@ -1032,7 +1002,7 @@
 .method public static greylist-max-o ensureFingerprintProperty()V
     .registers 3
 
-    .line 1828
+    .line 1805
     const-string/jumbo v0, "ro.build.fingerprint"
 
     invoke-static {v0}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
@@ -1045,7 +1015,7 @@
 
     if-eqz v1, :cond_1b
 
-    .line 1830
+    .line 1807
     :try_start_d
     sget-object v1, Landroid/os/Build;->FINGERPRINT:Ljava/lang/String;
 
@@ -1053,14 +1023,14 @@
     :try_end_12
     .catch Ljava/lang/IllegalArgumentException; {:try_start_d .. :try_end_12} :catch_13
 
-    .line 1833
+    .line 1810
     goto :goto_1b
 
-    .line 1831
+    .line 1808
     :catch_13
     move-exception v0
 
-    .line 1832
+    .line 1809
     .local v0, "e":Ljava/lang/IllegalArgumentException;
     const-string v1, "Build"
 
@@ -1068,7 +1038,7 @@
 
     invoke-static {v1, v2, v0}, Landroid/util/Slog;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
 
-    .line 1835
+    .line 1812
     .end local v0    # "e":Ljava/lang/IllegalArgumentException;
     :cond_1b
     :goto_1b
@@ -1079,10 +1049,10 @@
     .registers 4
     .param p0, "version"    # I
 
-    .line 1702
+    .line 1679
     if-ltz p0, :cond_1d
 
-    .line 1706
+    .line 1683
     invoke-static {p0}, Landroid/os/Build;->getMajorSdkVersion(I)I
 
     move-result v0
@@ -1111,7 +1081,7 @@
 
     return-object v0
 
-    .line 1703
+    .line 1680
     :cond_1d
     new-instance v0, Ljava/lang/IllegalArgumentException;
 
@@ -1144,20 +1114,20 @@
     throw v0
 .end method
 
-.method public static whitelist getBackportedFixStatus(J)I
+.method public static blacklist getBackportedFixStatus(J)I
     .registers 6
     .param p0, "id"    # J
 
-    .line 1779
+    .line 1756
     const/4 v0, 0x0
 
-    .line 1780
+    .line 1757
     .local v0, "status":I
     invoke-static {}, Landroid/os/Binder;->getCallingUid()I
 
     move-result v1
 
-    .line 1781
+    .line 1758
     .local v1, "uid":I
     const-wide/16 v2, 0x0
 
@@ -1171,7 +1141,7 @@
 
     if-gtz v2, :cond_20
 
-    .line 1782
+    .line 1759
     invoke-static {}, Landroid/sysprop/BackportedFixesProperties;->alias_bitset()Ljava/util/List;
 
     move-result-object v2
@@ -1184,7 +1154,7 @@
 
     if-eqz v2, :cond_1e
 
-    .line 1783
+    .line 1760
     const/4 v2, 0x1
 
     goto :goto_1f
@@ -1195,13 +1165,13 @@
     :goto_1f
     move v0, v2
 
-    .line 1785
+    .line 1762
     :cond_20
     const/16 v2, 0x3db
 
     invoke-static {v2, v1, p0, p1, v0}, Lcom/android/internal/util/FrameworkStatsLog;->write(IIJI)V
 
-    .line 1786
+    .line 1763
     return v0
 .end method
 
@@ -1216,12 +1186,12 @@
         }
     .end annotation
 
-    .line 1969
+    .line 2007
     new-instance v0, Ljava/util/ArrayList;
 
     invoke-direct {v0}, Ljava/util/ArrayList;-><init>()V
 
-    .line 1971
+    .line 2009
     .local v0, "partitions":Ljava/util/ArrayList;, "Ljava/util/ArrayList<Landroid/os/Build$Partition;>;"
     const-string/jumbo v5, "system"
 
@@ -1239,7 +1209,7 @@
 
     move-result-object v1
 
-    .line 1979
+    .line 2017
     .local v1, "names":[Ljava/lang/String;
     array-length v2, v1
 
@@ -1250,7 +1220,7 @@
 
     aget-object v5, v1, v3
 
-    .line 1980
+    .line 2018
     .local v5, "name":Ljava/lang/String;
     new-instance v4, Ljava/lang/StringBuilder;
 
@@ -1280,7 +1250,7 @@
 
     move-result-object v4
 
-    .line 1981
+    .line 2019
     .local v4, "fingerprint":Ljava/lang/String;
     invoke-static {v4}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
 
@@ -1288,10 +1258,10 @@
 
     if-eqz v7, :cond_45
 
-    .line 1982
+    .line 2020
     goto :goto_6e
 
-    .line 1984
+    .line 2022
     :cond_45
     new-instance v7, Ljava/lang/StringBuilder;
 
@@ -1323,7 +1293,7 @@
 
     mul-long v7, v6, v8
 
-    .line 1985
+    .line 2023
     .local v7, "time":J
     move-object v6, v4
 
@@ -1337,7 +1307,7 @@
 
     invoke-virtual {v0, v4}, Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z
 
-    .line 1979
+    .line 2017
     .end local v5    # "name":Ljava/lang/String;
     .end local v6    # "fingerprint":Ljava/lang/String;
     .end local v7    # "time":J
@@ -1346,7 +1316,7 @@
 
     goto :goto_1c
 
-    .line 1988
+    .line 2026
     :cond_71
     return-object v0
 .end method
@@ -1355,7 +1325,7 @@
     .registers 4
     .param p0, "property"    # Ljava/lang/String;
 
-    .line 2115
+    .line 2153
     :try_start_0
     invoke-static {p0}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
 
@@ -1369,11 +1339,11 @@
 
     return-wide v0
 
-    .line 2116
+    .line 2154
     :catch_9
     move-exception v0
 
-    .line 2117
+    .line 2155
     .local v0, "e":Ljava/lang/NumberFormatException;
     const-wide/16 v1, -0x1
 
@@ -1384,7 +1354,7 @@
     .registers 2
     .param p0, "sdkIntFull"    # I
 
-    .line 1634
+    .line 1610
     const v0, 0x186a0
 
     div-int v0, p0, v0
@@ -1396,7 +1366,7 @@
     .registers 2
     .param p0, "sdkIntFull"    # I
 
-    .line 1644
+    .line 1621
     const v0, 0x186a0
 
     rem-int v0, p0, v0
@@ -1407,7 +1377,7 @@
 .method public static whitelist getRadioVersion()Ljava/lang/String;
     .registers 2
 
-    .line 2084
+    .line 2122
     invoke-static {}, Landroid/sysprop/TelephonyProperties;->baseband_version()Ljava/util/List;
 
     move-result-object v0
@@ -1424,10 +1394,10 @@
 .method public static whitelist getSerial()Ljava/lang/String;
     .registers 4
 
-    .line 314
+    .line 283
     nop
 
-    .line 315
+    .line 284
     const-string v0, "device_identifiers"
 
     invoke-static {v0}, Landroid/os/ServiceManager;->getService(Ljava/lang/String;)Landroid/os/IBinder;
@@ -1438,14 +1408,14 @@
 
     move-result-object v0
 
-    .line 317
+    .line 286
     .local v0, "service":Landroid/os/IDeviceIdentifiersPolicyService;
     :try_start_b
     invoke-static {}, Landroid/app/ActivityThread;->currentApplication()Landroid/app/Application;
 
     move-result-object v1
 
-    .line 318
+    .line 287
     .local v1, "application":Landroid/app/Application;
     const/4 v2, 0x0
 
@@ -1460,7 +1430,7 @@
     :cond_17
     move-object v3, v2
 
-    .line 319
+    .line 288
     .local v3, "callingPackage":Ljava/lang/String;
     :goto_18
     invoke-interface {v0, v3, v2}, Landroid/os/IDeviceIdentifiersPolicyService;->getSerialForPackage(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
@@ -1471,17 +1441,17 @@
 
     return-object v2
 
-    .line 320
+    .line 289
     .end local v1    # "application":Landroid/app/Application;
     .end local v3    # "callingPackage":Ljava/lang/String;
     :catch_1d
     move-exception v1
 
-    .line 321
+    .line 290
     .local v1, "e":Landroid/os/RemoteException;
     invoke-virtual {v1}, Landroid/os/RemoteException;->rethrowFromSystemServer()Ljava/lang/RuntimeException;
 
-    .line 323
+    .line 292
     .end local v1    # "e":Landroid/os/RemoteException;
     const-string/jumbo v1, "unknown"
 
@@ -1492,7 +1462,7 @@
     .registers 2
     .param p0, "property"    # Ljava/lang/String;
 
-    .line 2089
+    .line 2127
     const-string/jumbo v0, "unknown"
 
     invoke-static {p0, v0}, Landroid/os/SystemProperties;->get(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
@@ -1507,12 +1477,12 @@
     .param p0, "property"    # Ljava/lang/String;
     .param p1, "separator"    # Ljava/lang/String;
 
-    .line 2104
+    .line 2142
     invoke-static {p0}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
 
     move-result-object v0
 
-    .line 2105
+    .line 2143
     .local v0, "value":Ljava/lang/String;
     invoke-virtual {v0}, Ljava/lang/String;->isEmpty()Z
 
@@ -1520,14 +1490,14 @@
 
     if-eqz v1, :cond_e
 
-    .line 2106
+    .line 2144
     const/4 v1, 0x0
 
     new-array v1, v1, [Ljava/lang/String;
 
     return-object v1
 
-    .line 2108
+    .line 2146
     :cond_e
     invoke-virtual {v0, p1}, Ljava/lang/String;->split(Ljava/lang/String;)[Ljava/lang/String;
 
@@ -1540,24 +1510,24 @@
     .registers 4
     .param p0, "property"    # Ljava/lang/String;
 
-    .line 2097
+    .line 2135
     filled-new-array {p0}, [Ljava/lang/Object;
 
     move-result-object v0
 
-    .line 2098
+    .line 2136
     const-string/jumbo v1, "ro.product.%s_for_attestation"
 
     invoke-static {v1, v0}, Landroid/text/TextUtils;->formatSimple(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
 
     move-result-object v0
 
-    .line 2097
+    .line 2135
     invoke-static {v0}, Landroid/os/Build;->getString(Ljava/lang/String;)Ljava/lang/String;
 
     move-result-object v0
 
-    .line 2099
+    .line 2137
     .local v0, "attestProp":Ljava/lang/String;
     const-string/jumbo v1, "unknown"
 
@@ -1567,7 +1537,7 @@
 
     if-eqz v1, :cond_28
 
-    .line 2100
+    .line 2138
     const-string/jumbo v1, "ro.product.vendor.%s"
 
     filled-new-array {p0}, [Ljava/lang/Object;
@@ -1587,7 +1557,7 @@
     :cond_28
     move-object v1, v0
 
-    .line 2099
+    .line 2137
     :goto_29
     return-object v1
 .end method
@@ -1596,7 +1566,7 @@
     .registers 2
     .param p0, "abi"    # Ljava/lang/String;
 
-    .line 387
+    .line 356
     invoke-static {p0}, Ldalvik/system/VMRuntime;->is64BitAbi(Ljava/lang/String;)Z
 
     move-result v0
@@ -1616,20 +1586,20 @@
         }
     .end annotation
 
-    .line 1791
+    .line 1768
     .local p0, "bitsetLongArray":Ljava/util/List;, "Ljava/util/List<Ljava/lang/Long;>;"
     const/4 v0, 0x0
 
     if-gez p1, :cond_4
 
-    .line 1792
+    .line 1769
     return v0
 
-    .line 1794
+    .line 1771
     :cond_4
     shr-int/lit8 v1, p1, 0x6
 
-    .line 1795
+    .line 1772
     .local v1, "arrayIndex":I
     invoke-interface {p0}, Ljava/util/List;->size()I
 
@@ -1637,10 +1607,10 @@
 
     if-gt v2, v1, :cond_d
 
-    .line 1796
+    .line 1773
     return v0
 
-    .line 1798
+    .line 1775
     :cond_d
     invoke-interface {p0, v1}, Ljava/util/List;->get(I)Ljava/lang/Object;
 
@@ -1671,9 +1641,9 @@
 .end method
 
 .method public static greylist-max-o isBuildConsistent()Z
-    .registers 3
+    .registers 11
 
-    .line 1889
+    .line 1874
     sget-boolean v0, Landroid/os/Build;->IS_ENG:Z
 
     const/4 v1, 0x1
@@ -1682,28 +1652,179 @@
 
     return v1
 
-    .line 1891
+    .line 1876
     :cond_6
+    sget-boolean v0, Landroid/os/Build;->IS_TREBLE_ENABLED:Z
+
+    const/4 v2, 0x0
+
+    const-string v3, "Build"
+
+    if-eqz v0, :cond_32
+
+    .line 1877
     invoke-static {}, Landroid/os/VintfObject;->verifyBuildAtBoot()I
 
     move-result v0
 
-    .line 1892
+    .line 1879
     .local v0, "result":I
-    if-eqz v0, :cond_26
+    if-eqz v0, :cond_2d
+
+    .line 1880
+    new-instance v4, Ljava/lang/StringBuilder;
+
+    invoke-direct {v4}, Ljava/lang/StringBuilder;-><init>()V
+
+    const-string v5, "Vendor interface is incompatible, error="
+
+    invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v4
+
+    .line 1881
+    invoke-static {v0}, Ljava/lang/String;->valueOf(I)Ljava/lang/String;
+
+    move-result-object v5
+
+    invoke-virtual {v4, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v4
+
+    invoke-virtual {v4}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object v4
+
+    .line 1880
+    invoke-static {v3, v4}, Landroid/util/Slog;->e(Ljava/lang/String;Ljava/lang/String;)I
+
+    .line 1884
+    :cond_2d
+    if-nez v0, :cond_30
+
+    goto :goto_31
+
+    :cond_30
+    move v1, v2
+
+    :goto_31
+    return v1
+
+    .line 1887
+    .end local v0    # "result":I
+    :cond_32
+    const-string/jumbo v0, "ro.system.build.fingerprint"
+
+    invoke-static {v0}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v0
+
+    .line 1888
+    .local v0, "system":Ljava/lang/String;
+    const-string/jumbo v4, "ro.vendor.build.fingerprint"
+
+    invoke-static {v4}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v4
+
+    .line 1889
+    .local v4, "vendor":Ljava/lang/String;
+    const-string/jumbo v5, "ro.bootimage.build.fingerprint"
+
+    invoke-static {v5}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v5
+
+    .line 1890
+    .local v5, "bootimage":Ljava/lang/String;
+    const-string/jumbo v6, "ro.build.expect.bootloader"
+
+    invoke-static {v6}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v6
+
+    .line 1891
+    .local v6, "requiredBootloader":Ljava/lang/String;
+    const-string/jumbo v7, "ro.bootloader"
+
+    invoke-static {v7}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v7
+
+    .line 1892
+    .local v7, "currentBootloader":Ljava/lang/String;
+    const-string/jumbo v8, "ro.build.expect.baseband"
+
+    invoke-static {v8}, Landroid/os/SystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v8
+
+    .line 1894
+    .local v8, "requiredRadio":Ljava/lang/String;
+    invoke-static {}, Landroid/sysprop/TelephonyProperties;->baseband_version()Ljava/util/List;
+
+    move-result-object v9
 
     .line 1893
+    const-string v10, ""
+
+    invoke-static {v9, v10}, Landroid/os/Build;->joinListOrElse(Ljava/util/List;Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v9
+
+    .line 1896
+    .local v9, "currentRadio":Ljava/lang/String;
+    invoke-static {v0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result v10
+
+    if-eqz v10, :cond_72
+
+    .line 1897
+    const-string v1, "Required ro.system.build.fingerprint is empty!"
+
+    invoke-static {v3, v1}, Landroid/util/Slog;->e(Ljava/lang/String;Ljava/lang/String;)I
+
+    .line 1898
+    return v2
+
+    .line 1901
+    :cond_72
+    invoke-static {v4}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z
+
+    move-result v10
+
+    if-nez v10, :cond_9f
+
+    .line 1902
+    invoke-static {v0, v4}, Ljava/util/Objects;->equals(Ljava/lang/Object;Ljava/lang/Object;)Z
+
+    move-result v10
+
+    if-nez v10, :cond_9f
+
+    .line 1903
     new-instance v1, Ljava/lang/StringBuilder;
 
     invoke-direct {v1}, Ljava/lang/StringBuilder;-><init>()V
 
-    const-string v2, "Vendor interface is incompatible, error="
+    const-string v10, "Mismatched fingerprints; system reported "
 
-    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+    invoke-virtual {v1, v10}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 
     move-result-object v1
 
-    invoke-virtual {v1, v0}, Ljava/lang/StringBuilder;->append(I)Ljava/lang/StringBuilder;
+    invoke-virtual {v1, v0}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v1
+
+    const-string v10, " but vendor reported "
+
+    invoke-virtual {v1, v10}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v1
+
+    invoke-virtual {v1, v4}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
 
     move-result-object v1
 
@@ -1711,17 +1832,13 @@
 
     move-result-object v1
 
-    const-string v2, "Build"
+    invoke-static {v3, v1}, Landroid/util/Slog;->e(Ljava/lang/String;Ljava/lang/String;)I
 
-    invoke-static {v2, v1}, Landroid/util/Slog;->e(Ljava/lang/String;Ljava/lang/String;)I
+    .line 1905
+    return v2
 
-    .line 1894
-    const/4 v1, 0x0
-
-    return v1
-
-    .line 1897
-    :cond_26
+    .line 1935
+    :cond_9f
     return v1
 .end method
 
@@ -1731,7 +1848,7 @@
         client = .enum Landroid/annotation/SystemApi$Client;->MODULE_LIBRARIES:Landroid/annotation/SystemApi$Client;
     .end annotation
 
-    .line 2032
+    .line 2070
     sget-boolean v0, Landroid/os/Build;->IS_DEBUGGABLE:Z
 
     return v0
@@ -1740,7 +1857,7 @@
 .method public static blacklist isEnabled32BitTranslate()Z
     .registers 3
 
-    .line 2133
+    .line 2171
     sget-boolean v0, Landroid/os/Build;->IS_SUPPORT_MI_FAKE_32BIT:Z
 
     const/4 v1, 0x0
@@ -1749,7 +1866,7 @@
 
     return v1
 
-    .line 2136
+    .line 2174
     :cond_6
     sget v0, Landroid/os/Build$VERSION;->DEVICE_INITIAL_SDK_INT:I
 
@@ -1761,7 +1878,7 @@
 
     return v0
 
-    .line 2139
+    .line 2177
     :cond_e
     const-string/jumbo v0, "persist.sys.force_32bit_install"
 
@@ -1788,7 +1905,7 @@
         }
     .end annotation
 
-    .line 2122
+    .line 2160
     .local p0, "list":Ljava/util/List;, "Ljava/util/List<TT;>;"
     invoke-interface {p0}, Ljava/util/List;->stream()Ljava/util/stream/Stream;
 
@@ -1802,7 +1919,7 @@
 
     move-result-object v0
 
-    .line 2123
+    .line 2161
     const-string v1, ","
 
     invoke-static {v1}, Ljava/util/stream/Collectors;->joining(Ljava/lang/CharSequence;)Ljava/util/stream/Collector;
@@ -1815,7 +1932,7 @@
 
     check-cast v0, Ljava/lang/String;
 
-    .line 2124
+    .line 2162
     .local v0, "ret":Ljava/lang/String;
     invoke-virtual {v0}, Ljava/lang/String;->isEmpty()Z
 
@@ -1838,7 +1955,7 @@
     .registers 2
     .param p0, "elem"    # Ljava/lang/Object;
 
-    .line 2122
+    .line 2160
     if-nez p0, :cond_5
 
     const-string v0, ""
@@ -1858,24 +1975,24 @@
     .registers 7
     .param p0, "version"    # Ljava/lang/String;
 
-    .line 1660
+    .line 1637
     const/16 v0, 0x2e
 
     invoke-virtual {p0, v0}, Ljava/lang/String;->indexOf(I)I
 
     move-result v0
 
-    .line 1662
+    .line 1639
     .local v0, "index":I
     const/4 v1, 0x0
 
-    .line 1664
+    .line 1641
     .local v1, "minor":I
     const/4 v2, -0x1
 
     if-ne v0, v2, :cond_f
 
-    .line 1665
+    .line 1642
     :try_start_a
     invoke-static {p0}, Ljava/lang/Integer;->parseInt(Ljava/lang/String;)I
 
@@ -1884,7 +2001,7 @@
     .local v2, "major":I
     goto :goto_23
 
-    .line 1667
+    .line 1644
     .end local v2    # "major":I
     :cond_f
     const/4 v2, 0x0
@@ -1897,7 +2014,7 @@
 
     move-result v2
 
-    .line 1668
+    .line 1645
     .restart local v2    # "major":I
     add-int/lit8 v3, v0, 0x1
 
@@ -1911,34 +2028,34 @@
 
     move v1, v3
 
-    .line 1670
+    .line 1647
     :goto_23
     if-ltz v2, :cond_4f
 
-    .line 1673
+    .line 1650
     const/16 v3, 0x53e2
 
     if-ge v2, v3, :cond_46
 
-    .line 1676
+    .line 1653
     if-ltz v1, :cond_3d
 
-    .line 1679
+    .line 1656
     const v3, 0x186a0
 
     if-ge v1, v3, :cond_34
 
-    .line 1686
+    .line 1663
     nop
 
-    .line 1687
+    .line 1664
     mul-int/2addr v3, v2
 
     add-int/2addr v3, v1
 
     return v3
 
-    .line 1680
+    .line 1657
     :cond_34
     new-instance v3, Ljava/lang/NumberFormatException;
 
@@ -1951,7 +2068,7 @@
     .end local p0    # "version":Ljava/lang/String;
     throw v3
 
-    .line 1677
+    .line 1654
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
     .restart local p0    # "version":Ljava/lang/String;
@@ -1967,7 +2084,7 @@
     .end local p0    # "version":Ljava/lang/String;
     throw v3
 
-    .line 1674
+    .line 1651
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
     .restart local p0    # "version":Ljava/lang/String;
@@ -1983,7 +2100,7 @@
     .end local p0    # "version":Ljava/lang/String;
     throw v3
 
-    .line 1671
+    .line 1648
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
     .restart local p0    # "version":Ljava/lang/String;
@@ -2001,7 +2118,7 @@
     :try_end_58
     .catch Ljava/lang/NumberFormatException; {:try_start_a .. :try_end_58} :catch_58
 
-    .line 1683
+    .line 1660
     .end local v2    # "major":I
     .restart local v0    # "index":I
     .restart local v1    # "minor":I
@@ -2009,7 +2126,7 @@
     :catch_58
     move-exception v2
 
-    .line 1684
+    .line 1661
     .local v2, "e":Ljava/lang/NumberFormatException;
     new-instance v3, Ljava/lang/IllegalArgumentException;
 
