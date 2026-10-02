@@ -27,7 +27,7 @@ Hook được chèn:
 Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
 ```
 
-Tham chiếu: [Instrumentation.smali](../Template/Template_V2060/framework/Instrumentation.smali).
+Tham chiếu: mẫu cùng Android version tại `framework/Instrumentation.smali`.
 
 #### Khởi tạo process
 
@@ -71,7 +71,7 @@ Hook:
 Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
 ```
 
-Tham chiếu: [ApplicationPackageManager.smali](../Template/Template_V2060/framework/ApplicationPackageManager.smali).
+Tham chiếu: mẫu cùng Android version tại `framework/ApplicationPackageManager.smali`.
 
 #### Tạo software key
 
@@ -93,7 +93,7 @@ Hook:
 Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
 ```
 
-Tham chiếu: [AndroidKeyStoreKeyPairGeneratorSpi.smali](../Template/Template_V2060/framework/AndroidKeyStoreKeyPairGeneratorSpi.smali).
+Tham chiếu: mẫu cùng Android version tại `framework/AndroidKeyStoreKeyPairGeneratorSpi.smali`.
 
 #### Certificate chain
 
@@ -115,7 +115,7 @@ Hook:
 Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
 ```
 
-Tham chiếu: [AndroidKeyStoreSpi.smali](../Template/Template_V2060/framework/AndroidKeyStoreSpi.smali).
+Tham chiếu: mẫu cùng Android version tại `framework/AndroidKeyStoreSpi.smali`.
 
 ### `services.jar`
 
@@ -141,7 +141,7 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
 
 ngay trước lệnh `Looper.loop()V` duy nhất đã được verifier xác nhận.
 
-Tham chiếu: [SystemServer.smali](../Template/Template_V2060/service/SystemServer.smali).
+Tham chiếu: mẫu cùng Android version tại `service/SystemServer.smali`.
 
 #### Ẩn app / nguồn cài đặt
 
@@ -213,7 +213,7 @@ USER
 
 Riêng `TIME:J`, chỉ xóa `final`.
 
-Tham chiếu: [Build.smali](../Template/Template_V2060/framework/Build.smali).
+Tham chiếu: mẫu Android 17 tại `a17/framework/Build.smali`.
 
 ### `Build$VERSION.smali`
 
@@ -227,7 +227,7 @@ SECURITY_PATCH
 DEVICE_INITIAL_SDK_INT
 ```
 
-Tham chiếu: [Build$VERSION.smali](../Template/Template_V2060/framework/Build$VERSION.smali).
+Tham chiếu: mẫu Android 17 tại `a17/framework/Build$VERSION.smali`.
 
 Giữ nguyên `SDK_INT`.
 
@@ -248,7 +248,7 @@ Class:
 Landroid/provider/Settings$NameValueCache;
 ```
 
-Tham chiếu: [Settings$NameValueCache.smali](../Template/Template_V2060/framework/Settings$NameValueCache.smali).
+Tham chiếu: mẫu cùng Android version tại `framework/Settings$NameValueCache.smali`.
 
 Chỉ patch overload `getStringForUser(...)` trả về String phù hợp với ROM đích. Không copy cứng register từ ROM khác.
 
