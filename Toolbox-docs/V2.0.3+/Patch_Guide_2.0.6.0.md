@@ -35,6 +35,8 @@ script/kaorios_patcher.py
 
 ---
 
+Template folders: `a13/`, `a14/`, `a15/`, `a16/`, `a17/`. See [Template_V2060 README](../Template/Template_V2060/README.md) and always use the folder matching the target Android version.
+
 ## 2. Choose the correct mode
 
 | Android | Use | Meaning |
@@ -206,7 +208,7 @@ The patcher inserts:
 Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
 ```
 
-Reference: [Instrumentation.smali](../Template/Template_V2060/framework/Instrumentation.smali).
+Reference: `framework/Instrumentation.smali` in the matching `a13`–`a17` folder.
 
 #### Process initialization
 
@@ -250,7 +252,7 @@ Hook:
 Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
 ```
 
-Reference: [ApplicationPackageManager.smali](../Template/Template_V2060/framework/ApplicationPackageManager.smali).
+Reference: `framework/ApplicationPackageManager.smali` in the matching `a13`–`a17` folder.
 
 #### Software key generation
 
@@ -272,7 +274,7 @@ Hook:
 Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
 ```
 
-Reference: [AndroidKeyStoreKeyPairGeneratorSpi.smali](../Template/Template_V2060/framework/AndroidKeyStoreKeyPairGeneratorSpi.smali).
+Reference: `framework/AndroidKeyStoreKeyPairGeneratorSpi.smali` in the matching `a13`–`a17` folder.
 
 #### Certificate chain
 
@@ -294,7 +296,7 @@ Hook:
 Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
 ```
 
-Reference: [AndroidKeyStoreSpi.smali](../Template/Template_V2060/framework/AndroidKeyStoreSpi.smali).
+Reference: `framework/AndroidKeyStoreSpi.smali` in the matching `a13`–`a17` folder.
 
 ### `services.jar`
 
@@ -324,7 +326,7 @@ immediately before the single verified:
 invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
-Reference: [SystemServer.smali](../Template/Template_V2060/service/SystemServer.smali).
+Reference: `service/SystemServer.smali` in the matching `a13`–`a17` folder.
 
 #### Package visibility / installer source
 
@@ -396,7 +398,7 @@ USER
 
 For `TIME:J`, remove only `final`.
 
-Reference: [Build.smali](../Template/Template_V2060/framework/Build.smali).
+Reference: `a17/framework/Build.smali`.
 
 ### `Build$VERSION.smali`
 
@@ -410,7 +412,7 @@ SECURITY_PATCH
 DEVICE_INITIAL_SDK_INT
 ```
 
-Reference: [Build$VERSION.smali](../Template/Template_V2060/framework/Build$VERSION.smali).
+Reference: `a17/framework/Build$VERSION.smali`.
 
 Keep `SDK_INT` unchanged.
 
@@ -503,7 +505,7 @@ Class:
 Landroid/provider/Settings$NameValueCache;
 ```
 
-Reference: [Settings$NameValueCache.smali](../Template/Template_V2060/framework/Settings$NameValueCache.smali).
+Reference: `framework/Settings$NameValueCache.smali` in the matching `a13`–`a17` folder.
 
 Patch only the String-returning `getStringForUser(...)` layout used by the target ROM. Do not copy a hard-coded register layout from another ROM.
 
