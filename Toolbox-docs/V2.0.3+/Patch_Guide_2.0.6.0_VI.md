@@ -4,14 +4,17 @@
 
 > Giữ nguyên các file JAR/APK stock của ROM đích. Không thay DEX stock hoặc copy nguyên class từ template của ROM khác sang.
 
-Guide này dùng chung cho Android 13, 14, 15, 16 và 17. Tên class/method có thể thay đổi giữa AOSP và ROM OEM, nên template chỉ dùng để tìm logic tương đương. Những điểm riêng của Android 17 được ghi chú ngay tại mục liên quan.
+Guide này dùng chung cho Android 13, 14, 15, 16 và 17.
+
+> [!IMPORTANT]
+> Source-of-truth cho hook ABI là `KaoriosHook.java` trong repo framework private; các script public phải khớp descriptor đó. Patcher chỉ tự động vá những layout mà verifier hiện tại chứng minh được và phải fail-closed với layout lạ. Không suy support từ template hoặc từ ROM khác. Tên class/method có thể thay đổi giữa AOSP và ROM OEM, nên template chỉ dùng để tìm logic tương đương. Những điểm riêng của Android 17 được ghi chú ngay tại mục liên quan.
 
 > [!WARNING]
 > Register trong snippet chỉ là ví dụ. `vScratch`, `vHook`, `vX` và `<cursor_reg>` là placeholder, phải đổi thành register hợp lệ của ROM đích. Xác định giá trị và liveness thực tế của cả `v0` trước khi sửa; không ghi đè register stock còn dùng trên nhánh fallback.
 
 ## Bắt đầu từ file stock sạch của ROM đích
 
-Sao lưu `framework.jar.orig`, `services.jar.orig`, `SettingsProvider.apk.orig` trước khi sửa. Luôn dùng file sạch từ đúng ROM đích. không copy nguyên class Template từ ROM khác, và tránh dùng framework đã patch tùy tiện. Nếu chỉnh sửa cũ xung đột, khôi phục source sạch rồi patch lại.
+Sao lưu `framework.jar.orig`, `services.jar.orig`, `SettingsProvider.apk.orig` trước khi sửa. Luôn dùng file sạch từ đúng ROM đích. Không copy nguyên class Template từ ROM khác, và tránh dùng framework đã patch tùy tiện. Nếu chỉnh sửa cũ xung đột, khôi phục source sạch rồi patch lại.
 
 ## Workspace Multi-DEX
 
@@ -72,7 +75,7 @@ Nếu chỉ số vật lý của parameter register vượt quá 15 (do số `.l
 
 #### ActivityThread: alias entry đã xác minh
 
-Trong cả năm sample, method là `handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V`. Entry copy `this` và AppBindData sang local; literal `iput-object p1,p0` không có. Patcher chứng minh alias từ entry, từ chối alias bị ghi đè hoặc back edge không an toàn, rồi chèn ngay sau assignment mBoundApplication vào receiver đúng.
+trên mọi ROM đích, method là `handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V`. Entry copy `this` và AppBindData sang local; literal `iput-object p1,p0` không có. Patcher chứng minh alias từ entry, từ chối alias bị ghi đè hoặc back edge không an toàn, rồi chèn ngay sau assignment mBoundApplication vào receiver đúng.
 
 | Sample | .registers | AppBindData / this alias |
 |---|---:|---|
@@ -330,7 +333,7 @@ return v0
 :cond_kaorios_hide_stock
 ```
 
-Phải xác định đúng register thật trên ROM đích. Trong cả năm sample, AppsFilterImpl kế thừa AppsFilterLocked rồi AppsFilterBase; đường production được roundtrip là ComputerEngine: II ở A13/A14, IIZZ ở A15–A17. Snippet AppsFilter/direct-cache chỉ là reference, chưa được auto-patch hoặc chứng nhận runtime.
+Phải xác định đúng register thật trên ROM đích. trên mọi ROM đích, AppsFilterImpl kế thừa AppsFilterLocked rồi AppsFilterBase; đường production được roundtrip là ComputerEngine: II ở A13/A14, IIZZ ở A15–A17. Snippet AppsFilter/direct-cache chỉ là reference, chưa được auto-patch hoặc chứng nhận runtime.
 
 #### Đường patch ComputerEngine
 
@@ -393,7 +396,7 @@ Không trộn ABI A13–16 và ABI A17. Kiểm tra đúng signature tồn tại 
 
 Bật Advanced Features rồi chỉnh rule của caller trong Hide Features. `hideInstallationSource` báo Play Store cho ứng dụng thường đã cài mà caller truy vấn. `hideSystemInstallationSource` tùy chọn trả null cho ứng dụng hệ thống; nếu tắt thì giữ stock. `excludeTargetInstallationSource` giữ nguồn cài đặt của chính caller. Tắt tùy chọn cha không xóa giá trị con. Policy installer áp dụng cho các target đã cài được caller truy vấn, độc lập danh sách target/template dùng để ẩn app. Caller manager, target không xác định và lỗi runtime giữ stock; tắt Advanced cũng giữ stock. Shared UID có thể kích hoạt policy từ bất kỳ rule hợp lệ của package trong UID, trừ UID chứa manager.
 
-Với layout tham chiếu A17, patch cả `ComputerEngine.getInstallerPackageName(String,int)String` và `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. API thứ hai chỉ lọc argument installing package khi dựng kết quả, bao phủ `getInstallingPackageName()`. Giữ nguyên initiating/originating package, update owner, package source, dữ liệu cài đặt và giao dịch PackageInstaller. Xem ghi chú tương thích để biết descriptor A13–A16 và phạm vi chính xác.
+Với layout tham chiếu A17, patch cả `ComputerEngine.getInstallerPackageName(String,int)String` và `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. API thứ hai chỉ lọc argument installing package khi dựng kết quả, bao phủ `getInstallingPackageName()`. Giữ nguyên initiating/originating package, update owner, package source, dữ liệu cài đặt và giao dịch PackageInstaller. Hãy kiểm tra descriptor chính xác trên ROM đích trước khi patch.
 
 ```sh
 python script/patch-installer-source.py /path/to/ComputerEngine.smali

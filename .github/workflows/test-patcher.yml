@@ -64,7 +64,10 @@ jobs:
           done
 
       - name: Run patcher unit tests
-        run: python -m unittest discover -s script -p 'kaorios_patcher_a17_test.py' -v
+        run: |
+          python script/patch-activitythread-a17-test.py
+          python script/patch-systemserver-a17-test.py -v
+          python -m unittest discover -s script -p 'kaorios_patcher_a17_test.py' -v
 
       - name: Run services patcher tests
         run: python script/patch-services-a17-test.py -v
@@ -77,6 +80,3 @@ jobs:
 
       - name: Run SELinux policy tests
         run: python script/check-advanced-policy-sepolicy-test.py -v
-
-      - name: Run synthetic sample checker tests
-        run: python script/check-framework-samples-test.py -v

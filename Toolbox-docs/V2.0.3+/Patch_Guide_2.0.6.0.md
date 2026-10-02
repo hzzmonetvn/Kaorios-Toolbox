@@ -4,14 +4,17 @@
 
 > Keep the stock JAR/APK files from the target ROM. Do not replace a stock DEX or copy an entire template class from another ROM.
 
-This guide is shared across Android 13, 14, 15, 16 and 17. Class/method layout can differ between AOSP and OEM ROMs, so templates are references for equivalent logic only. Android 17 differences are called out where needed.
+This guide is shared across Android 13, 14, 15, 16 and 17.
+
+> [!IMPORTANT]
+> The hook ABI source of truth is `KaoriosHook.java` in the private framework repository; public scripts must match those descriptors. The patcher only auto-patches layouts proven by its current verifier and must fail closed on unknown layouts. Do not infer support from a template or another ROM. Class/method layout can differ between AOSP and OEM ROMs, so templates are references for equivalent logic only. Android 17 differences are called out where needed.
 
 > [!WARNING]
 > Registers in snippets are examples. `vScratch`, `vHook`, `vX`, and `<cursor_reg>` are placeholders that must be replaced with valid target ROM registers. Resolve actual values and liveness, including `v0`, before editing; preserve stock registers used on fallback paths.
 
 ## Start from clean stock files from the target ROM
 
-Back up `framework.jar.orig`, `services.jar.orig`, and `SettingsProvider.apk.orig` before editing. Always use clean files from the exact target ROM. copy whole Template classes from another ROM. Avoid frameworks with arbitrary prior patches; restore clean source if earlier modifications conflict.
+Back up `framework.jar.orig`, `services.jar.orig`, and `SettingsProvider.apk.orig` before editing. Always use clean files from the exact target ROM. Do not copy whole Template classes from another ROM. Avoid frameworks with arbitrary prior patches; restore clean source if earlier modifications conflict.
 
 ## Multi-DEX workspace
 
@@ -72,7 +75,7 @@ If the physical parameter register index exceeds 15 (due to high `.locals`), use
 
 #### ActivityThread: verified entry aliases
 
-In all five samples the method is `handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V`. Entry moves copy `this` and AppBindData into locals; the literal `iput-object p1,p0` is absent. The patcher proves the entry aliases, rejects overwritten aliases or unsafe back edges, and hooks immediately after assigning mBoundApplication on the proven receiver.
+In the supported reference layouts the method is `handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V`. Entry moves copy `this` and AppBindData into locals; the literal `iput-object p1,p0` is absent. The patcher proves the entry aliases, rejects overwritten aliases or unsafe back edges, and hooks immediately after assigning mBoundApplication on the proven receiver.
 
 | Sample | .registers | AppBindData / this alias |
 |---|---:|---|
@@ -329,7 +332,7 @@ return v0
 :cond_kaorios_hide_stock
 ```
 
-Resolve the real registers on the target ROM. In all five samples, AppsFilterImpl extends AppsFilterLocked, then AppsFilterBase; the production path roundtripped here is ComputerEngine: II in A13/A14, IIZZ in A15–A17. Direct/cache AppsFilter snippets remain references, without automatic patch or runtime certification.
+Resolve the real registers on the target ROM. In the supported reference layouts, AppsFilterImpl extends AppsFilterLocked, then AppsFilterBase; the production path roundtripped here is ComputerEngine: II in A13/A14, IIZZ in A15–A17. Direct/cache AppsFilter snippets remain references, without automatic patch or runtime certification.
 
 #### ComputerEngine patch path
 
@@ -392,7 +395,7 @@ Use the current ABI exported by the shipped DEX. Android generation labels do no
 
 Enable Advanced Features, then edit a caller rule in Hide Features. `hideInstallationSource` reports Play Store for installed non-system packages queried by that caller. `hideSystemInstallationSource` optionally returns null for system packages; otherwise they stay stock. `excludeTargetInstallationSource` keeps the caller's own installer stock. Child options retain their values while the parent is off. Installer policy applies to installed targets queried by the caller, independently of the app-hide target/template lists. Manager callers, unresolved targets and runtime failures retain stock behavior; Advanced OFF disables filtering. With shared UIDs, any eligible package rule can activate filtering, except a UID containing the manager.
 
-For the A17 reference layout, patch both `ComputerEngine.getInstallerPackageName(String,int)String` and `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. The latter filters only the installing package constructor argument, covering `getInstallingPackageName()`. Initiating/originating package, update owner, package source, database records and PackageInstaller transactions remain stock. See the compatibility notes for A13–A16 descriptors and exact scope.
+For the A17 reference layout, patch both `ComputerEngine.getInstallerPackageName(String,int)String` and `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. The latter filters only the installing package constructor argument, covering `getInstallingPackageName()`. Initiating/originating package, update owner, package source, database records and PackageInstaller transactions remain stock. Inspect the exact target-ROM descriptor before patching.
 
 ```sh
 python script/patch-installer-source.py /path/to/ComputerEngine.smali
@@ -409,7 +412,7 @@ This differs between older framework implementations and the current Android 17 
 
 #### Legacy two-stage String hooks
 
-`shouldRemoveSetting(ContentResolver,String,String)` followed by `filterSettingValue(ContentResolver,String,String,String)` remains a deprecated compatibility ABI. Both stages must see the same namespace/name and original Binder caller on the same provider thread. They cannot be copied directly into methods returning `SettingsState$Setting` or Bundle. The generic legacy snippet is not a validated patch strategy for the included A13–A16 samples. For the current DEX, their inspected call/query layouts match the modern strategy below. See target-ROM validation; do not force legacy hooks into A17.
+`shouldRemoveSetting(ContentResolver,String,String)` followed by `filterSettingValue(ContentResolver,String,String,String)` remains a deprecated compatibility ABI. Both stages must see the same namespace/name and original Binder caller on the same provider thread. They cannot be copied directly into methods returning `SettingsState$Setting` or Bundle. The generic legacy snippet is not a universal patch strategy. Inspect the target ROM's call/query layout; do not force legacy hooks into A17.
 
 #### Current Android 17 patch
 

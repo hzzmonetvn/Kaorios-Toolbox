@@ -62,8 +62,10 @@ python3 script/kaorios_patcher_a17.py <target_dir_or_file> --mode {1,2,3} [--no-
 - **Options**:
   - `--no-delay`: Disables terminal typing effect and runs at maximum speed (ideal for CI/automation).
 
-Follow the detailed usage guide here:  
-👉 [Kaorios-Toolbox Guide](Toolbox-docs)
+Follow the maintained patch guide here:  
+👉 [Kaorios Toolbox Framework 2.0.6.0 guide](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md)
+
+The public patcher edits decompiled smali and fails closed on unsupported layouts. For ROM deployment, always rebuild/re-disassemble the affected DEX and verify against the exact ROM; Template files are references, not drop-in replacements.
 
 Releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases)  
 Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-Toolbox/releases)

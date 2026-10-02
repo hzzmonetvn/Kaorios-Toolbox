@@ -12,3 +12,6 @@ Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md
 Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0.md
 Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0_VI.md
 tmp/fw/
+script/check-framework-samples.py
+script/check-framework-samples-test.py
+script/refresh-sample-compatibility.py

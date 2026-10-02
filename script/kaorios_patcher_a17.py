@@ -77,23 +77,9 @@ class PatchStatus:
 # ==========================================
 
 def patch_activity_thread(content: str) -> tuple[str, bool]:
-    if mod_at is not None:
-        patched, changed = mod_at.patch(content)
-        return patched, changed
-
-    if "KaoriosHook;->initActivityThread" in content:
-        return content, False
-
-    target_assign = re.search(
-        r"(?m)^(?P<indent>[ \t]*)iput-object\s+p1,\s*p0,\s*Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread\$AppBindData;[ \t]*(?:\r?\n|$)",
-        content
-    )
-    if target_assign:
-        indent = target_assign.group("indent")
-        newline = "\r\n" if "\r\n" in content else "\n"
-        inject = f"{indent}invoke-static {{p1}}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V{newline}"
-        return content[:target_assign.end()] + inject + content[target_assign.end():], True
-    raise ValueError("ActivityThread: target anchor not found and hook missing")
+    if mod_at is None:
+        raise ValueError("patch-activitythread-a17.py required for ActivityThread patch but unavailable")
+    return mod_at.patch(content)
 
 
 def patch_computer_engine(content: str) -> tuple[str, bool]:
@@ -103,26 +89,10 @@ def patch_computer_engine(content: str) -> tuple[str, bool]:
 
 
 def patch_system_server(content: str) -> tuple[str, bool]:
-    if mod_ss is not None:
-        patched = mod_ss.patch(content)
-        return patched, (patched != content)
-
-    if "KaoriosHook;->initSystemServer" in content:
-        return content, False
-
-    loop_match = re.search(r"(?m)^(?P<indent>[ \t]*)invoke-static\s*\{\},\s*Landroid/os/Looper;->loop\(\)V", content)
-    if loop_match:
-        indent = loop_match.group("indent")
-        inject = f"{indent}invoke-static {{}}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V\n\n"
-        return content[:loop_match.start()] + inject + content[loop_match.start():], True
-
-    pattern = r'([ \t]*invoke-[^\n]*?Lcom/android/server/SystemServer;->startOtherServices\(Lcom/android/server/utils/TimingsTraceAndSlog;\)V)'
-    def replacer(match):
-        return "    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V\n\n" + match.group(1)
-    patched = re.sub(pattern, replacer, content)
-    if patched == content:
-        raise ValueError("SystemServer: target anchor not found and hook missing")
-    return patched, True
+    if mod_ss is None:
+        raise ValueError("patch-systemserver-a17.py required for SystemServer patch but unavailable")
+    patched = mod_ss.patch(content)
+    return patched, (patched != content)
 
 
 def patch_settings_provider(content: str) -> tuple[str, bool]:
