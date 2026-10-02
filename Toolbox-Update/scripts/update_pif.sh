@@ -59,12 +59,23 @@ if [ -f "$TARGET_FILE" ]; then
   CURRENT_DEVICE_INITIAL_SDK="$(jq -r '.DEVICE_INITIAL_SDK_INT // empty' "$TARGET_FILE" 2>/dev/null || true)"
 fi
 
-# Historical fallback: the old updater always selected the first Pixel OTA,
-# which was Pixel 6 / oriole.
-TARGET_DEVICE="${CURRENT_DEVICE:-oriole}"
-TARGET_MODEL="${CURRENT_MODEL:-Pixel 6}"
-
-echo "Target PIF device: $TARGET_DEVICE ($TARGET_MODEL)"
+# Prefer newest high-end Pixel with a published OTA. Format: codename|model|launch SDK
+PIXEL_PRIORITY=(
+  "kodiak|Pixel 11 Pro XL|37"
+  "grizzly|Pixel 11 Pro|37"
+  "cubs|Pixel 11|37"
+  "yogi|Pixel 11 Pro Fold|37"
+  "mustang|Pixel 10 Pro XL|36"
+  "blazer|Pixel 10 Pro|36"
+  "frankel|Pixel 10|36"
+  "rango|Pixel 10 Pro Fold|36"
+  "komodo|Pixel 9 Pro XL|34"
+  "caiman|Pixel 9 Pro|34"
+  "tokay|Pixel 9|34"
+  "comet|Pixel 9 Pro Fold|34"
+  "husky|Pixel 8 Pro|34"
+  "shiba|Pixel 8|34"
+)
 
 normalize_ota_link() {
   local link="$1"
@@ -77,56 +88,76 @@ normalize_ota_link() {
   fi
 }
 
-find_device_ota() {
-  local page="$1"
-  local link
-
-  link="$(
-    grep -oE 'href="[^"]+\.zip"' "$page"       | cut -d'"' -f2       | grep -E "/${TARGET_DEVICE}(_beta)?-ota-"       | head -n1       || true
-  )"
-
-  if [ -n "$link" ]; then
-    normalize_ota_link "$link"
+find_ota_for_device() {
+  local page="$1" device="$2" allow_beta="$3"
+  local links link
+  links="$(grep -oE 'href="[^"]+\.zip"' "$page" | cut -d'"' -f2 || true)"
+  if [ "$allow_beta" = "yes" ]; then
+    link="$(printf '%s\n' "$links" | grep -E "/${device}(_beta)?-ota-" | head -n1 || true)"
+  else
+    link="$(printf '%s\n' "$links" | grep -E "/${device}-ota-" | grep -v '_beta-ota-' | head -n1 || true)"
   fi
+  [ -n "$link" ] && normalize_ota_link "$link"
 }
 
-# Prefer the newest QPR page that still publishes an OTA for the selected
-# device. This matters for older Pixels: a newer QPR can drop the device
-# while the previous QPR still has a newer usable image than the base page.
+select_from_page() {
+  local page="$1" allow_beta="$2" entry device model launch_sdk link
+  for entry in "${PIXEL_PRIORITY[@]}"; do
+    IFS='|' read -r device model launch_sdk <<< "$entry"
+    link="$(find_ota_for_device "$page" "$device" "$allow_beta")"
+    if [ -n "$link" ]; then
+      TARGET_DEVICE="$device"
+      TARGET_MODEL="$model"
+      TARGET_INITIAL_SDK="$launch_sdk"
+      OTA_LINK="$link"
+      return 0
+    fi
+  done
+  return 1
+}
+
+TARGET_DEVICE=""
+TARGET_MODEL=""
+TARGET_INITIAL_SDK=""
 OTA_LINK=""
 OTA_PAGE=""
-for qpr in 4 3 2 1; do
-  candidate_url="https://developer.android.com/about/versions/$ANDROID_VERSION/qpr$qpr/download-ota"
-  candidate_file="ota-qpr$qpr.html"
+OTA_CHANNEL=""
 
-  if wget -q -O "$candidate_file" "$candidate_url"; then
-    candidate_link="$(find_device_ota "$candidate_file")"
-    if [ -n "$candidate_link" ]; then
+# Prefer released public OTAs. Beta/QPR images are fallback only.
+stable_url="https://developers.google.com/android/ota"
+if wget -q -O ota-stable.html "$stable_url" && select_from_page ota-stable.html no; then
+  OTA_PAGE="$stable_url"
+  OTA_CHANNEL="stable"
+fi
+
+if [ -z "$OTA_LINK" ]; then
+  for qpr in 4 3 2 1; do
+    candidate_url="https://developer.android.com/about/versions/$ANDROID_VERSION/qpr$qpr/download-ota"
+    candidate_file="ota-qpr$qpr.html"
+    if wget -q -O "$candidate_file" "$candidate_url" && select_from_page "$candidate_file" yes; then
       OTA_PAGE="$candidate_url"
-      OTA_LINK="$candidate_link"
+      OTA_CHANNEL="beta"
       break
     fi
-  fi
-done
+  done
+fi
 
 if [ -z "$OTA_LINK" ]; then
   candidate_url="https://developer.android.com/about/versions/$ANDROID_VERSION/download-ota"
   candidate_file="ota-base.html"
-
-  if wget -q -O "$candidate_file" "$candidate_url"; then
-    candidate_link="$(find_device_ota "$candidate_file")"
-    if [ -n "$candidate_link" ]; then
-      OTA_PAGE="$candidate_url"
-      OTA_LINK="$candidate_link"
-    fi
+  if wget -q -O "$candidate_file" "$candidate_url" && select_from_page "$candidate_file" yes; then
+    OTA_PAGE="$candidate_url"
+    OTA_CHANNEL="beta"
   fi
 fi
 
 if [ -z "$OTA_LINK" ]; then
-  echo "Failed to find an Android $ANDROID_VERSION OTA for device '$TARGET_DEVICE'."
+  echo "Failed to find an OTA for any preferred flagship Pixel."
   exit 1
 fi
 
+echo "Selected flagship: $TARGET_MODEL ($TARGET_DEVICE)"
+echo "Selected OTA channel: $OTA_CHANNEL"
 echo "Selected OTA page: $OTA_PAGE"
 echo "Found OTA link: $OTA_LINK"
 
@@ -219,6 +250,10 @@ device_initial_sdk() {
     tokay|caiman|komodo|comet)   echo 34 ;;
     # Pixel 9 Pro Fold — Android 14 launch
     gts9|eos)                    echo 34 ;;
+    # Pixel 10 family — Android 16 launch
+    frankel|blazer|mustang|rango|stallion) echo 36 ;;
+    # Pixel 11 family — Android 17 launch
+    cubs|grizzly|kodiak|yogi)    echo 37 ;;
     # Unknown device: caller falls back to preserving existing value or fails.
     *)                           echo "" ;;
   esac
@@ -239,7 +274,14 @@ resolve_device_initial_sdk() {
   return 1
 }
 
-if ! DEVICE_INITIAL_SDK="$(resolve_device_initial_sdk "$DEVICE" "$CURRENT_DEVICE" "$CURRENT_DEVICE_INITIAL_SDK")"; then
+if [ "$DEVICE" = "$TARGET_DEVICE" ] && [ -n "$TARGET_INITIAL_SDK" ]; then
+  DEVICE_INITIAL_SDK="$TARGET_INITIAL_SDK"
+  mapped_sdk="$(device_initial_sdk "$DEVICE")"
+  if [ -n "$mapped_sdk" ] && [ "$mapped_sdk" != "$DEVICE_INITIAL_SDK" ]; then
+    echo "Launch SDK map mismatch for $DEVICE: priority=$DEVICE_INITIAL_SDK map=$mapped_sdk"
+    exit 1
+  fi
+elif ! DEVICE_INITIAL_SDK="$(resolve_device_initial_sdk "$DEVICE" "$CURRENT_DEVICE" "$CURRENT_DEVICE_INITIAL_SDK")"; then
   echo "Failed to determine DEVICE_INITIAL_SDK_INT for device '$DEVICE' (not in map, no existing value to preserve)."
   exit 1
 fi
