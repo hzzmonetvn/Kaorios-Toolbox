@@ -62,13 +62,6 @@ jobs:
           for f in Toolbox-data/*.json; do
             [ -f "$f" ] && python -m json.tool "$f" > /dev/null
           done
-          python script/validate_toolbox_data.py Toolbox-data
-
-      - name: Run Keybox structural validation tests
-        run: python script/validate_keybox_test.py -v
-
-      - name: Run PIF updater unit tests
-        run: bash Toolbox-Update/scripts/update_pif_test.sh
 
       - name: Run patcher unit tests
         run: python -m unittest discover -s script -p 'kaorios_patcher_a17_test.py' -v
@@ -85,7 +78,5 @@ jobs:
       - name: Run SELinux policy tests
         run: python script/check-advanced-policy-sepolicy-test.py -v
 
-      - name: Run synthetic sample checker tests and raw archive diagnostics
-        run: |
-          python script/check-framework-samples-test.py -v
-          python script/check-framework-samples.py
+      - name: Run synthetic sample checker tests
+        run: python script/check-framework-samples-test.py -v

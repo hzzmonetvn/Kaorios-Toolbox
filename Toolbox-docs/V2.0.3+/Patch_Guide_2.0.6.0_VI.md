@@ -11,7 +11,7 @@ Guide này dùng chung cho Android 13, 14, 15, 16 và 17. Tên class/method có 
 
 ## Bắt đầu từ file stock sạch của ROM đích
 
-Sao lưu `framework.jar.orig`, `services.jar.orig`, `SettingsProvider.apk.orig` trước khi sửa. Luôn dùng file sạch từ đúng ROM đích. Không copy sample `tmp/fw/` vào ROM, không copy nguyên class Template từ ROM khác, và tránh dùng framework đã patch tùy tiện. Nếu chỉnh sửa cũ xung đột, khôi phục source sạch rồi patch lại.
+Sao lưu `framework.jar.orig`, `services.jar.orig`, `SettingsProvider.apk.orig` trước khi sửa. Luôn dùng file sạch từ đúng ROM đích. không copy nguyên class Template từ ROM khác, và tránh dùng framework đã patch tùy tiện. Nếu chỉnh sửa cũ xung đột, khôi phục source sạch rồi patch lại.
 
 ## Workspace Multi-DEX
 
@@ -26,49 +26,9 @@ for dex in work/framework/input/classes*.dex; do
 done
 ```
 
-Kết quả là `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Dùng tương tự `work/services/` và `work/settingsprovider/` cho hai archive còn lại. Tìm class trên mọi cây smali của workspace; không ghi đè dataset `tmp/fw/`.
+Kết quả là `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Dùng tương tự `work/services/` và `work/settingsprovider/` cho hai archive còn lại. Tìm class trên mọi cây smali của workspace.
 
-Kiểm chứng raw ngày **2026-10-01**: 15 archive, 48 DEX, 25 full-Dex roundtrip và 50 class auto-target PASS; cả 15 originals không đổi. Xem [ma trận và dữ liệu JSON](Sample_Compatibility_2.0.6.0.md). Input A17 đã có năm hook và payload cũ; `ALREADY_PATCHED` không phải chèn mới. Không dùng sample hoặc payload cũ để triển khai. Số register trong ví dụ số chỉ thuộc sample; `vScratch`, `vHook`, `vCursor`, `vSavedUri` và tên `v...` bằng chữ là **ký hiệu pseudocode**, phải thay bằng register đã resolve trên ROM đích. ABI hiện tại phải khớp DEX đang triển khai, kể cả khi patch sample A13–A16.
-
-## Included Framework Samples
-
-`tmp/fw/**` chứa sample/reference framework từ một số thế hệ Android/HyperOS. Mỗi sample có `framework.jar`, `services.jar`, `SettingsProvider.apk`. Dataset giúp xem class tồn tại, method descriptor, control flow, register layout, nghiên cứu tương thích và phát triển/test patcher.
-
-Sample không phải file để flash, framework chuẩn, replacement cho ROM của bạn, bằng chứng mọi ROM cùng Android giống nhau hay runtime dependency. Các quan sát dưới đây chỉ áp dụng **trong sample đi kèm**; class presence không chứng minh feature được hỗ trợ đầy đủ.
-
-| Target | A13 sample | A14 sample | A15 sample | A16 sample | A17 sample |
-|---|---|---|---|---|---|
-| ActivityThread / handleBindApplication | FOUND | FOUND | FOUND | FOUND | FOUND |
-| Instrumentation / both newApplication overloads | FOUND | FOUND | FOUND | FOUND | FOUND |
-| ApplicationPackageManager / hasSystemFeature(String,int) | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AndroidKeyStoreKeyPairGeneratorSpi / generateKeyPair | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AndroidKeyStoreSpi / engineGetCertificateChain | FOUND | FOUND | FOUND | FOUND | FOUND |
-| Build | FOUND | FOUND | FOUND | FOUND | FOUND |
-| Build$VERSION | FOUND | FOUND | FOUND | FOUND | FOUND |
-| SystemServer / run | FOUND | FOUND | FOUND | FOUND | FOUND |
-| ComputerEngine | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AppsFilterBase | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AppsFilterImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
-| IPackageManagerBase | FOUND | FOUND | FOUND | FOUND | FOUND |
-| PackageManagerService | FOUND | FOUND | FOUND | FOUND | FOUND |
-| PackageManagerService$IPackageManagerImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
-| InstallSourceInfo | FOUND | FOUND | FOUND | FOUND | FOUND |
-| SettingsProvider / call + query | FOUND | FOUND | FOUND | FOUND | FOUND |
-| ComputerEngine / PackageStateInternal IIZZ overload | DIFFERENT LAYOUT | DIFFERENT LAYOUT | FOUND | FOUND | FOUND |
-| SettingsProvider.call / getDeviceId() anchor | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND | FOUND |
-| SettingsProvider.call / getRequestingUserId(Bundle) anchor | FOUND | FOUND | FOUND | FOUND | FOUND |
-
-`FOUND` là đã tìm thấy class/method được ghi ở row. `NOT FOUND` là không có target cụ thể đó. `DIFFERENT LAYOUT` là có class nhưng descriptor đang so sánh khác; `NOT APPLICABLE` dùng khi target không liên quan (không có ô nào cần trạng thái này trong matrix).
-
-### Included sample observations
-
-- **MIUI 14 / Android 13 (`miui14-a13`)**: trong sample đi kèm, `newApplication(Class,Context)` là static, Context `p1`; overload ClassLoader là instance, Context `p3`. ComputerEngine có overload PackageStateInternal `II` và ComponentName `II`, chưa có `IIZZ`. SettingsProvider.call dùng `getRequestingUserId(Bundle)`; query có `.registers 10`, 7 return-object.
-- **HyperOS 1 / Android 14 (`os1-a14`)**: trong sample đi kèm, mapping Instrumentation và anchor SettingsProvider như A13; ComputerEngine thêm ComponentName `IIZ`, chưa có `IIZZ`. Query có `.registers 10`, 7 return-object.
-- **HyperOS 2 / Android 15 (`os2-a15`)**: trong sample đi kèm, ComputerEngine có `IIZZ`; SettingsProvider.call vẫn dùng `getRequestingUserId(Bundle)`. Query có `.registers 11`, 7 return-object.
-- **HyperOS 3 / Android 16 (`os3-a16`)**: trong sample đi kèm, ComputerEngine có `IIZZ`; call vẫn dùng `getRequestingUserId(Bundle)`. Query có `.registers 10`, 7 return-object.
-- **HyperOS 4 / Android 17 (`os4-a17`)**: trong sample đi kèm, call có cả hai anchor, patcher ưu tiên `getDeviceId()`; ComputerEngine có `IIZZ`. Query có `.registers 11`, 8 return-object và lời gọi `getDeviceId()`.
-
-Trong cả 5 sample, hai overload Instrumentation có một return-object mỗi method; KeyStore SPI có hai nhánh null và một nhánh trả mảng đã điền (register `v3`, `.registers 11`). `SystemServer.run()` có cả `startOtherServices(...)` và `Looper.loop()`; register count khác nhau. AppsFilterBase có `shouldFilterApplication(...)` và `shouldFilterApplicationUsingCache(III)Z`; AppsFilterImpl tồn tại nhưng không tự khai báo hai method này. Phải kiểm tra method inherited và descriptor thực tế. Đây là quan sát source của 15 archive qua baksmali trên mọi DEX split, không phải CI oracle hay kiểm chứng runtime/device.
+Các bundle sample tương thích và báo cáo sample sinh tự động được chủ động không phân phối trong repository này. Chỉ xem các file Template đi kèm như tài liệu tham chiếu cấu trúc: luôn inspect đúng layout ROM stock đích, resolve register trên chính ROM đó và dựa vào cơ chế verify fail-closed của patcher thay vì giả định descriptor/register của ROM khác giống nhau.
 
 ## Auto-patcher
 
@@ -96,7 +56,7 @@ Landroid/app/Instrumentation;
 Với cả hai overload, mỗi `return-object` trên đường trả về được hỗ trợ phải có `initContext()` ngay trước nó. Patcher verify mọi đường return; không chỉ patch return cuối theo thứ tự văn bản:
 
 1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
-   Trong cả năm sample đi kèm, method này **static**, `.registers 3`: `p0=Class=v1`, `p1=Context=v2`, một return. Hook:
+   Trong các layout tham chiếu dùng để soạn guide này, method này **static**, `.registers 3`: `p0=Class=v1`, `p1=Context=v2`, một return. Hook:
    ```smali
    invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
    ```
@@ -372,7 +332,7 @@ return v0
 
 Phải xác định đúng register thật trên ROM đích. Trong cả năm sample, AppsFilterImpl kế thừa AppsFilterLocked rồi AppsFilterBase; đường production được roundtrip là ComputerEngine: II ở A13/A14, IIZZ ở A15–A17. Snippet AppsFilter/direct-cache chỉ là reference, chưa được auto-patch hoặc chứng nhận runtime.
 
-#### Đường ComputerEngine hiện tại trong sample đi kèm
+#### Đường patch ComputerEngine
 
 Class:
 
@@ -433,7 +393,7 @@ Không trộn ABI A13–16 và ABI A17. Kiểm tra đúng signature tồn tại 
 
 Bật Advanced Features rồi chỉnh rule của caller trong Hide Features. `hideInstallationSource` báo Play Store cho ứng dụng thường đã cài mà caller truy vấn. `hideSystemInstallationSource` tùy chọn trả null cho ứng dụng hệ thống; nếu tắt thì giữ stock. `excludeTargetInstallationSource` giữ nguồn cài đặt của chính caller. Tắt tùy chọn cha không xóa giá trị con. Policy installer áp dụng cho các target đã cài được caller truy vấn, độc lập danh sách target/template dùng để ẩn app. Caller manager, target không xác định và lỗi runtime giữ stock; tắt Advanced cũng giữ stock. Shared UID có thể kích hoạt policy từ bất kỳ rule hợp lệ của package trong UID, trừ UID chứa manager.
 
-Trong sample A17 đi kèm, patch cả `ComputerEngine.getInstallerPackageName(String,int)String` và `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. API thứ hai chỉ lọc argument installing package khi dựng kết quả, bao phủ `getInstallingPackageName()`. Giữ nguyên initiating/originating package, update owner, package source, dữ liệu cài đặt và giao dịch PackageInstaller. Xem [bảng sample và checklist thiết bị](Sample_Compatibility_2.0.6.0.md) để biết descriptor A13–A16 và phạm vi chính xác.
+Với layout tham chiếu A17, patch cả `ComputerEngine.getInstallerPackageName(String,int)String` và `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. API thứ hai chỉ lọc argument installing package khi dựng kết quả, bao phủ `getInstallingPackageName()`. Giữ nguyên initiating/originating package, update owner, package source, dữ liệu cài đặt và giao dịch PackageInstaller. Xem ghi chú tương thích để biết descriptor A13–A16 và phạm vi chính xác.
 
 ```sh
 python script/patch-installer-source.py /path/to/ComputerEngine.smali
@@ -450,9 +410,9 @@ Phần này khác rõ giữa implementation/framework cũ và patch A17 hiện t
 
 #### Hook String hai bước của framework cũ
 
-`shouldRemoveSetting(ContentResolver,String,String)` rồi `filterSettingValue(ContentResolver,String,String,String)` là ABI tương thích đã deprecated. Hai bước phải nhận cùng namespace/name và Binder caller gốc trên cùng provider thread. Không chèn trực tiếp vào method trả `SettingsState$Setting` hoặc Bundle. Các getGlobal/getSecure/getSystemSetting đã inspect trả SettingsState$Setting nên String hook trực tiếp là NOT_APPLICABLE trong cả năm sample. Với DEX hiện tại, layout call/query của các sample này khớp strategy modern bên dưới. Xem [kiểm chứng sample](Sample_Compatibility_2.0.6.0.md); không ép hook legacy vào A17.
+`shouldRemoveSetting(ContentResolver,String,String)` rồi `filterSettingValue(ContentResolver,String,String,String)` là ABI tương thích đã deprecated. Hai bước phải nhận cùng namespace/name và Binder caller gốc trên cùng provider thread. Không chèn trực tiếp vào method trả `SettingsState$Setting` hoặc Bundle. Các getGlobal/getSecure/getSystemSetting đã inspect trả SettingsState$Setting nên String hook trực tiếp là NOT_APPLICABLE trên mọi ROM. Với DEX hiện tại, layout call/query của ROM đích khớp strategy modern bên dưới. Xem kiểm chứng ROM đích; không ép hook legacy vào A17.
 
-#### Strategy call/query hiện tại trong cả năm sample
+#### Strategy call/query hiện tại trên mọi ROM
 
 Patcher A17 hiện patch:
 
@@ -581,7 +541,7 @@ Android 13–17 và ROM OEM có thể thay đổi method/register giữa các b�
 
 ## Rebuild và tích hợp ROM
 
-Dùng toolchain pinned trong [sample report](Sample_Compatibility_2.0.6.0.md): smali/baksmali/dexlib2/util 3.0.8, JCommander 1.64. Full framework có hidden-API flags nên không dùng API mặc định 15. Với tool này, input DEX 039 dùng assembler API 29, DEX 040 dùng API 34 để giữ format gốc; API >=35 có lỗi writer DEX 041. Xác nhận output tồn tại, magic giữ nguyên, re-disassemble và verify full DEX; không sửa binary header để che lỗi. Chọn API assembler là chọn format/opcode, không phải đổi Android/SDK của ROM.
+Dùng toolchain pinned trong documented toolchain: smali/baksmali/dexlib2/util 3.0.8, JCommander 1.64. Full framework có hidden-API flags nên không dùng API mặc định 15. Với tool này, input DEX 039 dùng assembler API 29, DEX 040 dùng API 34 để giữ format gốc; API >=35 có lỗi writer DEX 041. Xác nhận output tồn tại, magic giữ nguyên, re-disassemble và verify full DEX; không sửa binary header để che lỗi. Chọn API assembler là chọn format/opcode, không phải đổi Android/SDK của ROM.
 
 
 1. Assemble mỗi cây smali đã sửa thành đúng DEX tương ứng, ví dụ cho input DEX 039: `smali a --api 29 work/framework/smali_classes2 -o work/framework/output/classes2.dex` (tạo thư mục output trước).
@@ -624,8 +584,8 @@ Generation là token `kaorios_time` của snapshot. Client so với epoch đã �
 
 Probe Settings không xác nhận package visibility hoặc installer hooks. Hide Features dùng master desired để cấu hình rule, hiển thị package hook **chưa kiểm chứng**; installer giữ cảnh báo cần verified ROM hooks riêng. Không cài package thử, đổi install source hoặc ghi HMA config để probe. Target thường đã cài nhưng stock installer null vẫn có thể trả `com.android.vending` theo rule caller; early null InstallSourceInfo và target không tồn tại giữ stock. Chỉ installing package field được lọc.
 
-Xem [sample evidence và checklist thiết bị](Sample_Compatibility_2.0.6.0.md). Settings và Installer roadmap vẫn PARTIAL / NEEDS_DEVICE_TEST.
+Xem kiểm chứng trên thiết bị đích. Settings và Installer roadmap vẫn PARTIAL / NEEDS_DEVICE_TEST.
 
 ## Tải và nhập Keybox
 
-Xem [hướng dẫn Keybox](Keybox_Guide_2.0.6.0_VI.md) về XML Hub, hỗ trợ EC-only/RSA-only, mã lỗi an toàn và giữ bản tốt gần nhất. Layout hook certificate-chain đã kiểm chứng không chứng minh Keybox được cung cấp hợp lệ về crypto hay đã thử trên thiết bị.
+Xem hướng dẫn Keybox về XML Hub, hỗ trợ EC-only/RSA-only, mã lỗi an toàn và giữ bản tốt gần nhất. Layout hook certificate-chain đã kiểm chứng không chứng minh Keybox được cung cấp hợp lệ về crypto hay đã thử trên thiết bị.

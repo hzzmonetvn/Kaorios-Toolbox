@@ -11,7 +11,7 @@ This guide is shared across Android 13, 14, 15, 16 and 17. Class/method layout c
 
 ## Start from clean stock files from the target ROM
 
-Back up `framework.jar.orig`, `services.jar.orig`, and `SettingsProvider.apk.orig` before editing. Always use clean files from the exact target ROM. Do not copy `tmp/fw/` samples into a ROM or copy whole Template classes from another ROM. Avoid frameworks with arbitrary prior patches; restore clean source if earlier modifications conflict.
+Back up `framework.jar.orig`, `services.jar.orig`, and `SettingsProvider.apk.orig` before editing. Always use clean files from the exact target ROM. copy whole Template classes from another ROM. Avoid frameworks with arbitrary prior patches; restore clean source if earlier modifications conflict.
 
 ## Multi-DEX workspace
 
@@ -26,49 +26,9 @@ for dex in work/framework/input/classes*.dex; do
 done
 ```
 
-The output trees are `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Use `work/services/` and `work/settingsprovider/` for the other archives. Search all smali trees in the workspace; do not overwrite the `tmp/fw/` dataset.
+The output trees are `work/framework/smali_classes`, `work/framework/smali_classes2`, ... Use `work/services/` and `work/settingsprovider/` for the other archives. Search all smali trees in the workspace.
 
-Raw audit **2026-10-01**: 15 archives, 48 DEX, 25 full-Dex roundtrips and 50 auto-target classes PASS; all 15 originals unchanged. See the [matrix and JSON evidence](Sample_Compatibility_2.0.6.0.md). The A17 input already has five hooks and an older payload: ALREADY_PATCHED is not fresh insertion. Do not deploy the samples or their old payload. Numeric registers in examples belong only to the stated sample; `vScratch`, `vHook`, `vCursor`, `vSavedUri` and other lettered `v...` names are **pseudocode placeholders**, to be replaced with resolved target registers. Current hook ABI must match the DEX being shipped, including for A13–A16 call sites.
-
-## Included Framework Samples
-
-`tmp/fw/**` contains sample/reference frameworks from several Android/HyperOS generations. Each sample includes `framework.jar`, `services.jar`, and `SettingsProvider.apk`. Use them to inspect class presence, method descriptors, control flow and register layout, research compatibility, and develop/test the patcher.
-
-These are not files to flash, a canonical framework, replacements for your ROM, universal proof that every ROM on the same Android version has the same layout, or runtime dependencies. Observations below apply only **in the included sample**; class presence does not establish full feature support.
-
-| Target | A13 sample | A14 sample | A15 sample | A16 sample | A17 sample |
-|---|---|---|---|---|---|
-| ActivityThread / handleBindApplication | FOUND | FOUND | FOUND | FOUND | FOUND |
-| Instrumentation / both newApplication overloads | FOUND | FOUND | FOUND | FOUND | FOUND |
-| ApplicationPackageManager / hasSystemFeature(String,int) | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AndroidKeyStoreKeyPairGeneratorSpi / generateKeyPair | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AndroidKeyStoreSpi / engineGetCertificateChain | FOUND | FOUND | FOUND | FOUND | FOUND |
-| Build | FOUND | FOUND | FOUND | FOUND | FOUND |
-| Build$VERSION | FOUND | FOUND | FOUND | FOUND | FOUND |
-| SystemServer / run | FOUND | FOUND | FOUND | FOUND | FOUND |
-| ComputerEngine | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AppsFilterBase | FOUND | FOUND | FOUND | FOUND | FOUND |
-| AppsFilterImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
-| IPackageManagerBase | FOUND | FOUND | FOUND | FOUND | FOUND |
-| PackageManagerService | FOUND | FOUND | FOUND | FOUND | FOUND |
-| PackageManagerService$IPackageManagerImpl | FOUND | FOUND | FOUND | FOUND | FOUND |
-| InstallSourceInfo | FOUND | FOUND | FOUND | FOUND | FOUND |
-| SettingsProvider / call + query | FOUND | FOUND | FOUND | FOUND | FOUND |
-| ComputerEngine / PackageStateInternal IIZZ overload | DIFFERENT LAYOUT | DIFFERENT LAYOUT | FOUND | FOUND | FOUND |
-| SettingsProvider.call / getDeviceId() anchor | NOT FOUND | NOT FOUND | NOT FOUND | NOT FOUND | FOUND |
-| SettingsProvider.call / getRequestingUserId(Bundle) anchor | FOUND | FOUND | FOUND | FOUND | FOUND |
-
-`FOUND` means the named class/method was located. `NOT FOUND` means that specific target was absent. `DIFFERENT LAYOUT` means the class exists but the compared descriptor differs; `NOT APPLICABLE` is reserved for irrelevant targets (no cells need it here).
-
-### Included sample observations
-
-- **MIUI 14 / Android 13 (`miui14-a13`)**: in the included sample, `newApplication(Class,Context)` is static with Context `p1`; the ClassLoader overload is instance with Context `p3`. ComputerEngine has PackageStateInternal `II` and ComponentName `II` overloads, without `IIZZ`. SettingsProvider.call uses `getRequestingUserId(Bundle)`; query has `.registers 10` and 7 return-object exits.
-- **HyperOS 1 / Android 14 (`os1-a14`)**: in the included sample, Instrumentation mapping and SettingsProvider anchor match A13; ComputerEngine adds ComponentName `IIZ`, without `IIZZ`. Query has `.registers 10` and 7 return-object exits.
-- **HyperOS 2 / Android 15 (`os2-a15`)**: in the included sample, ComputerEngine has `IIZZ`; SettingsProvider.call still uses `getRequestingUserId(Bundle)`. Query has `.registers 11` and 7 return-object exits.
-- **HyperOS 3 / Android 16 (`os3-a16`)**: in the included sample, ComputerEngine has `IIZZ`; call still uses `getRequestingUserId(Bundle)`. Query has `.registers 10` and 7 return-object exits.
-- **HyperOS 4 / Android 17 (`os4-a17`)**: in the included sample, call has both anchors and the patcher prefers `getDeviceId()`; ComputerEngine has `IIZZ`. Query has `.registers 11`, 8 return-object exits and a `getDeviceId()` invocation.
-
-In all five samples, each Instrumentation overload has one return-object; KeyStore SPI has two null paths and one populated-array return (`v3`, `.registers 11`). `SystemServer.run()` contains both `startOtherServices(...)` and `Looper.loop()` with differing register counts. AppsFilterBase declares `shouldFilterApplication(...)` and `shouldFilterApplicationUsingCache(III)Z`; AppsFilterImpl exists but does not itself declare these two methods. Check inherited methods and exact descriptors. These are source observations from baksmali inspection of all DEX splits in 15 archives, not a CI oracle or runtime/device verification.
+Compatibility sample bundles and generated documented toolchains are intentionally not distributed in this repository. Treat the included Template files only as structural references: always inspect the exact stock ROM layout, resolve registers on that ROM, and rely on the patcher's fail-closed verification rather than assuming another ROM's descriptors or register layout.
 
 ## Auto-patcher
 
@@ -96,7 +56,7 @@ Landroid/app/Instrumentation;
 For both overloads, every supported `return-object` must have `initContext()` immediately before it. The patcher verifies every return path; do not patch only the final textual return:
 
 1. `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
-   In all five included samples this method is **static**, `.registers 3`: `p0=Class=v1`, `p1=Context=v2`, one return. Hook:
+   In the reference layouts used to prepare this guide this method is **static**, `.registers 3`: `p0=Class=v1`, `p1=Context=v2`, one return. Hook:
    ```smali
    invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
    ```
@@ -371,7 +331,7 @@ return v0
 
 Resolve the real registers on the target ROM. In all five samples, AppsFilterImpl extends AppsFilterLocked, then AppsFilterBase; the production path roundtripped here is ComputerEngine: II in A13/A14, IIZZ in A15–A17. Direct/cache AppsFilter snippets remain references, without automatic patch or runtime certification.
 
-#### Current ComputerEngine path in the included samples
+#### ComputerEngine patch path
 
 Class:
 
@@ -432,7 +392,7 @@ Use the current ABI exported by the shipped DEX. Android generation labels do no
 
 Enable Advanced Features, then edit a caller rule in Hide Features. `hideInstallationSource` reports Play Store for installed non-system packages queried by that caller. `hideSystemInstallationSource` optionally returns null for system packages; otherwise they stay stock. `excludeTargetInstallationSource` keeps the caller's own installer stock. Child options retain their values while the parent is off. Installer policy applies to installed targets queried by the caller, independently of the app-hide target/template lists. Manager callers, unresolved targets and runtime failures retain stock behavior; Advanced OFF disables filtering. With shared UIDs, any eligible package rule can activate filtering, except a UID containing the manager.
 
-In the included A17 sample, patch both `ComputerEngine.getInstallerPackageName(String,int)String` and `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. The latter filters only the installing package constructor argument, covering `getInstallingPackageName()`. Initiating/originating package, update owner, package source, database records and PackageInstaller transactions remain stock. See the [sample matrix and device checklist](Sample_Compatibility_2.0.6.0.md) for A13–A16 descriptors and exact scope.
+For the A17 reference layout, patch both `ComputerEngine.getInstallerPackageName(String,int)String` and `ComputerEngine.getInstallSourceInfo(String,int)InstallSourceInfo`. The latter filters only the installing package constructor argument, covering `getInstallingPackageName()`. Initiating/originating package, update owner, package source, database records and PackageInstaller transactions remain stock. See the compatibility notes for A13–A16 descriptors and exact scope.
 
 ```sh
 python script/patch-installer-source.py /path/to/ComputerEngine.smali
@@ -449,7 +409,7 @@ This differs between older framework implementations and the current Android 17 
 
 #### Legacy two-stage String hooks
 
-`shouldRemoveSetting(ContentResolver,String,String)` followed by `filterSettingValue(ContentResolver,String,String,String)` remains a deprecated compatibility ABI. Both stages must see the same namespace/name and original Binder caller on the same provider thread. They cannot be copied directly into methods returning `SettingsState$Setting` or Bundle. The generic legacy snippet is not a validated patch strategy for the included A13–A16 samples. For the current DEX, their inspected call/query layouts match the modern strategy below. See [sample validation](Sample_Compatibility_2.0.6.0.md); do not force legacy hooks into A17.
+`shouldRemoveSetting(ContentResolver,String,String)` followed by `filterSettingValue(ContentResolver,String,String,String)` remains a deprecated compatibility ABI. Both stages must see the same namespace/name and original Binder caller on the same provider thread. They cannot be copied directly into methods returning `SettingsState$Setting` or Bundle. The generic legacy snippet is not a validated patch strategy for the included A13–A16 samples. For the current DEX, their inspected call/query layouts match the modern strategy below. See target-ROM validation; do not force legacy hooks into A17.
 
 #### Current Android 17 patch
 
@@ -579,7 +539,7 @@ Android 13–17 and OEM updates can move methods/registers, so follow the equiva
 
 ## Rebuild and ROM integration
 
-Use the pinned toolchain in the [sample report](Sample_Compatibility_2.0.6.0.md): smali/baksmali/dexlib2/util 3.0.8, JCommander 1.64. Full framework hidden-API flags require more than default API 15. With this tool, assemble input DEX 039 with API 29, input DEX 040 with API 34 to preserve stock format; API >=35 has a DEX 041 writer defect. Require a produced DEX with unchanged magic, re-disassemble and verify the full DEX; do not repair binary headers to conceal errors. Assembler API selects format/opcodes, not the ROM Android/SDK version.
+Use the pinned toolchain in the documented toolchain: smali/baksmali/dexlib2/util 3.0.8, JCommander 1.64. Full framework hidden-API flags require more than default API 15. With this tool, assemble input DEX 039 with API 29, input DEX 040 with API 34 to preserve stock format; API >=35 has a DEX 041 writer defect. Require a produced DEX with unchanged magic, re-disassemble and verify the full DEX; do not repair binary headers to conceal errors. Assembler API selects format/opcodes, not the ROM Android/SDK version.
 
 
 1. Assemble each modified smali tree back into its matching DEX, for an input DEX 039, for example `smali a --api 29 work/framework/smali_classes2 -o work/framework/output/classes2.dex` (create the output directory first).
@@ -622,8 +582,8 @@ Generation is the snapshot's `kaorios_time` token. The client compares it with t
 
 Settings probes do not verify package visibility or installer hooks. Hide Features uses master intent to configure rules and labels package hook status **not verified**; installer retains its separate verified-ROM-hook warning. No temporary package installation, install-source mutation or HMA config write is used to probe these domains. An installed non-system target with a null stock installer can still return `com.android.vending` under the caller rule; early null InstallSourceInfo and unknown targets retain stock behavior. Only the installing package field is filtered.
 
-See [sample evidence and the device checklist](Sample_Compatibility_2.0.6.0.md). Settings and Installer roadmaps remain PARTIAL / NEEDS_DEVICE_TEST.
+See target-device validation. Settings and Installer roadmaps remain PARTIAL / NEEDS_DEVICE_TEST.
 
 ## Keybox download and import
 
-See the [Keybox guide](Keybox_Guide_2.0.6.0.md) for Hub XML, EC-only/RSA-only support, safe validation errors and last-known-good behavior. A verified certificate-chain hook layout does not prove the supplied Keybox is cryptographically valid or device-tested.
+See the Keybox guide for Hub XML, EC-only/RSA-only support, safe validation errors and last-known-good behavior. A verified certificate-chain hook layout does not prove the supplied Keybox is cryptographically valid or device-tested.

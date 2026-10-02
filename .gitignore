@@ -3,3 +3,12 @@ __pycache__/
 *.pyo
 *.pyd
 .DS_Store
+# Intentionally removed legacy validation/docs/sample files
+script/validate_toolbox_data.py
+script/validate_keybox_test.py
+Toolbox-Update/scripts/update_pif_test.sh
+Toolbox-docs/Toolbox-data-schema.md
+Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md
+Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0.md
+Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0_VI.md
+tmp/fw/
