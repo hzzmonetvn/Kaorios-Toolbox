@@ -70,6 +70,7 @@ check(not changed and again == patched, "exact Object hook is not idempotent")
 
 decoy_source = method(
     body=(
+        "    .registers 3\n"
         "    iget-object v0, p0, "
         "Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;\n"
         "    invoke-virtual {v0}, Ljava/lang/Object;->toString()Ljava/lang/String;\n"
