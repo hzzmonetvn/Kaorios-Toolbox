@@ -183,8 +183,6 @@ echo "Downloading OTA metadata prefix..."
 
 FINGERPRINT=""
 SECURITY_PATCH=""
-SDK_INT=""
-
 # META-INF/com/android/metadata is normally near the beginning of Pixel OTA
 # packages. Grow the range progressively instead of assuming it is always
 # within the first 20 KiB.
@@ -221,6 +219,10 @@ DEVICE="$(printf '%s' "$FINGERPRINT" | cut -d/ -f3 | cut -d: -f1)"
 
 if [ -z "$PRODUCT" ] || [ -z "$DEVICE" ]; then
   echo "Failed to parse PRODUCT/DEVICE from fingerprint: $FINGERPRINT"
+  exit 1
+fi
+if [ "$DEVICE" != "$TARGET_DEVICE" ]; then
+  echo "OTA metadata device mismatch: selected '$TARGET_DEVICE' but fingerprint reports '$DEVICE'."
   exit 1
 fi
 
