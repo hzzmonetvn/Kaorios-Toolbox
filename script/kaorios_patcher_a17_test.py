@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PATCHER_PY = SCRIPT_DIR / "kaorios_patcher_a17.py"
+PATCHER_PY = SCRIPT_DIR / "kaorios_patcher.py"
 
 
 SAMPLE_ACTIVITY_THREAD_STOCK = """

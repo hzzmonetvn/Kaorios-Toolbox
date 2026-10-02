@@ -36,12 +36,26 @@ Các bundle sample tương thích và báo cáo sample sinh tự động đượ
 ## Auto-patcher
 
 ```bash
-python3 script/kaorios_patcher_a17.py work/framework --mode 1 --no-delay
+python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 1 --no-delay
 # General CLI:
-python3 script/kaorios_patcher_a17.py <target_dir_or_file> --mode {1,2,3} [--no-delay]
+python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,15,16,17} --mode {1,2,3} [--no-delay]
 ```
 
 Mode `1` chèn hooks; mode `2` patch Build spoof A17 (`Build` và `Build$VERSION`); mode `3` thực hiện cả hai. `--no-delay` tắt hiệu ứng gõ chữ. Quét workspace smali của framework, services và SettingsProvider tương ứng; tên A17 không đảm bảo mọi layout OEM được hỗ trợ.
+
+
+### Ma trận chạy patcher
+
+| Android | Lệnh chuẩn | Hook | Build spoof |
+|---|---|---|---|
+| 13 | `--android-version 13 --mode 1` | Có, theo layout/verifier | Không |
+| 14 | `--android-version 14 --mode 1` | Có, theo layout/verifier | Không |
+| 15 | `--android-version 15 --mode 1` | Có, theo layout/verifier | Không |
+| 16 | `--android-version 16 --mode 1` | Có, theo layout/verifier | Không |
+| 17 | `--android-version 17 --mode 1` | Có, theo layout/verifier | Tùy chọn |
+| 17 | `--android-version 17 --mode 3` | Có | Có |
+
+Tên Android chỉ chọn policy hợp lệ; patcher vẫn xác định call-site bằng class/method descriptor + verifier. Android 13–16 **không** chạy mode 2/3.
 
 Patcher kiểm tra register/control-flow được hỗ trợ và verify cấu trúc hook trước khi lưu; không chạy smali assembler. Một file không thuộc target của mode sẽ báo không nằm trong danh sách mục tiêu và không thành công; thư mục không có target cũng thất bại. CLI không in một status literal riêng cho file ngoài target. Exit `0` nghĩa là xử lý bắt buộc trong ngữ cảnh CLI đã thành công; exit `1` nghĩa là lỗi, unsupported hoặc không có target áp dụng. Patch trên cây làm việc có backup: file thành công trước đó có thể đã được lưu khi một file khác thất bại.
 
@@ -85,7 +99,7 @@ trên mọi ROM đích, method là `handleBindApplication(Landroid/app/ActivityT
 | A16 | 32 | v9 / v1 |
 | A17 | 39 | v9 / v1 |
 
-Ví dụ **chỉ thuộc A13 sample**:
+Ví dụ **thuộc một layout tham chiếu A13**:
 
 ```smali
 iput-object v2, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
@@ -343,7 +357,7 @@ Class:
 Lcom/android/server/pm/ComputerEngine;
 ```
 
-Patcher A17 ưu tiên:
+Patcher cross-version chọn overload đã được verifier xác nhận đang tồn tại trên ROM đích:
 
 ```smali
 shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z
@@ -417,7 +431,7 @@ Phần này khác rõ giữa implementation/framework cũ và patch A17 hiện t
 
 #### Strategy call/query hiện tại trên mọi ROM
 
-Patcher A17 hiện patch:
+Patcher cross-version hiện patch:
 
 ```smali
 Lcom/android/providers/settings/SettingsProvider;
@@ -433,8 +447,8 @@ filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 
 `call(...)` là instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. Patcher tìm anchor ngữ nghĩa an toàn theo thứ tự:
 
-1. `getDeviceId()I`: có trong call của sample A17, ưu tiên khi nhận diện layout an toàn.
-2. `getRequestingUserId(Landroid/os/Bundle;)I`: fallback trong sample A13–A16, cũng có ở A17. Không coi anchor là bảo đảm theo phiên bản.
+1. `getDeviceId()I`: được ưu tiên trên layout A17 đã nhận diện, ưu tiên khi nhận diện layout an toàn.
+2. `getRequestingUserId(Landroid/os/Bundle;)I`: fallback trên layout A13–A16 đã nhận diện, cũng có ở A17. Không coi anchor là bảo đảm theo phiên bản.
 
 > [!IMPORTANT]
 > **Bảo Toàn Định Danh Người Gọi (Caller Identity Preservation):**  

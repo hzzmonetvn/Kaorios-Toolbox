@@ -36,12 +36,26 @@ Compatibility sample bundles and generated documented toolchains are intentional
 ## Auto-patcher
 
 ```bash
-python3 script/kaorios_patcher_a17.py work/framework --mode 1 --no-delay
+python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 1 --no-delay
 # General CLI:
-python3 script/kaorios_patcher_a17.py <target_dir_or_file> --mode {1,2,3} [--no-delay]
+python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,15,16,17} --mode {1,2,3} [--no-delay]
 ```
 
 Mode `1` inserts hooks; mode `2` patches A17 Build spoof (`Build` and `Build$VERSION`); mode `3` does both. `--no-delay` disables typing delays. Scan the corresponding framework, services and SettingsProvider smali workspaces; the A17 name does not guarantee support for every OEM layout.
+
+
+### Patcher execution matrix
+
+| Android | Canonical command | Hooks | Build spoof |
+|---|---|---|---|
+| 13 | `--android-version 13 --mode 1` | Yes, layout/verifier driven | No |
+| 14 | `--android-version 14 --mode 1` | Yes, layout/verifier driven | No |
+| 15 | `--android-version 15 --mode 1` | Yes, layout/verifier driven | No |
+| 16 | `--android-version 16 --mode 1` | Yes, layout/verifier driven | No |
+| 17 | `--android-version 17 --mode 1` | Yes, layout/verifier driven | Optional |
+| 17 | `--android-version 17 --mode 3` | Yes | Yes |
+
+The Android label selects valid policy; call-sites are still selected by class/method descriptor plus verifier. Android 13–16 **must not** use mode 2/3.
 
 The patcher validates supported register/control-flow layout and structurally verifies resulting hooks before saving; it does not invoke a smali assembler. A file outside the mode's targets prints a not-target message and is unsuccessful; a directory without targets also fails. The CLI does not print a separate literal status for an unrelated file. Exit `0` means required processing in this CLI context succeeded; exit `1` means error, unsupported layout, or no applicable target. Work on backed-up trees: earlier successful files may already have been saved when another file fails.
 
@@ -85,7 +99,7 @@ In the supported reference layouts the method is `handleBindApplication(Landroid
 | A16 | 32 | v9 / v1 |
 | A17 | 39 | v9 / v1 |
 
-Example **from the A13 sample only**:
+Example **for an A13 reference layout**:
 
 ```smali
 iput-object v2, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
@@ -342,7 +356,7 @@ Class:
 Lcom/android/server/pm/ComputerEngine;
 ```
 
-The A17 patcher prefers:
+The cross-version patcher selects the verified overload that exists in the target ROM:
 
 ```smali
 shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z
@@ -414,7 +428,7 @@ This differs between older framework implementations and the current Android 17 
 
 `shouldRemoveSetting(ContentResolver,String,String)` followed by `filterSettingValue(ContentResolver,String,String,String)` remains a deprecated compatibility ABI. Both stages must see the same namespace/name and original Binder caller on the same provider thread. They cannot be copied directly into methods returning `SettingsState$Setting` or Bundle. The generic legacy snippet is not a universal patch strategy. Inspect the target ROM's call/query layout; do not force legacy hooks into A17.
 
-#### Current Android 17 patch
+#### Current Android 13–17 SettingsProvider patch
 
 Class:
 
@@ -432,8 +446,8 @@ filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
 
 `call(...)` is an instance method: `p0=this`, `p1=method`, `p2=name`, `p3=args`. The patcher searches for a safe semantic anchor in this order:
 
-1. `getDeviceId()I`: present in the included A17 call method, preferred when the safe layout is recognized.
-2. `getRequestingUserId(Landroid/os/Bundle;)I`: the included A13–A16 fallback; also present in A17. Neither anchor is a universal version guarantee.
+1. `getDeviceId()I`: preferred on recognized A17 layouts, preferred when the safe layout is recognized.
+2. `getRequestingUserId(Landroid/os/Bundle;)I`: the recognized A13–A16 fallback; also present in A17. Neither anchor is a universal version guarantee.
 
 > [!IMPORTANT]
 > **Caller Identity Preservation:**  

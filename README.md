@@ -47,18 +47,18 @@ For **version 2.0.4.0 and below**, see:
 
 See Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md). For Android 17 (SDK 37), also refer to the [Android 17 Build Patch Notes](Toolbox-docs/V2.0.3+/notes-a17.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/notes-a17_VI.md)).
 
-### ⚡ Automated Patcher CLI (`script/kaorios_patcher_a17.py`)
+### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
 
 **Usage:**
 
 ```bash
-python3 script/kaorios_patcher_a17.py <target_dir_or_file> --mode {1,2,3} [--no-delay]
+python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,15,16,17} --mode {1,2,3} [--no-delay]
 ```
 
 - **Modes**:
-  - `1`: **Hooks only** — Patches `ActivityThread`, `ComputerEngine`, `SystemServer`, `SettingsProvider`, `Instrumentation`, `ApplicationPackageManager`, `AndroidKeyStoreKeyPairGeneratorSpi`, and `AndroidKeyStoreSpi`.
+  - `1`: **Hooks Android 13–17** — Patches `ActivityThread`, `ComputerEngine`, `SystemServer`, `SettingsProvider`, `Instrumentation`, `ApplicationPackageManager`, `AndroidKeyStoreKeyPairGeneratorSpi`, and `AndroidKeyStoreSpi`.
   - `2`: **Build Spoof A17 only** — Removes `final` and updates initializers in `Build.smali` and `Build$VERSION.smali`.
-  - `3`: **All-in-One** — Executes both Mode 1 (Hooks) and Mode 2 (Build Spoof).
+  - `3`: **Hooks + Build Spoof (Android 17 only)** — Executes Mode 1 plus the A17-only Build patch. Android 13–16 must use Mode 1.
 - **Options**:
   - `--no-delay`: Disables terminal typing effect and runs at maximum speed (ideal for CI/automation).
 
