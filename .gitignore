@@ -15,3 +15,18 @@ tmp/fw/
 script/check-framework-samples.py
 script/check-framework-samples-test.py
 script/refresh-sample-compatibility.py
+
+# Intentionally removed repository-only test/debug clutter
+.github/workflows/test-patcher.yml
+.github/workflows/README.md
+.github/workflows/NO_BUG_CHARM.webp
+script/*-test.py
+script/*_test.py
+script/fixtures/
+script/smoke-test-device.sh
+Toolbox-docs/V2.0.3+/notes-a17.md
+Toolbox-docs/V2.0.3+/notes-a17_VI.md
+AGENT.md
+AGENTS.md
+agent.md
+agents.md

@@ -41,8 +41,24 @@ python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 1 -
 python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,15,16,17} --mode {1,2,3} [--no-delay]
 ```
 
-Mode `1` inserts hooks; mode `2` patches A17 Build spoof (`Build` and `Build$VERSION`); mode `3` does both. `--no-delay` disables typing delays. Scan the corresponding framework, services and SettingsProvider smali workspaces; the A17 name does not guarantee support for every OEM layout.
+Mode `1` inserts hooks; mode `2` patches A17 Build spoof (`Build` and `Build$VERSION`); mode `3` does both. `--no-delay` disables typing delays.
 
+The maintained entry point is **`script/kaorios_patcher.py`**. `script/kaorios_patcher_a17.py` is only a compatibility launcher for older commands. Some sibling patcher/verifier filenames still contain `a17` for compatibility; that filename does **not** mean the verified hook is Android-17-only.
+
+For mode 1/3 the current target set is:
+
+- `ActivityThread.smali`
+- `ComputerEngine.smali`
+- `SettingsProvider.smali`
+- `SystemServer.smali`
+- `AndroidKeyStoreKeyPairGeneratorSpi.smali`
+- `AndroidKeyStoreSpi.smali`
+- `Instrumentation.smali`
+- `ApplicationPackageManager.smali`
+
+Mode 2/3 additionally targets `Build.smali` and `Build$VERSION.smali`, and is accepted only with `--android-version 17`.
+
+Run the patcher against the decompiled tree that actually contains each class. A normal multi-DEX job therefore usually means running mode 1 separately against the framework, services and SettingsProvider workspaces rather than pointing at one unrelated directory and assuming every hook is present there.
 
 ### Patcher execution matrix
 
@@ -278,13 +294,31 @@ No scratch is needed. Preserve try/catch boundaries. Full-Dex run roundtrips pas
 
 ---
 
-## 3. Android 17-only patch
+## 3. Android 17-only Build patch
 
-Android 17 / SDK 37 additionally requires the `Build.smali` and `Build$VERSION.smali` field patch.
+Android 17 / SDK 37 may require the additional Build-field patch used by PIF/GameProps-style runtime spoofing. This is exactly what mode `2` does, while mode `3` combines it with the hook patch.
 
-See [notes-a17.md](notes-a17.md).
+### `Build.smali`
 
-Do not apply this section to Android 13–16 unless your framework explicitly requires it.
+For these String fields, remove `final` and set the field initializer to `null`:
+
+`BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`.
+
+For `TIME:J`, remove only `final`; do not append `= null`.
+
+Reference: [`Build.smali`](../Template/Template_V2060/framework/Build.smali).
+
+### `Build$VERSION.smali`
+
+Remove `final` from:
+
+`RELEASE`, `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`.
+
+Reference: [`Build$VERSION.smali`](../Template/Template_V2060/framework/Build$VERSION.smali).
+
+Keep `SDK_INT` unchanged. Do not bulk-remove `final` from every Build field. If a custom profile modifies extra fields such as `DISPLAY`, `HOST`, `INCREMENTAL`, `SDK` or additional `*_FOR_ATTESTATION` values, change only the exact fields required by that profile after checking the target ROM layout.
+
+Do not apply mode 2/3 to Android 13–16.
 
 ---
 
@@ -549,7 +583,6 @@ Android 13–17 and OEM updates can move methods/registers, so follow the equiva
 
 ## 6. Other documentation
 
-- [Android 17 Build patch](notes-a17.md)
 - [Disable Secure Flag](Disable_Secure_Flag.md)
 - [CorePatch](CorePatch.md)
 - [Smali templates](../Template/Template_V2060)

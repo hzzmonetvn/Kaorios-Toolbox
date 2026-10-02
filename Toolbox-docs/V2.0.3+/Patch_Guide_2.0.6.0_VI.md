@@ -41,8 +41,24 @@ python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 1 -
 python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,15,16,17} --mode {1,2,3} [--no-delay]
 ```
 
-Mode `1` chèn hooks; mode `2` patch Build spoof A17 (`Build` và `Build$VERSION`); mode `3` thực hiện cả hai. `--no-delay` tắt hiệu ứng gõ chữ. Quét workspace smali của framework, services và SettingsProvider tương ứng; tên A17 không đảm bảo mọi layout OEM được hỗ trợ.
+Mode `1` chèn hooks; mode `2` patch Build spoof A17 (`Build` và `Build$VERSION`); mode `3` thực hiện cả hai. `--no-delay` tắt hiệu ứng gõ chữ.
 
+Entry point đang được duy trì là **`script/kaorios_patcher.py`**. `script/kaorios_patcher_a17.py` chỉ là launcher tương thích để lệnh cũ không hỏng. Một số file patcher/verifier phụ vẫn có `a17` trong tên vì tương thích lịch sử; tên file đó **không** có nghĩa hook chỉ dùng cho Android 17.
+
+Target hiện tại của mode 1/3:
+
+- `ActivityThread.smali`
+- `ComputerEngine.smali`
+- `SettingsProvider.smali`
+- `SystemServer.smali`
+- `AndroidKeyStoreKeyPairGeneratorSpi.smali`
+- `AndroidKeyStoreSpi.smali`
+- `Instrumentation.smali`
+- `ApplicationPackageManager.smali`
+
+Mode 2/3 thêm `Build.smali` và `Build$VERSION.smali`, và chỉ hợp lệ khi dùng `--android-version 17`.
+
+Hãy chạy patcher trên đúng cây smali thực sự chứa class cần vá. Với ROM multi-DEX, thông thường phải chạy mode 1 riêng trên workspace framework, services và SettingsProvider thay vì trỏ vào một thư mục không chứa đủ target rồi giả định mọi hook đều nằm chung một chỗ.
 
 ### Ma trận chạy patcher
 
@@ -278,13 +294,31 @@ Không cần scratch. Giữ nguyên try/catch boundaries; full-Dex roundtrip c�
 
 ---
 
-## 3. Patch riêng Android 17
+## 3. Patch Build riêng cho Android 17
 
-Android 17 / SDK 37 cần patch thêm các field trong `Build.smali` và `Build$VERSION.smali`.
+Android 17 / SDK 37 có thể cần patch thêm field Build để PIF/GameProps spoof runtime đúng. Đây chính là phần mode `2` thực hiện; mode `3` = hook + Build patch.
 
-Xem: [notes-a17_VI.md](notes-a17_VI.md).
+### `Build.smali`
 
-Không áp dụng phần này cho Android 13–16 nếu framework của bạn không yêu cầu.
+Với các field String sau, xóa `final` và đặt initializer thành `null`:
+
+`BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`.
+
+Riêng `TIME:J`, chỉ xóa `final`; không thêm `= null`.
+
+Tham chiếu: [`Build.smali`](../Template/Template_V2060/framework/Build.smali).
+
+### `Build$VERSION.smali`
+
+Xóa `final` khỏi:
+
+`RELEASE`, `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`.
+
+Tham chiếu: [`Build$VERSION.smali`](../Template/Template_V2060/framework/Build$VERSION.smali).
+
+Giữ nguyên `SDK_INT`. Không xóa hàng loạt `final` khỏi mọi field Build. Nếu profile riêng sửa thêm `DISPLAY`, `HOST`, `INCREMENTAL`, `SDK` hoặc các field `*_FOR_ATTESTATION` khác thì chỉ sửa đúng field profile đó cần sau khi kiểm tra layout ROM đích.
+
+Không dùng mode 2/3 cho Android 13–16.
 
 ---
 
@@ -551,7 +585,6 @@ Android 13–17 và ROM OEM có thể thay đổi method/register giữa các b�
 
 ## 6. Tài liệu khác
 
-- [Android 17 Build patch](notes-a17_VI.md)
 - [Disable Secure Flag](Disable_Secure_Flag_VI.md)
 - [CorePatch](CorePatch_VI.md)
 - [Template Smali](../Template/Template_V2060)

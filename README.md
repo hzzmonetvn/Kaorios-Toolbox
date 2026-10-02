@@ -45,7 +45,7 @@ For **version 2.0.4.0 and below**, see:
 
 ## 📦 Latest release: v2.0.6.0
 
-See Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md). For Android 17 (SDK 37), also refer to the [Android 17 Build Patch Notes](Toolbox-docs/V2.0.3+/notes-a17.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/notes-a17_VI.md)).
+See the maintained Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md). The same guide covers Android 13–17, including the Android 17 / SDK 37 Build patch.
 
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
 
@@ -65,7 +65,7 @@ python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,
 Follow the maintained patch guide here:  
 👉 [Kaorios Toolbox Framework 2.0.6.0 guide](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md)
 
-The public patcher edits decompiled smali and fails closed on unsupported layouts. For ROM deployment, always rebuild/re-disassemble the affected DEX and verify against the exact ROM; Template files are references, not drop-in replacements.
+The maintained entry point is `script/kaorios_patcher.py`. The legacy `kaorios_patcher_a17.py` filename is only a compatibility launcher. The patcher edits decompiled smali and fails closed on unsupported layouts. For ROM deployment, always rebuild/re-disassemble the affected DEX and verify against the exact ROM; Template files are references, not drop-in replacements.
 
 Releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases)  
 Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-Toolbox/releases)
