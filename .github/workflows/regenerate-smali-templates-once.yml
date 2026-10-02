@@ -1,0 +1,39 @@
+name: Regenerate Android 13-17 Smali Templates
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/regenerate-smali-templates-once.yml'
+      - 'script/regenerate-smali-templates-once.sh'
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@d23441a2e711c9a5d2f4a270c2f03b9f3c4f7f89
+        with:
+          fetch-depth: 0
+
+      - name: Generate patched templates
+        run: bash script/regenerate-smali-templates-once.sh
+
+      - name: Commit generated templates and remove one-shot generator
+        run: |
+          rm -f .github/workflows/regenerate-smali-templates-once.yml
+          rm -f script/regenerate-smali-templates-once.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No template changes generated"
+            exit 1
+          fi
+          git commit -m "Regenerate patched smali templates from Android 13-17 stock archives"
+          git push origin HEAD:main
