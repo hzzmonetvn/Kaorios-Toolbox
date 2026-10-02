@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout full history
-        uses: actions/checkout@d23441a2e711c9a5d2f4a270c2f03b9f3c4f7f89
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           fetch-depth: 0
 
