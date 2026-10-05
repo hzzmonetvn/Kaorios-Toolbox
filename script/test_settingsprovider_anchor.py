@@ -32,6 +32,18 @@ class AnchorBoundaryTest(unittest.TestCase):
         result = result.replace("    :cond_kaorios_settings_stock\n", "    .line 480\n    :cond_kaorios_settings_stock\n", 1)
         patcher.verify(result)
 
+    def test_range_crossing_parameter_boundary_is_rejected(self):
+        stock = STOCK.format(gap="").replace("    return-object p3", "    invoke-static/range {v1 .. v3}, Ltest/Boundary;->accept(ILcom/android/providers/settings/SettingsProvider;Ljava/lang/String;)V\n    return-object p3")
+        with self.assertRaises(ValueError):
+            patcher.patch(stock)
+
+    def test_register_aliases_do_not_change_strings_or_labels(self):
+        stock = STOCK.format(gap="").replace("    return-object p3", '    const-string v0, "v2 {v1 .. v3}"\n    :v2\n    move-object v0, v2\n    return-object p3')
+        result, _ = patcher.patch(stock)
+        self.assertIn('const-string v0, "v2 {v1 .. v3}"', result)
+        self.assertIn(":v2", result)
+        self.assertIn("move-object v0, p0", result)
+
     def test_split_result_is_rejected(self):
         result, _ = patcher.patch(STOCK.format(gap=""))
         broken = result.replace("    move-result v0\n", "", 1)

@@ -373,6 +373,9 @@ High-register or unsupported control-flow layouts fail closed.
 
 **SettingsProvider fix, 2026-10-05:** the previous patch could insert a hook between `getDeviceId()` and its `move-result` when baksmali emitted blank/debug lines. The DEX can assemble while ART rejects the method and the provider fails to start. Use the updated patcher, rebuild from the stock APK, re-disassemble and verify. The hook must follow the complete invoke/result pair; signing changes or CorePatch do not repair this bytecode defect. Device boot success remains unverified.
 
+When growing locals in `call()`, the patcher rejects `invoke-range` spans crossing the local/parameter boundary because growth adds an unintended register to the range. Register alias conversion preserves string literals, labels and descriptors. Do not force a rejected layout by globally renaming register-looking text.
+
+
 ---
 
 ## 7. Android 17 Build patch

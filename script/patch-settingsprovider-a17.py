@@ -268,20 +268,34 @@ def patch(text: str) -> tuple[str, bool]:
 
         reg_match = REGISTERS_RE.search(body)
         loc_match = LOCALS_RE.search(body)
-        updated_body = body
+        if (reg_match is None) == (loc_match is None):
+            raise ValueError("expected exactly one SettingsProvider.call register directive")
+        old_locals = int((loc_match or reg_match)["num"]) - (param_width if reg_match else 0)
+        if old_locals < 0:
+            raise ValueError("SettingsProvider.call register count is less than parameter count")
+        for instruction in _query_instructions(body):
+            if not instruction.split()[0].endswith('/range'):
+                continue
+            for low, high in re.findall(r'\{([vp]\d+)\s*\.\.\s*([vp]\d+)\}', instruction):
+                physical = lambda reg: int(reg[1:]) + (old_locals if reg.startswith('p') else 0)
+                if physical(low) < old_locals <= physical(high):
+                    raise ValueError("unsupported call range crossing local/parameter boundary")
+        # Change operands only; quoted strings and descriptor/label names are data.
+        lines = []
+        for line in body.splitlines(keepends=True):
+            parts = re.split(r'("(?:\\.|[^"\\])*")', line)
+            for n in range(0, len(parts), 2):
+                parts[n] = re.sub(
+                    r'(?<![\w/$:>])v(\d+)(?![\w/;$(])',
+                    lambda m: 'p' + str(int(m[1]) - old_locals)
+                    if old_locals <= int(m[1]) < old_locals + param_width else m[0],
+                    parts[n],
+                )
+            lines.append(''.join(parts))
+        updated_body = ''.join(lines)
 
         if loc_match:
             current_locs = int(loc_match.group("num"))
-            # .locals may reference parameter slots numerically as vN. Adding a
-            # local shifts the physical parameter registers, so canonicalize those aliases
-            # to stable pN names before expanding .locals.
-            for param_idx in range(param_width - 1, -1, -1):
-                v_idx = current_locs + param_idx
-                updated_body = re.sub(
-                    rf"(?<![A-Za-z0-9_])v{v_idx}(?![0-9])",
-                    f"p{param_idx}",
-                    updated_body,
-                )
             new_locs = current_locs + 1
             hook_reg = f"v{current_locs}"
             indent = loc_match.group("indent")
@@ -296,16 +310,6 @@ def patch(text: str) -> tuple[str, bool]:
             existing_locals = current_regs - param_width
             if existing_locals < 0:
                 raise ValueError(f".registers {current_regs} is less than parameter count {param_width}")
-            # .registers may reference parameter slots numerically as vN. Adding a
-            # local shifts the physical parameter registers, so canonicalize those aliases
-            # to stable pN names before converting the directive to .locals.
-            for register_index in range(current_regs - 1, existing_locals - 1, -1):
-                parameter_index = register_index - existing_locals
-                updated_body = re.sub(
-                    rf"(?<![A-Za-z0-9_])v{register_index}(?![0-9])",
-                    f"p{parameter_index}",
-                    updated_body,
-                )
             new_locs = existing_locals + 1
             hook_reg = f"v{existing_locals}"
             indent = reg_match.group("indent")
@@ -315,17 +319,6 @@ def patch(text: str) -> tuple[str, bool]:
                 + new_loc_line
                 + updated_body[reg_match.end():]
             )
-        else:
-            hook_reg = "v0"
-            new_locs = 1
-            lines = updated_body.splitlines(keepends=True)
-            method_line_end = len(lines[0])
-            updated_body = (
-                updated_body[:method_line_end]
-                + f"    .locals 1{newline}"
-                + updated_body[method_line_end:]
-            )
-
         p1_num = new_locs + 1
         p2_num = new_locs + 2
         if p1_num > 15 or p2_num > 15:

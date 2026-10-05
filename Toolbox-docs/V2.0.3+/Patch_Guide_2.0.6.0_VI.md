@@ -383,6 +383,9 @@ Layout high-register hoặc control-flow không được hỗ trợ sẽ fail-cl
 
 **Sửa lỗi SettingsProvider ngày 2026-10-05:** bản patch cũ có thể chèn hook giữa `getDeviceId()` và `move-result` khi baksmali có dòng trống/debug. DEX vẫn assemble được nhưng ART có thể từ chối method và provider không khởi động. Dùng patcher mới, rebuild từ APK stock, decompile lại rồi verify. Hook phải nằm sau cả cặp invoke/result; không sửa chữ ký hoặc bật CorePatch để xử lý lỗi bytecode này. Chưa có xác nhận boot thành công trên thiết bị.
 
+Khi tăng local cho `call()`, patcher từ chối `invoke-range` đi qua ranh giới local/parameter vì range sẽ chứa thêm register ngoài ý định. Đổi alias register chỉ áp dụng cho operand; giữ nguyên literal chuỗi, label và descriptor. Nếu gặp layout bị từ chối, không ép patch bằng cách đổi tên register hàng loạt.
+
+
 
 ---
 
