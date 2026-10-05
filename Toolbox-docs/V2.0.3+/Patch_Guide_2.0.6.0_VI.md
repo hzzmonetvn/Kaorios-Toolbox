@@ -27,7 +27,9 @@ android/security/kaorios/settings/ServiceManagerBridge
 android/security/kaorios/settings/SettingDecisionParcel
 ```
 
-**Kiểm tra ngày 2026-10-05:** asset release có SHA-256 `f122b4600535dd48776865e7ba174cf701bc4df79524d25a44f2f92bd9820497`, đủ 11 method hook được mô tả, nhưng thiếu tên class `AdvancedPolicyService` và `AdvancedPolicySnapshot` trong danh sách trên. Asset này chưa đạt yêu cầu tên class của bộ kiểm tra hiện tại. Không mặc định payload tương thích chỉ vì cùng version; cần payload cập nhật đáp ứng danh sách này trước khi triển khai theo guide. Không tạo class rỗng hoặc đổi tên class đã obfuscate bằng tay để làm đủ danh sách.
+API danh sách app còn cần giữ tên `com.kousei.framework.KaoriosFramework$InstalledAppEntry` và `com.kousei.framework.KaoriosFramework$InstalledAppsSnapshot`, cùng các field của chúng. Chỉ giữ tên method chưa đủ: đổi tên type trả về vẫn làm sai descriptor mà APK gọi.
+
+**Cập nhật release ngày 2026-10-05:** `classes.dex` đã được thay bằng payload build lại, kích thước 573,604 byte, SHA-256 `365280bec58e8c917a7f4b7aa15ebd462b9ba83b7f667e9ec96d5d57f5b0f6f1`. Đã kiểm tra 11 method hook, tám class AdvancedPolicy ở trên, hai type snapshot app và các reference framework trực tiếp từ APK quản lý đang phát hành. Payload có worker khởi tạo SystemServer. Đây là kiểm tra host/artifact; chưa xác nhận boot, HMA hoặc attestation trên máy thật.
 
 Cần smali/baksmali và công cụ chỉnh archive. Nếu triển khai APK, chuẩn bị quy trình ký bằng platform key của ROM trước khi sửa. Đổi DEX làm chữ ký nội dung APK gốc mất hiệu lực.
 

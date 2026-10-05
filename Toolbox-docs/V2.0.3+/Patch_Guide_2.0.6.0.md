@@ -27,7 +27,9 @@ android/security/kaorios/settings/ServiceManagerBridge
 android/security/kaorios/settings/SettingDecisionParcel
 ```
 
-**Audit on 2026-10-05:** the release asset has SHA-256 `f122b4600535dd48776865e7ba174cf701bc4df79524d25a44f2f92bd9820497` and all 11 described hook methods, but lacks the named classes `AdvancedPolicyService` and `AdvancedPolicySnapshot` from this list. It does not satisfy the current class-name checks. A matching version label is insufficient; obtain an updated payload satisfying this checklist before deploying this integration. Do not fabricate empty classes or manually rename obfuscated classes merely to satisfy the list.
+The installed-app API also requires named `com.kousei.framework.KaoriosFramework$InstalledAppEntry` and `com.kousei.framework.KaoriosFramework$InstalledAppsSnapshot` types and their fields. Keeping a method name alone is insufficient: renaming its return type changes the descriptor used by the APK.
+
+**Release updated on 2026-10-05:** `classes.dex` has been replaced with the rebuilt payload, 573,604 bytes, SHA-256 `365280bec58e8c917a7f4b7aa15ebd462b9ba83b7f667e9ec96d5d57f5b0f6f1`. Checks covered 11 hook methods, the eight AdvancedPolicy classes above, both installed-app snapshot types and the published manager's direct framework references. The payload contains worker-based SystemServer initialization. These are host/artifact checks; device boot, HMA and attestation remain unverified.
 
 Use smali/baksmali and an archive editor. For APK deployment, also arrange the ROM's platform signing process before editing. Changing a DEX invalidates the original APK content signature.
 
