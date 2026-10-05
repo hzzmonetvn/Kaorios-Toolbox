@@ -9166,13 +9166,14 @@
 
     .line 479
     invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+
+    move-result v4
+
     invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
     move-result-object v9
     if-eqz v9, :cond_kaorios_settings_stock
     return-object v9
     :cond_kaorios_settings_stock
-
-    move-result v4
 
     .line 480
     invoke-virtual {p1}, Ljava/lang/Object;->hashCode()I

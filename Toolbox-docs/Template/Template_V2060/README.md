@@ -28,4 +28,4 @@ The A13-A16 Build files are stock references; the Android 17 Build files are pat
 
 Other files still stored directly under `framework/` and `service/` are optional CorePatch/FLAG_SECURE references and are not part of the automatic core patcher.
 
-Never replace a target ROM class with a whole template class. Match the method/layout and use the patcher/verifier.
+Never replace a target ROM class with a whole template class. Match the method descriptor, register aliases and control flow. Follow the [manual patch guide](../../V2.0.3+/Patch_Guide_2.0.6.0.md) ([Tiếng Việt](../../V2.0.3+/Patch_Guide_2.0.6.0_VI.md)) for hand edits, or the separate [patcher guide](../../V2.0.3+/Patcher_Guide_2.0.6.0.md) for automatic commands.

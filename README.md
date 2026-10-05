@@ -45,7 +45,7 @@ For **version 2.0.4.0 and below**, see:
 
 ## 📦 Latest release: v2.0.6.0
 
-See the maintained Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md). The same guide covers Android 13–17, including the Android 17 / SDK 37 Build patch.
+See the manual Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.0.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.0_VI.md).
 
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
 

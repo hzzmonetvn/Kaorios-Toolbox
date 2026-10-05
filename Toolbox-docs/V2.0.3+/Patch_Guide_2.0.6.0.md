@@ -1,618 +1,391 @@
-# Kaorios Toolbox Framework 2.0.6.0 — Android 13–17
+# Kaorios Toolbox Framework 2.0.6.0 — Manual patch, Android 13–17
 
 **English** | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
 
-This guide follows the current public patcher in this repository.
+This guide explains how to edit the target ROM's smali by hand. Commands and modes for the automatic tool are in the separate [patcher guide](Patcher_Guide_2.0.6.0.md).
 
-> [!IMPORTANT]
-> Always start from clean stock files from the exact target ROM. Do not copy a whole class or DEX from another ROM. The files under `Toolbox-docs/Template/Template_V2060` are references only.
+## 1. Prepare the stock files and payload
 
-## 1. What you need
+Keep clean `framework.jar`, `services.jar` and `SettingsProvider.apk` from the exact ROM build, plus their original hashes. Work on copies. An OTA requires a new set of stock files.
 
-From the target ROM, keep clean copies of:
+Obtain the matching published Kaorios framework payload for Toolbox 2.0.6.0. Extract its DEX and inspect the actual class/method descriptors before adding callers. A manager APK alone is not a framework payload. Keep every payload dependency, including AdvancedPolicy classes; importing only `KaoriosHook.smali` is insufficient.
 
-- `framework.jar`
-- `services.jar`
-- `SettingsProvider.apk`
+Use smali/baksmali and an archive editor. For APK deployment, also arrange the ROM's platform signing process before editing. Changing a DEX invalidates the original APK content signature.
 
-Recommended backups:
-
-```text
-framework.jar.orig
-services.jar.orig
-SettingsProvider.apk.orig
-```
-
-You also need a working smali/baksmali toolchain.
-
-The maintained patcher entry point is:
-
-```text
-script/kaorios_patcher.py
-```
-
-`script/kaorios_patcher_a17.py` is only a compatibility launcher for old commands.
+The [versioned templates](../Template/Template_V2060/README.md) are examples from MIUI/HyperOS builds, not replacement classes. Select `a13/`–`a17/` matching Android, then compare the method descriptor and flow against your own ROM. AOSP/Evolution X/OEM register numbers can differ.
 
 ---
 
-Template folders: `a13/`, `a14/`, `a15/`, `a16/`, `a17/`. See [Template_V2060 README](../Template/Template_V2060/README.md) and always use the folder matching the target Android version.
+## 2. Find the owning DEX
 
-## 2. Choose the correct mode
-
-| Android | Use | Meaning |
-|---|---|---|
-| 13 | `--android-version 13 --mode 1` | Kaorios hooks |
-| 14 | `--android-version 14 --mode 1` | Kaorios hooks |
-| 15 | `--android-version 15 --mode 1` | Kaorios hooks |
-| 16 | `--android-version 16 --mode 1` | Kaorios hooks |
-| 17 | `--android-version 17 --mode 1` | Kaorios hooks only |
-| 17 | `--android-version 17 --mode 2` | Build spoof only |
-| 17 | `--android-version 17 --mode 3` | Hooks + Build spoof |
-
-Android 13–16 must use mode 1.
-
-Mode 2/3 contains the Android 17 Build patch and is rejected for Android 13–16.
-
-General command:
-
-```bash
-python3 script/kaorios_patcher.py <smali_dir_or_file> \
-  --android-version <13|14|15|16|17> \
-  --mode <1|2|3> \
-  --no-delay
-```
-
-`--no-delay` only disables the terminal typing effect.
-
----
-
-## 3. Decompile every DEX separately
-
-Do not assume the target class is in `classes.dex`.
-
-Example for `framework.jar`:
+Extract and disassemble each DEX separately:
 
 ```bash
 mkdir -p work/framework/input
 unzip framework.jar 'classes*.dex' -d work/framework/input
-
 for dex in work/framework/input/classes*.dex; do
     name=$(basename "$dex" .dex)
     baksmali d "$dex" -o "work/framework/smali_$name"
 done
+rg -n '^\.class .*Landroid/app/ActivityThread;' work/framework
 ```
 
-Do the same for:
+Repeat for `services.jar`, `SettingsProvider.apk` and the payload, using separate workspaces. Search every split. Record a table of class descriptor → archive → original DEX → smali path. Never assume a class is in `classes.dex`.
 
-```text
-work/services/
-work/settingsprovider/
-```
-
-You may end up with directories such as:
-
-```text
-smali_classes/
-smali_classes2/
-smali_classes3/
-```
-
-Search all of them.
+Keep the original manifest, resources and non-DEX entries. Do not rebuild an APK's resources merely to change its bytecode.
 
 ---
 
-## 4. Run the automatic patcher
+## 3. Import classes: replace duplicates, retain the ROM
 
-### Android 13–16
+Import the payload into `framework.jar` by **class descriptor** across all its DEX splits:
 
-Run mode 1 on each workspace that contains Kaorios targets:
+1. Inventory every original and payload descriptor from the `.class` line, not the filename.
+2. If a payload descriptor already exists, replace that class in its original owner DEX. Remove any additional duplicate owner.
+3. Add new payload classes to a chosen framework DEX with sufficient method/type/reference capacity. If that split exceeds DEX limits, redistribute the added classes with a multidex-capable tool and check class visibility.
+4. Retain every original class whose descriptor is absent from the payload.
+5. Edit the Android hook classes from this ROM. Never replace `ActivityThread`, `ComputerEngine` or `SettingsProvider` with a whole template class.
+6. Check each output descriptor has exactly one owner. The descriptor set must equal the union of original and payload descriptors; every unmatched original class must remain unchanged.
 
-```bash
-python3 script/kaorios_patcher.py work/framework --android-version 16 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/services --android-version 16 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/settingsprovider --android-version 16 --mode 1 --no-delay
-```
+For example, if `KaoriosHook` already belongs to `classes6.dex`, replace that class inside `classes6.dex`; do not replace the entire split with the release DEX. Otherwise, unrelated ROM classes in that split disappear. Import the complete payload once in the framework; services and provider call those framework classes.
 
-Replace `16` with the real Android version.
 
-### Android 17
+### Using a DEX editor
 
-Patch the hooks first:
+Open a copy of the original `framework.jar` as an archive, then open its DEX splits in a multidex view. Import **all classes from every payload DEX**. Choose replacement for matching descriptors and addition for new descriptors, while retaining the other classes. If the editor operates on one split at a time, first locate each existing descriptor across the full archive so it is replaced in its owner rather than duplicated in the currently open split. Save/export the changed DEX entries under their original names, then reopen the final archive and search across all splits again.
 
-```bash
-python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/services --android-version 17 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/settingsprovider --android-version 17 --mode 1 --no-delay
-```
-
-Then patch the Android 17 Build fields in the framework workspace:
-
-```bash
-python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 2 --no-delay
-```
-
-If the framework workspace contains both the hook targets and `Build.smali` / `Build$VERSION.smali`, mode 3 can replace the two framework commands:
-
-```bash
-python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 3 --no-delay
-```
-
-Still run mode 1 separately on `services` and `SettingsProvider`.
-
-### What mode 1 currently patches
-
-The current patcher recognizes these target files:
-
-```text
-ActivityThread.smali
-Instrumentation.smali
-ApplicationPackageManager.smali
-AndroidKeyStoreKeyPairGeneratorSpi.smali
-AndroidKeyStoreSpi.smali
-
-ComputerEngine.smali
-SystemServer.smali
-
-SettingsProvider.smali
-```
-
-The actual class may live in any `classes*.dex`.
-
-Some helper script filenames still contain `a17` for historical compatibility. Support is decided by the target method/layout verifier, not by the helper filename.
+Use the same editor to modify the Android hook methods below in their original owner DEX. Keep the archive backup outside the editor's working file. A successful import dialog does not prove that dependencies were included or duplicate owners were removed.
 
 ---
 
-## 5. Understand the patcher result
+## 4. Plan registers before inserting a hook
 
-Typical results:
+For an instance method, `p0` is `this`. Parameters occupy the last physical registers; `J` and `D` each occupy two slots. Static methods have no implicit `this`. `.locals L` counts only locals; `.registers R` counts locals plus parameter slots.
 
-| Result | Meaning |
-|---|---|
-| `PATCHED` | File was changed and its structural verifier passed. |
-| `ALREADY_PATCHED` | The expected final hook is already present and valid. |
-| `UNSUPPORTED_LAYOUT` | The ROM layout is not recognized safely. Do not force the patch. |
-| `FAILED` | The patch or verification failed. Restore the stock working file and inspect the error. |
-| No target found | Wrong directory, target class is in another DEX, or that archive does not contain the target. |
+```smali
+.method public call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
+    .registers 13
+    # 9 locals: v0..v8; p0=v9, p1=v10, p2=v11, p3=v12
+```
 
-The patcher is fail-closed: unknown register/control-flow layouts are rejected instead of being guessed.
+Adding one local changes this example to `.locals 10` (or `.registers 14`); the new scratch is `v9`, and parameters move to physical `v10..v13`. Before growth, convert **existing parameter operands** `v9..v12` to `p0..p3`, including ranges and debug register references. Keep local operands `v0..v8` intact. Do not rename quoted strings, labels, field names or descriptors.
 
-> [!WARNING]
-> If you patch a directory containing several target files, an earlier file may already have been written before a later file fails. Work on copies, not your only stock files.
+Growing locals also shifts parameters in methods already using `.locals`. Audit every instruction that uses `pN`: its physical register may now exceed the opcode limit. Ordinary `invoke-* {…}` accepts at most five register words, each at `v0..v15`. `/range` needs a contiguous physical argument sequence. `move-result*` and `return*` use an 8-bit register; `if-eqz` also needs an 8-bit register, while two-register comparisons have tighter limits. Select `move-object/from16`, `move-object/16`, `move/from16` or `move/16` as appropriate to the source/destination.
+
+A range that crosses the old local/parameter boundary changes its argument count when locals grow. Rewrite that call with a proven contiguous argument block, or preserve the old physical slots by copying parameters at entry and using those slots throughout the original body. Do not simply increase `.locals`.
+
+Every snippet below states its register assumptions. Scratch registers must be unused or proven dead at the insertion point on every incoming path; choose fresh label names. Insert executable code outside annotation blocks, before a stock entry label when the hook must run only on method entry. Do not move code across exception/monitor boundaries without tracing their behavior.
+
+An `invoke-*` and its consumed `move-result*` must remain adjacent executable instructions. Debug directives and blank lines emit no instruction; inserting a hook between them breaks the pair.
 
 ---
 
-## 6. Core hook map
+## 5. Edit framework.jar
 
-This section is a quick map for understanding what the automatic patcher is looking for. It is not a replacement for the verifier.
+### 5.1 Instrumentation: app context
 
-### `framework.jar`
+Class `Landroid/app/Instrumentation;`, both overloads:
 
-#### App initialization
+- Static `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`: context is `p1`.
+- Instance `newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;`: context is `p3` at entry.
 
-Class:
-
-```smali
-Landroid/app/Instrumentation;
-```
-
-Methods:
+Find the existing `Application.attach(Context)` on the successful application-creation path. Insert `initContext` immediately after attach, using that same Context operand. Keep the application's return register unchanged. Example for the static overload with app in `v0` and context still in `p1`:
 
 ```smali
-newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;
-newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;
+invoke-virtual {v0, p1}, Landroid/app/Application;->attach(Landroid/content/Context;)V
+    invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+    return-object v0
 ```
 
-The patcher inserts:
+For the instance overload, use `p3` only if it still holds the context at that location; trace any aliases. If its physical register exceeds 15, use `invoke-static/range {p3 .. p3}`. Do not hook exception exits.
+
+### 5.2 ActivityThread: process initialization
+
+Class `Landroid/app/ActivityThread;`, method `handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V`.
+
+Locate the assignment to `mBoundApplication`. Trace the method-entry `this` and `AppBindData` aliases to that assignment, then insert the hook **after** the field write with the same AppBindData operand. Example where `v1` is this and `v9` is AppBindData:
 
 ```smali
-Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
+iput-object v9, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+    invoke-static {v9}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
 ```
 
-Reference: `framework/Instrumentation.smali` in the matching `a13`–`a17` folder.
+Do not pass the ActivityThread receiver to this hook. For a high AppBindData register, use `invoke-static/range {vN .. vN}` with the actual register. No extra local is needed.
 
-#### Process initialization
+### 5.3 ApplicationPackageManager: feature result
 
-Class:
+Method `hasSystemFeature(Ljava/lang/String;I)Z` in `Landroid/app/ApplicationPackageManager;`. At method entry, `p1` is feature name and `p2` is version. Insert before the original first executable instruction. The example assumes `v0` is available and the physical parameter registers are at most 15:
 
 ```smali
-Landroid/app/ActivityThread;
+invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    move-result-object v0
+    if-eqz v0, :kaorios_feature_stock
+    invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result v0
+    return v0
+    :kaorios_feature_stock
+    # Original first instruction and the complete stock body follow.
 ```
 
-Method:
+A null Boolean means continue the stock logic. A non-null Boolean must be unboxed; do not treat the Boolean object itself as a primitive result. At high registers, stage name/version into two consecutive scratch locals and use `/range`.
+
+### 5.4 AndroidKeyStoreKeyPairGeneratorSpi: generation
+
+Method `generateKeyPair()Ljava/security/KeyPair;` in `Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;`. Insert at method entry, before stock instructions. The example assumes `v0` is available on entry:
 
 ```smali
-handleBindApplication(Landroid/app/ActivityThread$AppBindData;)V
+invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    move-result-object v0
+    if-eqz v0, :kaorios_key_stock
+    return-object v0
+    :kaorios_key_stock
+    # Original stock body follows.
 ```
 
-The patcher verifies the real aliases of `this` and `AppBindData` before inserting:
+The receiver is the generator (`p0`), not a context. Null falls back to the complete original generation path. Keep its cleanup and exception handling.
+
+### 5.5 AndroidKeyStoreSpi: certificate chain
+
+Method `engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;` in `Landroid/security/keystore2/AndroidKeyStoreSpi;`. Trace where the stock leaf and CA certificates form the final array. Filter each successful complete-chain return path; preserve stock null/error returns.
 
 ```smali
-Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
+# v3 contains the complete stock certificate array on this path.
+    invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+    move-result-object v3
+    return-object v3
 ```
 
-Do not hard-code `p0/p1` from another ROM.
+Replace `v3` with the actual array/return register. The `move-result-object` must overwrite the array that is returned. Returning a different, unmodified register discards the rewritten chain. Use a one-register `/range` invocation if needed.
 
-#### System feature spoof
-
-Class:
-
-```smali
-Landroid/app/ApplicationPackageManager;
-```
-
-Method:
-
-```smali
-hasSystemFeature(Ljava/lang/String;I)Z
-```
-
-Hook:
-
-```smali
-Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-```
-
-Reference: `framework/ApplicationPackageManager.smali` in the matching `a13`–`a17` folder.
-
-#### Software key generation
-
-Class:
-
-```smali
-Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
-```
-
-Method:
-
-```smali
-generateKeyPair()Ljava/security/KeyPair;
-```
-
-Hook:
-
-```smali
-Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-```
-
-Reference: `framework/AndroidKeyStoreKeyPairGeneratorSpi.smali` in the matching `a13`–`a17` folder.
-
-#### Certificate chain
-
-Class:
-
-```smali
-Landroid/security/keystore2/AndroidKeyStoreSpi;
-```
-
-Method:
-
-```smali
-engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
-```
-
-Hook:
-
-```smali
-Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
-```
-
-Reference: `framework/AndroidKeyStoreSpi.smali` in the matching `a13`–`a17` folder.
-
-The generation and chain-read hooks cover different paths. `getCertificate()` reads a single certificate independently in AOSP 17 and Evolution X cnb; installing only the chain hook does not cover that API. After changing targets or mode, test a fresh key. See [target/unlocked troubleshooting and pinned AOSP/Evolution X comparison](Attestation_Guide_2.0.6.0.md).
+Generation and chain reads are separate paths. A single-certificate `getCertificate()` path is not covered by this chain hook. Target selection and testing with a fresh key are explained in the [attestation guide](Attestation_Guide_2.0.6.0.md).
 
 ---
 
-### `services.jar`
+## 6. Edit services.jar
 
-#### SystemServer initialization
+### 6.1 SystemServer: service lifecycle
 
-Class:
-
-```smali
-Lcom/android/server/SystemServer;
-```
-
-Method:
-
-```smali
-run()V
-```
-
-Current patcher inserts:
+In `Lcom/android/server/SystemServer;->run()V`, find the actual main `Looper.loop()V` after service startup. Insert exactly one hook directly before that invocation:
 
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+    invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
-immediately before the single verified:
+No scratch register is needed. Do not place the hook before `startOtherServices`, before provider/service startup, or in a constructor. Use the matching payload whose initialization schedules the potentially blocking work off the boot caller. A correctly placed caller cannot repair an old payload that blocks startup.
+
+### 6.2 ComputerEngine: HMA package visibility
+
+Find the `PackageStateInternal` overload through which this ROM's visibility checks converge:
+
+- `shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ)Z`: `p1` package state, `p2` caller UID, `p5` user ID.
+- `shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;II)Z`: `p1` package state, `p2` caller UID, `p3` user ID.
+
+Do not confuse the overload accepting `SharedUserSetting`. Insert at entry before stock checks; retain the entire stock fallback. Example for the seven-parameter overload with available `v0` and all invoke operands within 0..15:
 
 ```smali
-invoke-static {}, Landroid/os/Looper;->loop()V
+if-eqz p1, :kaorios_visibility_stock
+    invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
+    move-result-object v0
+    if-eqz v0, :kaorios_visibility_stock
+    invoke-static {p2, v0, p5}, Landroid/security/kaorios/KaoriosHook;->shouldHideAppListForCaller(ILjava/lang/String;I)Z
+    move-result v0
+    if-eqz v0, :kaorios_visibility_stock
+    const/4 v0, 0x1
+    return v0
+    :kaorios_visibility_stock
+    # Original visibility checks follow.
 ```
 
-Reference: `service/SystemServer.smali` in the matching `a13`–`a17` folder.
+For the three-parameter overload, change only the hook's user operand to `p3` after verifying the signature. A true result means **filter/hide**, not allow. Null state/name and false hook results continue stock logic. Pass the target package's name, the original Binder caller UID and the correct user; never substitute the system-server UID.
 
-#### Package visibility / installer source
+If registers are high, reserve a consecutive `I, String, I` scratch block, stage UID/name/user with correctly typed moves, then invoke `/range`. Audit stock parameter operands after allocation. Adding the hook to an overload that callers never reach does not implement HMA.
 
-Class:
+### 6.3 ComputerEngine: installer source reads
+
+Patch both read APIs when present: `getInstallerPackageName(String[, int])` and `getInstallSourceInfo(String[, int])`. Preserve stock package lookup, access checks and errors. Trace the installer string from `InstallSource.mInstallerPackageName` (or the ROM's equivalent) to its return or the **installing-package** constructor argument.
+
+The hook takes `(ContentResolver, callingUid, userId, targetPackage, stockInstaller)` and returns the effective installer. In the supported framework path, a null resolver is passed. Capture caller UID and target/user at entry before stock code can overwrite their registers. For a one-String overload derive the user with `UserHandle.getUserId(callingUid)`; for `(String, int)` use the actual user argument.
+
+Example assumes those values remain in entry `p1/p2` during capture, locals `v10..v14` have been safely reserved, and the stock installer is in `v2`:
 
 ```smali
-Lcom/android/server/pm/ComputerEngine;
+# v10..v14 is a reserved contiguous scratch block.
+    # v14 is filled with the stock installer string at each read site.
+    const/16 v10, 0x0
+    invoke-static {}, Landroid/os/Binder;->getCallingUid()I
+    move-result v11
+    move/16 v12, p2
+    move-object/16 v13, p1
+
+    # At a proven stock installer return, here held in v2:
+    move-object/16 v14, v2
+    invoke-static/range {v10 .. v14}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    move-result-object v2
+    return-object v2
 ```
 
-The patcher looks for supported `shouldFilterApplication(...)` layouts.
-
-If supported installer APIs are also present, the ComputerEngine patcher also applies and verifies installer-source filtering. A partial or unknown installer layout is rejected.
-
-### `SettingsProvider.apk`
-
-Class:
-
-```smali
-Lcom/android/providers/settings/SettingsProvider;
-```
-
-The current patcher handles:
-
-```smali
-call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-```
-
-and, when present:
-
-```smali
-query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;
-```
-
-For `call()`, the safe anchor is currently:
-
-- `getDeviceId()` when present; otherwise
-- `getRequestingUserId(Bundle)`.
-
-High-register or unsupported control-flow layouts fail closed.
-
-**SettingsProvider fix, 2026-10-05:** the previous patch could insert a hook between `getDeviceId()` and its `move-result` when baksmali emitted blank/debug lines. The DEX can assemble while ART rejects the method and the provider fails to start. Use the updated patcher, rebuild from the stock APK, re-disassemble and verify. The hook must follow the complete invoke/result pair; signing changes or CorePatch do not repair this bytecode defect. Device boot success remains unverified.
-
-When growing locals in `call()`, the patcher rejects `invoke-range` spans crossing the local/parameter boundary because growth adds an unintended register to the range. Register alias conversion preserves string literals, labels and descriptors. Do not force a rejected layout by globally renaming register-looking text.
-
+Keep the captured UID/user/package intact across the stock body; choose another block if those slots are live. For `getInstallSourceInfo`, place the same filter after the stock installing string is known and before its constructor use. Feed the returned String back into that exact installing argument. Retain the initiating/originating package, signing data, package source and all other arguments. Do not stringify/filter the whole `InstallSourceInfo` object, and do not filter unrelated package names.
 
 ---
 
-## 7. Android 17 Build patch
+## 7. Edit SettingsProvider.apk
 
-Only Android 17 uses this section.
+Class `Lcom/android/providers/settings/SettingsProvider;`. Edit the exact methods below in their owning DEX; keep the provider's stock read/write routing and permissions.
 
-### `Build.smali`
+### 7.1 call(): spoofed Bundle or stock fallback
 
-For these String fields, remove `final` and set the initializer to `null`:
+Descriptor: `call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;`. At entry: `p0` provider, `p1` method, `p2` setting name, `p3` extras.
 
-```text
-BRAND
-BRAND_FOR_ATTESTATION
-DEVICE
-DEVICE_FOR_ATTESTATION
-FINGERPRINT
-HARDWARE
-ID
-MANUFACTURER
-MANUFACTURER_FOR_ATTESTATION
-MODEL
-MODEL_FOR_ATTESTATION
-PRODUCT
-PRODUCT_FOR_ATTESTATION
-TAGS
-TYPE
-USER
+Find the stock initialization call to `getDeviceId()I`, or, on layouts without it, `getRequestingUserId(Landroid/os/Bundle;)I`. Keep the original call **and its original `move-result` together**. Insert the hook after that complete pair, before stock routing, while `p1/p2` still hold the method and setting name. The example assumes nine old locals and a safely added scratch `v9`; `v4` remains the stock device ID:
+
+```smali
+invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+    move-result v4
+
+    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
+    move-result-object v9
+    if-eqz v9, :kaorios_settings_stock
+    return-object v9
+    :kaorios_settings_stock
+    # Original instruction following the getDeviceId result continues here.
 ```
 
-For `TIME:J`, remove only `final`.
+On a requesting-user layout, retain its original `invoke-static {p3}, …getRequestingUserId(Bundle)I` and original result register, then insert the same Bundle hook. Never replace the integer `move-result` with `move-result-object`.
 
-Reference: `a17/framework/Build.smali`.
+A non-null Bundle returns immediately; null continues stock logic. Do not call `Settings.get*` or recursively invoke the provider from this inserted block. Do not replace stock writes or return an empty Bundle for every call.
 
-### `Build$VERSION.smali`
+For high `p1/p2`, the two argument slots are consecutive: use `invoke-static/range {p1 .. p2}`. The result scratch and branch/return registers must remain encodable. If there is no equivalent safe initialization point, trace the OEM method rather than assuming the template anchor exists.
 
-Remove `final` from:
+**Known boot failure pattern:** a hook inserted between the stock `invoke` and its integer `move-result` can assemble successfully but leave an invalid result consumer. Re-signing the APK or enabling CorePatch cannot correct that instruction sequence.
 
-```text
-RELEASE
-RELEASE_OR_CODENAME
-RELEASE_OR_PREVIEW_DISPLAY
-SECURITY_PATCH
-DEVICE_INITIAL_SDK_INT
+### 7.2 query(): keep the original query inputs
+
+Descriptor: `query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;`.
+
+At entry: `p1` URI, `p2` projection, `p3` selection, `p4` selectionArgs, `p5` sortOrder. Optimized stock code can overwrite these parameters. Allocate **three dedicated locals**, normalize old parameter aliases, and save URI/selection/selectionArgs before the first executable stock instruction:
+
+```smali
+# Example: original query had 5 locals. Allocate 3 more: .locals 8.
+    move-object/from16 v5, p1
+    move-object/from16 v6, p3
+    move-object/from16 v7, p4
 ```
 
-Reference: `a17/framework/Build$VERSION.smali`.
+Keep `v5..v7` untouched throughout the original body. Immediately before **every** `return-object`, filter the stock Cursor using those saved inputs and return the hook's result. Example after growth where `p0` is physically `v8`, so all operands fit the ordinary invocation:
 
-Keep `SDK_INT` unchanged.
+```smali
+# p0 holds the stock Cursor on this example's return path.
+    invoke-static {p0, v5, v6, v7}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
+    move-result-object p0
+    return-object p0
+```
 
-Do not remove `final` from every Build field. Only change extra fields when your own profile actually needs them.
+Use the actual return register for each path, including stock null returns. Do not use an overwritten `p1/p3/p4` as the query inputs. If a high-register return cannot fit the invocation, stage Cursor/URI/selection/selectionArgs into a separate four-slot contiguous block and use `/range`. Other query overloads require tracing their delegation; do not paste this parameter mapping into a Bundle overload.
 
 ---
 
-## 8. Rebuild only the DEX you changed
+## 8. Optional Build field edits for Android 17
 
-After patching a smali tree, assemble it back to the same DEX name.
+Apply this section only for an Android 17 profile needing mutable Build spoof fields. Keep the ROM's `<clinit>` initialization.
 
-Example:
+In `Landroid/os/Build;`, remove `final` and set the String field initializer to `null` for:
+
+`BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`.
+
+```smali
+# Before:
+.field public static final BRAND:Ljava/lang/String; = "example"
+# After:
+.field public static BRAND:Ljava/lang/String; = null
+```
+
+For `TIME:J`, remove only `final`. In `Landroid/os/Build$VERSION;`, remove `final` only from `RELEASE`, `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`. Keep `SDK_INT` and unrelated fields unchanged. Do not copy Android 17 field declarations into Android 13–16.
+
+---
+
+## 9. Assemble and package the edited artifacts
+
+Assemble each modified smali tree to its **original DEX entry name**, then replace only those entries in a copy of the stock archive. Example for a `classes2.dex` input compatible with assembler API 34:
 
 ```bash
 mkdir -p work/framework/output
-smali a --api 29 work/framework/smali_classes2 \
-  -o work/framework/output/classes2.dex
+smali a --api 34 work/framework/smali_classes2     -o work/framework/output/classes2.dex
+cp framework.jar work/framework/output/framework.jar
+(cd work/framework/output && zip -u framework.jar classes2.dex)
+baksmali d work/framework/output/classes2.dex     -o work/framework/recheck_classes2
 ```
 
-Use the assembler API appropriate for the input DEX/toolchain. The assembler API selects DEX format/opcodes; it is not the Android version label.
+Select the assembler API from the input DEX format/opcodes and supported toolchain, not by copying the ROM SDK number. Inspect the input/output DEX header. Do not force a newer DEX container format merely because the ROM is Android 17. In the supplied ROM artifact checks, framework/services used API 34 and provider used API 29; these values are evidence for that artifact, not defaults for every ROM.
 
-Then replace only that DEX entry in a copy of the original archive.
+Repeat for every changed split and preserve untouched DEX hashes. Inspect the final ZIP entry list: no duplicate entry names, no missing splits, no accidental `work/` directory prefix.
 
-Do not replace untouched `classes*.dex` files.
-
-For `SettingsProvider.apk`, preserve the original manifest/resources and use your ROM build/signing process. Direct device deployment requires the correct platform signing setup.
-
-### Import payload into an existing DEX
-
-Import by class descriptor across all DEX splits: replace matching payload classes, add new classes and retain unmatched classes from the original ROM. Do not overwrite an existing DEX with a release DEX. Each output descriptor must have exactly one owner; check that no original classes were lost and untouched DEX hashes remain identical. Patch Android hook classes from the target ROM itself.
-
-After rebuilding, check that the certificate-chain hook result reaches the register returned by the method. An `invoke-static` followed by returning the original array does not use the rewritten chain.
+For `SettingsProvider.apk`, preserve manifest/resources and sign through the ROM build/platform signing process, then verify the output signature with the SDK's `apksigner verify`. Copying `META-INF` or the original APK Signing Block does not validate modified content. An unsigned host test artifact is not a deployable APK. A system overlay with invalid digests is usable only if the exact ROM's trusted-system scan behavior has been independently established; a generic manual guide cannot assume that bypass.
 
 ---
 
-## 9. Re-disassemble and verify
+## 10. Inspect the final bytecode by hand
 
-Verification before saving is useful, but the rebuilt DEX must also be checked.
+Extract and re-disassemble **the packaged output**, not just the pre-assembly workspace. Check:
 
-Re-disassemble the rebuilt artifact and run the matching verifier.
+1. Every payload method referenced by a hook exists with the exact descriptor; all dependency classes are present and uniquely owned.
+2. Both Instrumentation overloads call the hook after attach with the actual Context; ActivityThread passes AppBindData after `mBoundApplication` assignment.
+3. Each result consumer follows its producer, uses the correct primitive/object/wide variant, and feeds the branch/return that actually uses it.
+4. Nullable hooks reach intact stock fallback paths. No stock parameter changed identity after local allocation; no range acquired extra arguments.
+5. SystemServer initializes once just before its main loop. HMA runs on the used visibility path and passes caller UID, target name and user correctly.
+6. Installer reads filter the installing string at its real return/constructor site. Provider query captures original inputs and filters every Cursor return.
+7. Descriptor inventory matches the import plan, untouched DEX hashes match stock, and the provider signature verifies with the intended ROM signer.
 
-Examples:
+Assembler success checks syntax/encoding, not every ART type/control-flow rule. Re-disassembly establishes what was packaged; neither proves a real device boot. Keep host, artifact and device results separate.
+
+---
+
+## 11. Deploy, isolate boot failures and test features
+
+Deploy only artifacts built for the exact ROM. A module must mount framework/services and the provider at their actual stock paths with appropriate ownership and SELinux labeling. Do not install the provider with `pm install`; prepare a recovery route before the first reboot.
+
+First test the framework payload and framework/services hooks with the stock provider. After that boots, add the correctly signed patched provider. Then test Toolbox startup, per-app Settings behavior, HMA and installer-source behavior. Add FLAG_SECURE/CorePatch only after the core integration works.
+
+Capture the earliest available boot failure:
 
 ```bash
-python3 script/verify-framework-a17-hooks.py work/framework/recheck --caller-only
-python3 script/verify-services-a17-hooks.py work/services/recheck
-python3 script/verify-systemserver-a17-hooks.py work/services/recheck
-python3 script/verify-settingsprovider-a17-hooks.py work/settingsprovider/recheck
+adb logcat -b all -v threadtime > boot.log
+# Run in a separate terminal after the system responds:
+adb shell getprop sys.boot_completed
 ```
 
-For a final framework artifact that already contains the Kaorios framework DEX and AdvancedPolicy classes, run the full framework verifier without `--caller-only`:
+If SettingsProvider causes bootloop, disable the overlay module or restore the complete stock artifact set to recover. For module ID `kaorios_rom_hzz`, create a `disable` file in each existing `/data/adb/modules/kaorios_rom_hzz/` and `/data/adb/modules_update/kaorios_rom_hzz/` directory through root/recovery, then reboot. Recovery access requires the data partition to be accessible. Do not erase Settings storage to compensate for a broken method.
 
-```bash
-python3 script/verify-framework-a17-hooks.py work/framework/recheck
-```
+After recovery, inspect the first `VerifyError`, `ClassNotFoundException`/`NoSuchMethodError`, signature rejection or SELinux denial. Check the invoke/result pair, registers and payload before changing signing/SELinux policy. If framework/services boot with stock provider but fail with patched provider, that narrows the failure to the provider integration; it does not identify a specific cause without logs.
 
-A verifier PASS proves the expected structure is present. It does not prove the ROM will boot on a real device.
+The supplied `hzz` profile had a reported bootloop and a confirmed provider invoke/result defect. Corrected artifact checks passed; real-device boot remains unverified. For HMA, configure the **caller app** and the template of target apps to hide, force-stop the caller and test again. For attestation, apply the target/mode and generate a fresh key using the [attestation guide](Attestation_Guide_2.0.6.0.md).
+
+### Provider process and SELinux domain
+
+Read the actual manifest: provider-level `android:process` overrides the application's process; the default is the package name, and a `:name` process is package-relative. The supplied profile uses shared process `system`, not `system_server`. A package-name-only process search can miss it.
+
+Match the first NUL-terminated name in `/proc/<pid>/cmdline`, then read `/proc/<pid>/attr/current`. Use the observed domain for the exact ROM. Do not guess `system_app` or make SELinux permissive. Passing file hashes does not validate process/domain detection or runtime Binder permissions.
 
 ---
 
-## 10. Boot-test in this order
+## 12. Optional patches
 
-Do not add every optional patch at once.
+For developer/ADB status hiding, inspect the String-returning `Settings$NameValueCache.getStringForUser(...)` overload in this ROM. The versioned `framework/Settings$NameValueCache.smali` shows the `shouldHideDevStatusFromNameValueCache(ContentResolver, String, int)Z` entry hook: true returns `"0"`, false continues stock. Verify the resolver/name/user operands and scratch register before using it; keep writes intact.
 
-Recommended order:
 
-1. boot with the core framework/services/SettingsProvider hooks;
-2. check logcat for framework or system_server crashes;
-3. test Toolbox startup;
-4. test Play Integrity / keybox behavior;
-5. test package visibility;
-6. test per-app Settings spoofing;
-7. test installer-source spoofing;
-8. only then add optional patches such as FLAG_SECURE/CorePatch.
-
-If the ROM bootloops, restore the stock archive first, then check:
-
-- wrong DEX rebuilt/replaced;
-- target class was in another `classes*.dex`;
-- unsupported OEM method layout;
-- bad scratch register/manual edit;
-- missing Kaorios framework DEX/classes;
-- SettingsProvider signing mismatch.
-
----
-
-## 11. Optional patches
-
-These are not required for every ROM.
-
-### Hide Developer options / ADB state
-
-Class:
+For the instance descriptor `getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;`, entry `p1/p2/p3` are resolver/name/user. With an available `v0`, insert this before the original first executable instruction:
 
 ```smali
-Landroid/provider/Settings$NameValueCache;
+    if-eqz p2, :kaorios_dev_stock
+    invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
+    move-result v0
+    if-eqz v0, :kaorios_dev_stock
+    const-string v0, "0"
+    return-object v0
+    :kaorios_dev_stock
+    # Original stock body follows.
 ```
 
-Reference: `framework/Settings$NameValueCache.smali` in the matching `a13`–`a17` folder.
+The range contains exactly the three parameter slots. Do not apply it to a different overload or grow locals without auditing the original instructions.
 
-Patch only the String-returning `getStringForUser(...)` layout used by the target ROM. Do not copy a hard-coded register layout from another ROM.
-
-### Disable FLAG_SECURE
-
-See [Disable Secure Flag](Disable_Secure_Flag.md).
-
-### Signature verification / CorePatch
-
-See [CorePatch](CorePatch.md).
-
----
-
-## 12. When the patcher says UNSUPPORTED_LAYOUT
-
-Do not force the nearest-looking snippet into the ROM.
-
-Instead:
-
-1. restore the clean stock smali file;
-2. confirm the exact method descriptor;
-3. inspect `.registers` / `.locals`;
-4. identify the real parameter registers and return paths;
-5. compare with the matching Template only for logic;
-6. update the patcher/verifier for that layout before using it on release builds.
-
-That is safer than copying a register number from another Android/OEM build.
-
----
-
-## 13. Android 17 artifact helper scripts
-
-For Android 17 there are also full-artifact helper pipelines:
-
-```text
-script/patch-framework-a17-artifact.sh
-script/patch-services-a17-artifact.sh
-script/patch-settingsprovider-a17-artifact.sh
-```
-
-They discover owner DEX files, rebuild only modified DEXes, verify untouched DEX hashes and re-run structural verification.
-
-Use them only when you understand their required smali/baksmali inputs and, for direct `SettingsProvider.apk` deployment, the platform signing requirements.
-
----
-
-## 14. Install a ROM module through KernelSU / MamboSU
-
-> [!WARNING]
-> A device bootloop was reported for the supplied `hzz` profile after module delivery. Logs have not established its cause; the delivered builds are not device-boot verified. Disable the module first, retain the earliest failure log and do not reinstall based only on passing hashes/verifiers.
-
-A three-artifact module is specific to the ROM/profile used to build it. After an OTA or ROM change, obtain fresh stock artifacts and rebuild the module. Install the ZIP through the root manager while Android is running; do not install its `SettingsProvider.apk` separately through Package Installer or `pm install`.
-
-KernelSU versions using the metamodule architecture require a compatible metamodule to mount `system/`; successful ZIP installation does not prove the framework is mounted. MamboSU is the installation interface: check the actual root solution and mounting mechanism too. See the [KernelSU module guide](https://kernelsu.org/guide/module.html) and [Magisk module guide](https://topjohnwu.github.io/Magisk/guides.html).
-
-### `Cannot resolve SettingsProvider SELinux domain`
-
-If ROM hashes and payload files report `OK` before this error, the failed step is process/domain detection; this does not indicate corrupt artifacts. Package `com.android.providers.settings` may run in a shared process. For a profile whose manifest declares `android:process="system"`, searching `ps` for the package name misses that process.
-
-The installer should derive the process name from the correct APK manifest (provider override first, then application/default), match the first name in `/proc/<pid>/cmdline`, and read the actual domain from `/proc/<pid>/attr/current`. Do not assume `system_app` or substitute `system_server` for `system`. If the process is not running, try one read-only Settings query to start the provider; stop and retain the log if the context cannot be read or matching domains conflict.
-
-For a profile using process `system`, inspect it from a root terminal:
-
-```sh
-su
-for pid in $(pidof system); do
-    tr '\000' '\n' < "/proc/$pid/cmdline" | head -n 1
-    cat "/proc/$pid/attr/current"
-done
-```
-
-Preserving the original APK Signing Block does not make modified APK content digests valid. Prefer building/signing with the ROM platform key; a metadata-preserving APK overlay requires verification of the ROM's trusted-system scan path. Do not use CorePatch or SELinux permissive to bypass this installer error.
-
-### After installation and recovery
-
-Reboot and check Toolbox framework/Advanced Features status. For HMA, configure the caller app and a template containing apps to hide, then force-stop the caller and test again. For attestation, apply the target/mode and generate a fresh key as described in the [attestation guide](Attestation_Guide_2.0.6.0.md).
-
-If a successful installation causes a bootloop, use your root solution's safe mode or disable the module through root/recovery. For module ID `kaorios_rom_hzz`, create `/data/adb/modules/kaorios_rom_hzz/disable` and reboot. Do not reboot after a failed flash; save the log and resolve the error first. Passing hashes, structural verifiers and host tests does not establish boot, HMA, attestation or Binder/SELinux behavior on a real device.
-
----
-
-## Short version
-
-For most users:
-
-```text
-1. Extract clean stock framework.jar / services.jar / SettingsProvider.apk
-2. Decompile every classes*.dex separately
-3. Android 13–16: mode 1
-4. Android 17: mode 1 + mode 2, or mode 3 for the framework tree
-5. Rebuild only modified DEX files
-6. Put them back into copies of the stock archives
-7. Re-disassemble and run the verifiers
-8. Boot-test before adding optional patches
-```
+See the separate [FLAG_SECURE guide](Disable_Secure_Flag.md) and [CorePatch guide](CorePatch.md) for those optional edits. Neither is a repair for invalid SettingsProvider bytecode.

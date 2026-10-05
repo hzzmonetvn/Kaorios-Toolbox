@@ -3503,8 +3503,6 @@
     invoke-virtual {v0}, Lcom/mediatek/server/MtkSystemServer;->startMtkCoreServices()V
 
     .line 1205
-    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
-
     invoke-direct {v1, v3}, Lcom/android/server/SystemServer;->startOtherServices(Lcom/android/server/utils/TimingsTraceAndSlog;)V
 
     .line 1206
@@ -3681,6 +3679,8 @@
 
     .line 1277
     :cond_2df
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+
     invoke-static {}, Landroid/os/Looper;->loop()V
 
     .line 1278

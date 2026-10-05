@@ -6889,13 +6889,14 @@
 
     .line 421
     invoke-static {p3}, Lcom/android/providers/settings/SettingsProvider;->getRequestingUserId(Landroid/os/Bundle;)I
+
+    move-result v5
+
     invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
     move-result-object v9
     if-eqz v9, :cond_kaorios_settings_stock
     return-object v9
     :cond_kaorios_settings_stock
-
-    move-result v5
 
     .line 422
     invoke-virtual {p1}, Ljava/lang/String;->hashCode()I
