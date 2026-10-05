@@ -564,6 +564,9 @@ Use them only when you understand their required smali/baksmali inputs and, for 
 
 ## 14. Install a ROM module through KernelSU / MamboSU
 
+> [!WARNING]
+> A device bootloop was reported for the supplied `hzz` profile after module delivery. Logs have not established its cause; the delivered builds are not device-boot verified. Disable the module first, retain the earliest failure log and do not reinstall based only on passing hashes/verifiers.
+
 A three-artifact module is specific to the ROM/profile used to build it. After an OTA or ROM change, obtain fresh stock artifacts and rebuild the module. Install the ZIP through the root manager while Android is running; do not install its `SettingsProvider.apk` separately through Package Installer or `pm install`.
 
 KernelSU versions using the metamodule architecture require a compatible metamodule to mount `system/`; successful ZIP installation does not prove the framework is mounted. MamboSU is the installation interface: check the actual root solution and mounting mechanism too. See the [KernelSU module guide](https://kernelsu.org/guide/module.html) and [Magisk module guide](https://topjohnwu.github.io/Magisk/guides.html).

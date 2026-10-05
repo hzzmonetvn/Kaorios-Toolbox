@@ -572,6 +572,9 @@ Chỉ dùng khi đã hiểu input smali/baksmali của script; với `SettingsPr
 
 ## 14. Cài module ROM qua KernelSU / MamboSU
 
+> [!WARNING]
+> Profile `hzz` có báo cáo bootloop trên thiết bị sau khi giao module. Chưa có log xác định nguyên nhân; không coi các bản đã giao là đã boot-test. Nếu bị bootloop, disable module trước, giữ log lỗi đầu tiên và không cài lại chỉ vì hash/verifier PASS.
+
 Module chứa ba artifact chỉ dành cho đúng ROM/profile đã dùng để build. Sau OTA hoặc đổi ROM, lấy lại ba file stock để build module mới. Cài ZIP từ root manager khi Android đang chạy; không cài `SettingsProvider.apk` riêng bằng Package Installer hoặc `pm install`.
 
 Với KernelSU dùng kiến trúc metamodule, cần metamodule mount `system/` tương thích; thấy ZIP cài thành công chưa chứng minh framework đã được mount. MamboSU là giao diện cài đặt: kiểm tra cả root solution và cơ chế mount thực tế. Xem [module guide KernelSU](https://kernelsu.org/guide/module.html) và [module guide Magisk](https://topjohnwu.github.io/Magisk/guides.html).
