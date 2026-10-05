@@ -454,6 +454,12 @@ Không thay các `classes*.dex` chưa đụng tới.
 
 Với `SettingsProvider.apk`, giữ nguyên manifest/resources và dùng quy trình build/sign của ROM. Nếu cài trực tiếp lên máy thì cần đúng platform signing setup.
 
+### Import payload vào DEX đã có
+
+Import theo descriptor của từng class trên tất cả DEX split: replace class payload trùng tên, thêm class mới và giữ class không trùng của ROM gốc. Không ghi đè nguyên DEX đang có bằng DEX release. Mỗi descriptor trong output phải có đúng một owner; kiểm tra không mất class gốc và DEX không sửa vẫn giữ nguyên hash. Patch hook trong class Android của chính ROM đích.
+
+Sau rebuild, kiểm tra hook certificate chain ghi kết quả vào đúng register được return; có `invoke-static` nhưng return mảng gốc vẫn không dùng được chain đã sửa.
+
 ---
 
 ## 9. Decompile lại và verify
@@ -561,6 +567,38 @@ script/patch-settingsprovider-a17-artifact.sh
 Chúng tự tìm owner DEX, chỉ rebuild DEX đã sửa, kiểm tra hash các DEX còn lại và chạy lại verifier.
 
 Chỉ dùng khi đã hiểu input smali/baksmali của script; với `SettingsProvider.apk` cài trực tiếp còn phải xử lý đúng platform signing.
+
+---
+
+## 14. Cài module ROM qua KernelSU / MamboSU
+
+Module chứa ba artifact chỉ dành cho đúng ROM/profile đã dùng để build. Sau OTA hoặc đổi ROM, lấy lại ba file stock để build module mới. Cài ZIP từ root manager khi Android đang chạy; không cài `SettingsProvider.apk` riêng bằng Package Installer hoặc `pm install`.
+
+Với KernelSU dùng kiến trúc metamodule, cần metamodule mount `system/` tương thích; thấy ZIP cài thành công chưa chứng minh framework đã được mount. MamboSU là giao diện cài đặt: kiểm tra cả root solution và cơ chế mount thực tế. Xem [module guide KernelSU](https://kernelsu.org/guide/module.html) và [module guide Magisk](https://topjohnwu.github.io/Magisk/guides.html).
+
+### Lỗi `Cannot resolve SettingsProvider SELinux domain`
+
+Nếu hash/payload đều `OK` rồi mới báo lỗi này, lỗi nằm ở bước phát hiện process/domain; không kết luận ba artifact bị hỏng. Package `com.android.providers.settings` có thể chạy trong process dùng chung. Với profile có manifest khai báo `android:process="system"`, tìm package name trong `ps` sẽ không thấy process đó.
+
+Installer cần lấy process name từ manifest đúng APK (provider override trước, rồi application/default), đọc tên đầu tiên trong `/proc/<pid>/cmdline` và domain thực từ `/proc/<pid>/attr/current`. Không mặc định `system_app`, không dùng `system_server` thay cho `system`. Nếu process chưa chạy, thử một lần đọc Settings để khởi động provider; context không đọc được hoặc domain xung đột thì dừng và giữ log.
+
+Để kiểm tra profile chạy process `system`, dùng terminal có root:
+
+```sh
+su
+for pid in $(pidof system); do
+    tr '\000' '\n' < "/proc/$pid/cmdline" | head -n 1
+    cat "/proc/$pid/attr/current"
+done
+```
+
+Giữ APK Signing Block gốc không làm content digest của APK đã sửa hợp lệ. Ưu tiên build/sign bằng platform key của ROM; overlay APK giữ metadata chỉ dùng khi đã xác minh ROM có nhánh trusted-system scan phù hợp. Không dùng CorePatch hoặc SELinux permissive để bỏ qua lỗi installer này.
+
+### Sau cài đặt và khôi phục
+
+Reboot rồi kiểm tra trạng thái framework/Advanced Features trong Toolbox. Với HMA, cấu hình app caller và template chứa app cần ẩn, force-stop caller rồi thử lại. Với attestation, apply target/mode và tạo khóa mới theo [attestation guide](Attestation_Guide_2.0.6.0_VI.md).
+
+Nếu bootloop sau khi cài thành công, dùng safe mode của root solution hoặc root/recovery để disable module. Với module ID `kaorios_rom_hzz`, tạo file `/data/adb/modules/kaorios_rom_hzz/disable` rồi reboot. Không reboot nếu flash đã báo failure; lưu log và sửa lỗi trước. Hash, structural verifier và host test PASS chưa xác nhận boot, HMA, attestation hoặc Binder/SELinux trên máy thật.
 
 ---
 

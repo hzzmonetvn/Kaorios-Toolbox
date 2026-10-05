@@ -444,6 +444,12 @@ Do not replace untouched `classes*.dex` files.
 
 For `SettingsProvider.apk`, preserve the original manifest/resources and use your ROM build/signing process. Direct device deployment requires the correct platform signing setup.
 
+### Import payload into an existing DEX
+
+Import by class descriptor across all DEX splits: replace matching payload classes, add new classes and retain unmatched classes from the original ROM. Do not overwrite an existing DEX with a release DEX. Each output descriptor must have exactly one owner; check that no original classes were lost and untouched DEX hashes remain identical. Patch Android hook classes from the target ROM itself.
+
+After rebuilding, check that the certificate-chain hook result reaches the register returned by the method. An `invoke-static` followed by returning the original array does not use the rewritten chain.
+
 ---
 
 ## 9. Re-disassemble and verify
@@ -553,6 +559,38 @@ script/patch-settingsprovider-a17-artifact.sh
 They discover owner DEX files, rebuild only modified DEXes, verify untouched DEX hashes and re-run structural verification.
 
 Use them only when you understand their required smali/baksmali inputs and, for direct `SettingsProvider.apk` deployment, the platform signing requirements.
+
+---
+
+## 14. Install a ROM module through KernelSU / MamboSU
+
+A three-artifact module is specific to the ROM/profile used to build it. After an OTA or ROM change, obtain fresh stock artifacts and rebuild the module. Install the ZIP through the root manager while Android is running; do not install its `SettingsProvider.apk` separately through Package Installer or `pm install`.
+
+KernelSU versions using the metamodule architecture require a compatible metamodule to mount `system/`; successful ZIP installation does not prove the framework is mounted. MamboSU is the installation interface: check the actual root solution and mounting mechanism too. See the [KernelSU module guide](https://kernelsu.org/guide/module.html) and [Magisk module guide](https://topjohnwu.github.io/Magisk/guides.html).
+
+### `Cannot resolve SettingsProvider SELinux domain`
+
+If ROM hashes and payload files report `OK` before this error, the failed step is process/domain detection; this does not indicate corrupt artifacts. Package `com.android.providers.settings` may run in a shared process. For a profile whose manifest declares `android:process="system"`, searching `ps` for the package name misses that process.
+
+The installer should derive the process name from the correct APK manifest (provider override first, then application/default), match the first name in `/proc/<pid>/cmdline`, and read the actual domain from `/proc/<pid>/attr/current`. Do not assume `system_app` or substitute `system_server` for `system`. If the process is not running, try one read-only Settings query to start the provider; stop and retain the log if the context cannot be read or matching domains conflict.
+
+For a profile using process `system`, inspect it from a root terminal:
+
+```sh
+su
+for pid in $(pidof system); do
+    tr '\000' '\n' < "/proc/$pid/cmdline" | head -n 1
+    cat "/proc/$pid/attr/current"
+done
+```
+
+Preserving the original APK Signing Block does not make modified APK content digests valid. Prefer building/signing with the ROM platform key; a metadata-preserving APK overlay requires verification of the ROM's trusted-system scan path. Do not use CorePatch or SELinux permissive to bypass this installer error.
+
+### After installation and recovery
+
+Reboot and check Toolbox framework/Advanced Features status. For HMA, configure the caller app and a template containing apps to hide, then force-stop the caller and test again. For attestation, apply the target/mode and generate a fresh key as described in the [attestation guide](Attestation_Guide_2.0.6.0.md).
+
+If a successful installation causes a bootloop, use your root solution's safe mode or disable the module through root/recovery. For module ID `kaorios_rom_hzz`, create `/data/adb/modules/kaorios_rom_hzz/disable` and reboot. Do not reboot after a failed flash; save the log and resolve the error first. Passing hashes, structural verifiers and host tests does not establish boot, HMA, attestation or Binder/SELinux behavior on a real device.
 
 ---
 
