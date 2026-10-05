@@ -58,7 +58,7 @@ python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,
 ```
 
 - **Modes**:
-  - `1`: **Hooks Android 13–17** — Patches `ActivityThread`, `ComputerEngine`, `SystemServer`, `SettingsProvider`, `Instrumentation`, `ApplicationPackageManager`, `AndroidKeyStoreKeyPairGeneratorSpi`, and `AndroidKeyStoreSpi`.
+  - `1`: **Hooks Android 13–17** — Patches `ActivityThread`, `ComputerEngine`, `SystemServer`, `Instrumentation`, `ApplicationPackageManager`, `AndroidKeyStoreKeyPairGeneratorSpi`, and `AndroidKeyStoreSpi`.
   - `2`: **Build Spoof A17 only** — Removes `final` and updates initializers in `Build.smali` and `Build$VERSION.smali`.
   - `3`: **Hooks + Build Spoof (Android 17 only)** — Executes Mode 1 plus the A17-only Build patch. Android 13–16 must use Mode 1.
 - **Options**:

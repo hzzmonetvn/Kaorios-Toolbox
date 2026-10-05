@@ -4,11 +4,10 @@
 
 ## Chuẩn bị
 
-Cần trình chỉnh DEX/smali và ba file gốc từ **đúng ROM đang dùng**:
+Cần trình chỉnh DEX/smali và hai file gốc từ **đúng ROM đang dùng**:
 
 - `framework.jar`
 - `services.jar`
-- `SettingsProvider.apk`
 
 Giữ bản sao để khôi phục nếu máy không boot.
 
@@ -21,7 +20,7 @@ Mở từng file, tìm class trên **tất cả DEX** (`classes.dex`, `classes2.
 - Đoạn dùng `v0` cần ít nhất một local; đoạn dùng `v0`, `v1` cần hai local. Không dùng register đang giữ giá trị mà code gốc còn cần.
 - Không chèn giữa `invoke-*` và `move-result*` của nó.
 - Khi chèn ở đầu method, đặt ngoài `.annotation` và trước label/code gốc. Không xóa thân method gốc.
-- Nếu cần tăng local, xem ví dụ register ở mục SettingsProvider trước khi sửa.
+- Nếu tăng `.locals`/`.registers`, đổi operand `vN` đang trỏ vào parameter thành `pN` trước. Kiểm tra giới hạn register và các lời gọi `/range` sau khi tăng.
 
 ## `framework.jar`
 
@@ -294,79 +293,6 @@ Trong `getInstallerPackageName`, tìm return trả tên installer. Ví dụ đan
 
 Trong `getInstallSourceInfo`, chèn cùng hook sau khi đọc `mInstallerPackageName`, trước constructor `InstallSourceInfo`. Dùng kết quả hook cho đối số **installing package**, không thêm `return-object v2`. Giữ các đối số khác. Thay register ví dụ bằng register của ROM.
 
-## `SettingsProvider.apk`
-
-**Class:**
-
-```smali
-Lcom/android/providers/settings/SettingsProvider;
-```
-
-**Smali mẫu (Android 17):** [SettingsProvider.smali](../Template/Template_V2060/a17/settingsprovider/SettingsProvider.smali)
-
-### Cấp thêm local trước khi sửa
-
-Không chỉ tăng `.registers`: register parameter sẽ dịch vị trí. Ví dụ `call()` có `.registers 13`: chín local `v0..v8`, còn `v9..v12` là `p0..p3`.
-
-1. Trong code gốc, đổi **operand parameter** `v9`, `v10`, `v11`, `v12` thành `p0`, `p1`, `p2`, `p3`. Không đổi chuỗi, label hay tên field.
-2. Đổi `.registers 13` thành `.locals 10`.
-3. Dùng `v9` làm local mới. Kiểm tra các lệnh dùng parameter và `/range` vẫn hợp lệ sau khi dịch register.
-
-Nếu method có số register khác, tính theo method đó; không dán các số trên. Lời gọi thường dùng tối đa năm register vật lý 0–15; `/range` cần đối số liên tiếp. Range đi qua ranh giới local/parameter cũ phải viết lại khi tăng local.
-
-### 1. `call()`
-
-**Method:**
-
-```smali
-call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-```
-
-Tìm cặp lệnh `getDeviceId()I` và `move-result`. **Giữ cả hai**, thêm hook ngay sau `move-result`. Ví dụ đã cấp local mới `v9` như trên:
-
-```smali
-    invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
-    move-result v4
-
-    invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
-    move-result-object v9
-    if-eqz v9, :kaorios_settings_stock
-    return-object v9
-    :kaorios_settings_stock
-```
-
-Nếu ROM không có `getDeviceId`, tìm cặp `getRequestingUserId(Bundle)I` / `move-result`, thêm cùng hook sau cả cặp khi `p1`, `p2` vẫn giữ method và tên setting. Giữ register nhận integer gốc. **Chèn giữa invoke và move-result có thể gây bootloop.**
-
-### 2. `query()`
-
-**Method:**
-
-```smali
-query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;
-```
-
-Cần ba local mới để lưu input. Ví dụ method gốc có `.registers 11` (năm local):
-
-1. Đổi operand parameter gốc `v5..v10` thành `p0..p5` theo cách trên.
-2. Đổi `.registers 11` thành `.locals 8`.
-3. Thêm ngay đầu method:
-
-```smali
-    move-object/from16 v5, p1
-    move-object/from16 v6, p3
-    move-object/from16 v7, p4
-```
-
-Giữ `v5..v7` không bị ghi đè. Tìm **từng** `return-object`, thêm hook ngay trước return. Ví dụ Cursor trả về đang ở `p0`:
-
-```smali
-    invoke-static {p0, v5, v6, v7}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
-    move-result-object p0
-    return-object p0
-```
-
-Thay `p0` trong cả ba dòng bằng register Cursor thực của nhánh đó. Chỉ áp dụng cho đúng overload trên; không dùng input parameter đã bị code gốc ghi đè.
-
 ## Patch tùy chọn
 
 ### 1. Ẩn trạng thái developer/ADB
@@ -425,10 +351,9 @@ Với `TIME:J`, chỉ xóa `final`. Trong `Landroid/os/Build$VERSION;`, chỉ x�
 
 ## Lưu file và kiểm tra
 
-1. Assemble/export DEX đã sửa, lưu lại đúng tên entry trong JAR/APK. Giữ các DEX chưa sửa, manifest và resources.
+1. Assemble/export DEX đã sửa, lưu lại đúng tên entry trong JAR. Giữ các DEX chưa sửa và entry khác.
 2. Mở lại **file đã lưu**, kiểm tra đủ class payload, không trùng class và các hook nằm đúng vị trí. Kiểm tra `move-result*` đi ngay sau lời gọi tương ứng.
-3. Với `SettingsProvider.apk`, ký bằng platform key/quy trình ký của ROM. Key khác có thể bị từ chối vì shared UID. Không sửa APK sau khi ký.
 
-Test framework/services với **SettingsProvider gốc** trước. Khi boot được, mới thêm provider đã sửa và ký đúng. Chuẩn bị cách disable module/khôi phục file gốc trước khi reboot. Assemble thành công chưa xác nhận máy boot được.
+Giữ nguyên **SettingsProvider gốc**. Fake Settings đã được bỏ, không cần patch hoặc ký lại APK này. Chuẩn bị cách disable module/khôi phục file gốc trước khi reboot. Assemble thành công chưa xác nhận máy boot được.
 
 HMA: chọn app đọc danh sách cần lọc (caller), gán template chứa các app muốn ẩn, force-stop caller rồi thử lại.

@@ -4,11 +4,10 @@
 
 ## Preparation
 
-Use a DEX/smali editor and these three stock files from **the exact ROM build you use**:
+Use a DEX/smali editor and these two stock files from **the exact ROM build you use**:
 
 - `framework.jar`
 - `services.jar`
-- `SettingsProvider.apk`
 
 Keep backups to restore if the device fails to boot.
 
@@ -21,7 +20,7 @@ Open each file and search **all DEX entries** (`classes.dex`, `classes2.dex`…)
 - A block using `v0` needs at least one local; `v0`, `v1` need two. Do not overwrite a value still needed by the original code.
 - Never insert between an `invoke-*` and its `move-result*`.
 - At method entry, insert outside `.annotation` blocks and before original labels/code. Keep the original method body.
-- If you need more locals, read the register example under SettingsProvider first.
+- Before increasing `.locals`/`.registers`, convert `vN` parameter aliases to `pN`. Check register limits and `/range` calls after the change.
 
 ## `framework.jar`
 
@@ -294,79 +293,6 @@ In `getInstallerPackageName`, find the installer-name return. If it is `return-o
 
 In `getInstallSourceInfo`, insert the same hook after reading `mInstallerPackageName`, before the `InstallSourceInfo` constructor. Use the hook result for the **installing package** argument; omit `return-object v2`. Keep the other arguments. Match the example registers to your ROM.
 
-## `SettingsProvider.apk`
-
-**Class:**
-
-```smali
-Lcom/android/providers/settings/SettingsProvider;
-```
-
-**Example smali (Android 17):** [SettingsProvider.smali](../Template/Template_V2060/a17/settingsprovider/SettingsProvider.smali)
-
-### Allocate locals before editing
-
-Do not just increase `.registers`: parameter registers move. Example: `call()` with `.registers 13` has nine locals, `v0..v8`; `v9..v12` are `p0..p3`.
-
-1. Change original **parameter operands** `v9`, `v10`, `v11`, `v12` to `p0`, `p1`, `p2`, `p3`. Leave strings, labels and field names alone.
-2. Change `.registers 13` to `.locals 10`.
-3. Use `v9` as the new local. Check that parameter instructions and `/range` calls remain valid after the shift.
-
-For a different register count, calculate the mapping for that method instead. Ordinary calls use at most five physical registers in 0–15; `/range` needs consecutive arguments. Rewrite ranges crossing the old local/parameter boundary when adding locals.
-
-### 1. `call()`
-
-**Method:**
-
-```smali
-call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-```
-
-Find the `getDeviceId()I` call and its `move-result`. **Keep both**, and insert after `move-result`. Example using the new `v9` local allocated above:
-
-```smali
-    invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
-    move-result v4
-
-    invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
-    move-result-object v9
-    if-eqz v9, :kaorios_settings_stock
-    return-object v9
-    :kaorios_settings_stock
-```
-
-If your ROM has no `getDeviceId`, find the `getRequestingUserId(Bundle)I` / `move-result` pair and insert after both, while `p1`, `p2` still hold the method and setting name. Keep the original integer result register. **Inserting between invoke and move-result can cause bootloop.**
-
-### 2. `query()`
-
-**Method:**
-
-```smali
-query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;)Landroid/database/Cursor;
-```
-
-Reserve three new locals to save the inputs. Example with original `.registers 11` (five locals):
-
-1. Convert original parameter operands `v5..v10` to `p0..p5` as above.
-2. Change `.registers 11` to `.locals 8`.
-3. Insert at method entry:
-
-```smali
-    move-object/from16 v5, p1
-    move-object/from16 v6, p3
-    move-object/from16 v7, p4
-```
-
-Keep `v5..v7` unchanged. Find **every** `return-object` and insert before it. Example with the returned Cursor in `p0`:
-
-```smali
-    invoke-static {p0, v5, v6, v7}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
-    move-result-object p0
-    return-object p0
-```
-
-Replace `p0` in all three lines with that branch's actual Cursor register. Use this mapping only for the stated overload; do not pass input parameters overwritten by the original code.
-
 ## Optional patches
 
 ### 1. Hide developer/ADB status
@@ -425,10 +351,9 @@ For `TIME:J`, remove only `final`. In `Landroid/os/Build$VERSION;`, remove only 
 
 ## Save and check
 
-1. Assemble/export edited DEX entries under their original names in the JAR/APK. Keep untouched DEX entries, manifest and resources.
+1. Assemble/export edited DEX entries under their original names in the JAR. Keep untouched DEX entries and other archive entries.
 2. Reopen the **saved file**. Check payload classes are present without duplicates and hooks are in the stated locations. Each `move-result*` must follow its matching call.
-3. Sign `SettingsProvider.apk` using the ROM's platform key/signing process. A different key can be rejected due to shared UID. Do not edit the APK after signing.
 
-Test framework/services with the **stock SettingsProvider** first. Once that boots, add the edited, correctly signed provider. Prepare a way to disable the module/restore stock files before rebooting. Successful assembly does not confirm device boot.
+Keep the **stock SettingsProvider**. Fake Settings has been removed; do not patch or re-sign this APK. Prepare a way to disable the module/restore stock files before rebooting. Successful assembly does not confirm device boot.
 
 HMA: select the caller app whose view you want to filter, assign a template containing the apps to hide, then force-stop the caller and retry.

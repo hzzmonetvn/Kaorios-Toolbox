@@ -10,14 +10,12 @@ From the target ROM, keep clean copies of:
 
 - `framework.jar`
 - `services.jar`
-- `SettingsProvider.apk`
 
 Recommended backups:
 
 ```text
 framework.jar.orig
 services.jar.orig
-SettingsProvider.apk.orig
 ```
 
 You also need a working smali/baksmali toolchain.
@@ -83,7 +81,6 @@ Do the same for:
 
 ```text
 work/services/
-work/settingsprovider/
 ```
 
 You may end up with directories such as:
@@ -107,7 +104,6 @@ Run mode 1 on each workspace that contains Kaorios targets:
 ```bash
 python3 script/kaorios_patcher.py work/framework --android-version 16 --mode 1 --no-delay
 python3 script/kaorios_patcher.py work/services --android-version 16 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/settingsprovider --android-version 16 --mode 1 --no-delay
 ```
 
 Replace `16` with the real Android version.
@@ -119,7 +115,6 @@ Patch the hooks first:
 ```bash
 python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 1 --no-delay
 python3 script/kaorios_patcher.py work/services --android-version 17 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/settingsprovider --android-version 17 --mode 1 --no-delay
 ```
 
 Then patch the Android 17 Build fields in the framework workspace:
@@ -134,7 +129,7 @@ If the framework workspace contains both the hook targets and `Build.smali` / `B
 python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 3 --no-delay
 ```
 
-Still run mode 1 separately on `services` and `SettingsProvider`.
+Still run mode 1 separately on `services`.
 
 ### What mode 1 currently patches
 
@@ -150,7 +145,6 @@ AndroidKeyStoreSpi.smali
 ComputerEngine.smali
 SystemServer.smali
 
-SettingsProvider.smali
 ```
 
 The actual class may live in any `classes*.dex`.
@@ -190,7 +184,6 @@ Examples:
 python3 script/verify-framework-a17-hooks.py work/framework/recheck --caller-only
 python3 script/verify-services-a17-hooks.py work/services/recheck
 python3 script/verify-systemserver-a17-hooks.py work/services/recheck
-python3 script/verify-settingsprovider-a17-hooks.py work/settingsprovider/recheck
 ```
 
 For a final framework artifact that already contains the Kaorios framework DEX and AdvancedPolicy classes, run the full framework verifier without `--caller-only`:
@@ -229,9 +222,8 @@ For Android 17 there are also full-artifact helper pipelines:
 ```text
 script/patch-framework-a17-artifact.sh
 script/patch-services-a17-artifact.sh
-script/patch-settingsprovider-a17-artifact.sh
 ```
 
 They discover owner DEX files, rebuild only modified DEXes, verify untouched DEX hashes and re-run structural verification.
 
-Use them only when you understand their required smali/baksmali inputs and, for direct `SettingsProvider.apk` deployment, the platform signing requirements.
+Use them only when you understand their required smali/baksmali inputs. Keep stock `SettingsProvider.apk`; Fake Settings and provider patching have been removed.

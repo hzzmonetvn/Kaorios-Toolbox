@@ -22,7 +22,7 @@ Each version contains:
 - `framework/Settings$NameValueCache.smali`
 - `service/ComputerEngine.smali`
 - `service/SystemServer.smali`
-- `settingsprovider/SettingsProvider.smali`
+- `settingsprovider/SettingsProvider.smali` — historical sample; Fake Settings is retired. Keep the stock provider APK.
 
 The A13-A16 Build files are stock references; the Android 17 Build files are patched by mode 2.
 

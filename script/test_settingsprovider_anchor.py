@@ -1,56 +1,84 @@
 #!/usr/bin/env python3
-"""Regression checks for SettingsProvider invoke/result anchor boundaries."""
+"""Ensure retired provider commands never modify an input or publish an APK."""
+import contextlib
 import importlib.util
+import io
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
-spec = importlib.util.spec_from_file_location("patcher", Path(__file__).with_name("patch-settingsprovider-a17.py"))
-patcher = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(patcher)
+SCRIPT_DIR = Path(__file__).resolve().parent
 
-STOCK = """.class public Lcom/android/providers/settings/SettingsProvider;
-.super Landroid/content/ContentProvider;
-.method public call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landroid/os/Bundle;
-    .locals 2
-    invoke-direct {{p0}}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
-{gap}    move-result v0
-    return-object p3
+
+def load(filename, name):
+    spec = importlib.util.spec_from_file_location(name, SCRIPT_DIR / filename)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+patcher = load('kaorios_patcher.py', 'patcher')
+provider = load('patch-settingsprovider-a17.py', 'provider')
+
+GENERATOR = '''.class public Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
+.super Ljava/security/KeyPairGeneratorSpi;
+.method public generateKeyPair()Ljava/security/KeyPair;
+    .locals 1
+    const/4 v0, 0x0
+    return-object v0
 .end method
-"""
+'''
 
 
-class AnchorBoundaryTest(unittest.TestCase):
-    def test_debug_separators_preserve_result(self):
-        for gap in ("", "\n", "\n    .line 479\n", "\n    # separator\n    .line 479\n"):
-            with self.subTest(gap=gap):
-                result, _ = patcher.patch(STOCK.format(gap=gap))
-                self.assertLess(result.index("move-result v0"), result.index(patcher.HOOK_TARGET))
-                patcher.verify(result)
+class RetiredProviderTest(unittest.TestCase):
+    def test_main_patcher_keeps_provider_while_patching_framework(self):
+        for mode in ('1', '3'):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                stock = b'provider stock bytes\r\n'
+                apk = root / 'SettingsProvider.smali'
+                apk.write_bytes(stock)
+                generator = root / 'AndroidKeyStoreKeyPairGeneratorSpi.smali'
+                generator.write_text(GENERATOR)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.assertTrue(patcher.process_files(root, mode, slow=False))
+                self.assertEqual(stock, apk.read_bytes())
+                self.assertIn('initGenerateSoftwareKeyPair', generator.read_text())
 
-    def test_debug_line_before_stock_label(self):
-        result, _ = patcher.patch(STOCK.format(gap=""))
-        result = result.replace("    :cond_kaorios_settings_stock\n", "    .line 480\n    :cond_kaorios_settings_stock\n", 1)
-        patcher.verify(result)
+    def test_provider_only_input_is_not_a_patch_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / 'SettingsProvider.smali'
+            file.write_bytes(b'stock')
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertFalse(patcher.process_files(file, '1', slow=False))
+            self.assertEqual(b'stock', file.read_bytes())
 
-    def test_range_crossing_parameter_boundary_is_rejected(self):
-        stock = STOCK.format(gap="").replace("    return-object p3", "    invoke-static/range {v1 .. v3}, Ltest/Boundary;->accept(ILcom/android/providers/settings/SettingsProvider;Ljava/lang/String;)V\n    return-object p3")
-        with self.assertRaises(ValueError):
-            patcher.patch(stock)
+    def test_old_python_api_rejects_provider_patching(self):
+        with self.assertRaisesRegex(ValueError, 'Fake Settings has been removed'):
+            provider.patch('stock')
+        with self.assertRaisesRegex(ValueError, 'Fake Settings has been removed'):
+            provider.verify('stock')
 
-    def test_register_aliases_do_not_change_strings_or_labels(self):
-        stock = STOCK.format(gap="").replace("    return-object p3", '    const-string v0, "v2 {v1 .. v3}"\n    :v2\n    move-object v0, v2\n    return-object p3')
-        result, _ = patcher.patch(stock)
-        self.assertIn('const-string v0, "v2 {v1 .. v3}"', result)
-        self.assertIn(":v2", result)
-        self.assertIn("move-object v0, p0", result)
+    def test_old_commands_do_not_write_input_or_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            apk = Path(directory) / 'SettingsProvider.apk'
+            output = Path(directory) / 'patched.apk'
+            apk.write_bytes(b'stock APK')
+            commands = [
+                [sys.executable, str(SCRIPT_DIR / 'patch-settingsprovider-a17.py'), str(apk)],
+                ['bash', str(SCRIPT_DIR / 'patch-settingsprovider-a17-artifact.sh'),
+                 '--input', str(apk), '--output', str(output)],
+            ]
+            for command in commands:
+                with self.subTest(command=command[0]):
+                    result = subprocess.run(command, capture_output=True, text=True)
+                    self.assertNotEqual(0, result.returncode)
+                    self.assertIn('Fake Settings has been removed', result.stdout + result.stderr)
+                    self.assertEqual(b'stock APK', apk.read_bytes())
+                    self.assertFalse(output.exists())
 
-    def test_split_result_is_rejected(self):
-        result, _ = patcher.patch(STOCK.format(gap=""))
-        broken = result.replace("    move-result v0\n", "", 1)
-        broken = broken.replace("    :cond_kaorios_settings_stock\n", "    :cond_kaorios_settings_stock\n    move-result v0\n", 1)
-        with self.assertRaises(ValueError):
-            patcher.verify(broken)
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

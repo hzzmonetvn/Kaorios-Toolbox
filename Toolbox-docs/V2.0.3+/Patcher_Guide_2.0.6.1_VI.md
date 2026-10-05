@@ -10,14 +10,12 @@ Lấy từ ROM đích và giữ bản sạch của:
 
 - `framework.jar`
 - `services.jar`
-- `SettingsProvider.apk`
 
 Nên backup:
 
 ```text
 framework.jar.orig
 services.jar.orig
-SettingsProvider.apk.orig
 ```
 
 Cần có smali/baksmali hoạt động bình thường.
@@ -44,7 +42,7 @@ Smali mẫu đã patch được tách riêng theo Android version:
 | 16 | [`a16/`](../Template/Template_V2060/a16/) |
 | 17 | [`a17/`](../Template/Template_V2060/a17/) |
 
-Mỗi thư mục có `framework/`, `service/` và `settingsprovider/` được tạo từ stock archive tương ứng trong commit cũ. Xem [Template_V2060 README](../Template/Template_V2060/README.md).
+Mỗi thư mục có `framework/` và `service/` được tạo từ stock archive tương ứng trong commit cũ. Xem [Template_V2060 README](../Template/Template_V2060/README.md).
 
 Không lấy nguyên class mẫu của Android version khác để thay vào ROM.
 
@@ -99,7 +97,6 @@ Làm tương tự cho:
 
 ```text
 work/services/
-work/settingsprovider/
 ```
 
 Có thể sẽ có:
@@ -123,7 +120,6 @@ Chạy mode 1 trên từng workspace có target Kaorios:
 ```bash
 python3 script/kaorios_patcher.py work/framework --android-version 16 --mode 1 --no-delay
 python3 script/kaorios_patcher.py work/services --android-version 16 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/settingsprovider --android-version 16 --mode 1 --no-delay
 ```
 
 Đổi `16` thành đúng Android version của ROM.
@@ -135,7 +131,6 @@ Patch hook trước:
 ```bash
 python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 1 --no-delay
 python3 script/kaorios_patcher.py work/services --android-version 17 --mode 1 --no-delay
-python3 script/kaorios_patcher.py work/settingsprovider --android-version 17 --mode 1 --no-delay
 ```
 
 Sau đó patch field Build trong workspace framework:
@@ -150,7 +145,7 @@ Nếu workspace framework chứa cả target hook lẫn `Build.smali` / `Build$V
 python3 script/kaorios_patcher.py work/framework --android-version 17 --mode 3 --no-delay
 ```
 
-`services` và `SettingsProvider` vẫn chạy mode 1 riêng.
+`services` vẫn chạy mode 1 riêng.
 
 ### Mode 1 hiện patch những file nào
 
@@ -166,7 +161,6 @@ AndroidKeyStoreSpi.smali
 ComputerEngine.smali
 SystemServer.smali
 
-SettingsProvider.smali
 ```
 
 Class thật có thể nằm ở bất kỳ `classes*.dex` nào.
@@ -202,7 +196,6 @@ Decompile artifact vừa build rồi chạy:
 python3 script/verify-framework-a17-hooks.py work/framework/recheck --caller-only
 python3 script/verify-services-a17-hooks.py work/services/recheck
 python3 script/verify-systemserver-a17-hooks.py work/services/recheck
-python3 script/verify-settingsprovider-a17-hooks.py work/settingsprovider/recheck
 ```
 
 Nếu framework cuối đã có Kaorios framework DEX + đầy đủ AdvancedPolicy classes, chạy full verifier không có `--caller-only`:
@@ -241,9 +234,8 @@ Android 17 có thêm các pipeline build artifact đầy đủ:
 ```text
 script/patch-framework-a17-artifact.sh
 script/patch-services-a17-artifact.sh
-script/patch-settingsprovider-a17-artifact.sh
 ```
 
 Chúng tự tìm owner DEX, chỉ rebuild DEX đã sửa, kiểm tra hash các DEX còn lại và chạy lại verifier.
 
-Chỉ dùng khi đã hiểu input smali/baksmali của script; với `SettingsProvider.apk` cài trực tiếp còn phải xử lý đúng platform signing.
+Chỉ dùng khi đã hiểu input smali/baksmali của script. Giữ `SettingsProvider.apk` gốc; Fake Settings và bước patch provider đã được bỏ.

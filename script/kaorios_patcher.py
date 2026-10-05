@@ -8,7 +8,6 @@ assuming that every OEM ROM of the same Android generation is identical.
 Supported targets:
 - ActivityThread.smali (process initialization hook)
 - ComputerEngine.smali (Hidden App / package visibility filter hook)
-- SettingsProvider.smali (per-app Advanced Settings spoof hook with call & query)
 - SystemServer.smali (initSystemServer lifecycle hook)
 - AndroidKeyStoreKeyPairGeneratorSpi.smali (keypair generation hook)
 - AndroidKeyStoreSpi.smali (certificate chain hook and single-leaf delegation)
@@ -60,12 +59,10 @@ def _load_sibling(filename: str, module_name: str):
 mod_at = _load_sibling("patch-activitythread-a17.py", "at_patcher")
 mod_ce = _load_sibling("patch-services-a17.py", "ce_patcher")
 mod_ss = _load_sibling("patch-systemserver-a17.py", "ss_patcher")
-mod_sp = _load_sibling("patch-settingsprovider-a17.py", "sp_patcher")
 
 mod_v_fw = _load_sibling("verify-framework-a17-hooks.py", "v_fw")
 mod_v_ce = _load_sibling("verify-services-a17-hooks.py", "v_ce")
 mod_v_ss = _load_sibling("verify-systemserver-a17-hooks.py", "v_ss")
-mod_v_sp = _load_sibling("verify-settingsprovider-a17-hooks.py", "v_sp")
 
 
 class PatchStatus:
@@ -97,12 +94,6 @@ def patch_system_server(content: str) -> tuple[str, bool]:
         raise ValueError("patch-systemserver-a17.py required for SystemServer patch but unavailable")
     patched = mod_ss.patch(content)
     return patched, (patched != content)
-
-
-def patch_settings_provider(content: str) -> tuple[str, bool]:
-    if mod_sp is not None:
-        return mod_sp.patch(content)
-    raise ValueError("patch-settingsprovider-a17.py required for SettingsProvider patch but unavailable")
 
 
 def _canonicalize_param_aliases(method_body: str, registers: int, param_count: int) -> str:
@@ -463,9 +454,6 @@ def verify_target_content(filename: str, content: str) -> None:
     elif filename == "SystemServer.smali":
         if mod_ss is not None:
             mod_ss.verify(content)
-    elif filename == "SettingsProvider.smali":
-        if mod_sp is not None:
-            mod_sp.verify(content)
     elif filename == "AndroidKeyStoreKeyPairGeneratorSpi.smali":
         body = _extract_method_body(
             content,
@@ -663,12 +651,6 @@ def run_directory_verifiers(root_path: Path, processed_filenames: set[str]) -> l
         except Exception as e:
             errors.append(f"Services verifier (SystemServer): {e}")
 
-    if "SettingsProvider.smali" in processed_filenames and mod_v_sp is not None:
-        try:
-            mod_v_sp.verify_caller(root_path)
-        except Exception as e:
-            errors.append(f"SettingsProvider verifier: {e}")
-
     return errors
 
 
@@ -678,7 +660,6 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
         targets.update({
             "ActivityThread.smali": patch_activity_thread,
             "ComputerEngine.smali": patch_computer_engine,
-            "SettingsProvider.smali": patch_settings_provider,
             "SystemServer.smali": patch_system_server,
             "AndroidKeyStoreKeyPairGeneratorSpi.smali": patch_keystore_generator,
             "AndroidKeyStoreSpi.smali": patch_keystore_spi,
