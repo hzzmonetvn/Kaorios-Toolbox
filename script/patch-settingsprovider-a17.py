@@ -34,17 +34,23 @@ LOCALS_RE = re.compile(r"(?m)^(?P<indent>[ \t]*)\.locals[ \t]+(?P<num>\d+)[ \t]*
 # Safe anchors in SettingsProvider.call:
 # Priority 1: after getDeviceId() (Android 17 / HyperOS 4)
 # Priority 2: after getRequestingUserId() (Android 13-16 / MIUI 14 - HyperOS 3)
+RESULT_DEBUG_GAP = (
+    r"(?:^[ \t]*(?:#[^\r\n]*|\.(?:line|local|end local|restart local|prologue|epilogue)[^\r\n]*)?"
+    r"[ \t]*(?:\r?\n|$))*"
+)
 DEVICE_ID_RE = re.compile(
     r"(?m)^[ \t]*invoke-(?:virtual|direct)[ \t]+\{[^}]+\},[ \t]*"
     r"Lcom/android/providers/settings/SettingsProvider;->getDeviceId\(\)I"
     r"[ \t]*(?:\r?\n|$)"
-    r"(?:^[ \t]*move-result[ \t]+[vp]\d+[ \t]*(?:\r?\n|$))?"
+    + RESULT_DEBUG_GAP
+    + r"^[ \t]*move-result[ \t]+[vp]\d+[ \t]*(?:\r?\n|$)"
 )
 REQ_USER_ID_RE = re.compile(
     r"(?m)^[ \t]*invoke-static[ \t]+\{[^}]+\},[ \t]*"
     r"Lcom/android/providers/settings/SettingsProvider;->getRequestingUserId\(Landroid/os/Bundle;\)I"
     r"[ \t]*(?:\r?\n|$)"
-    r"(?:^[ \t]*move-result[ \t]+[vp]\d+[ \t]*(?:\r?\n|$))?"
+    + RESULT_DEBUG_GAP
+    + r"^[ \t]*move-result[ \t]+[vp]\d+[ \t]*(?:\r?\n|$)"
 )
 
 
@@ -76,6 +82,11 @@ def verify(text: str) -> None:
     """Assert the final smali has exactly one hook in SettingsProvider.call satisfying Phase 19."""
     start, end = _method_span(text)
     body = text[start:end]
+    instructions = list(_query_instructions(body))
+    for index, instruction in enumerate(instructions):
+        if instruction.startswith("move-result"):
+            if index == 0 or not instructions[index - 1].startswith(("invoke-", "filled-new-array")):
+                raise ValueError("SettingsProvider.call: move-result must immediately follow its invoke")
     count = _hook_count(body)
     if count != 1:
         raise ValueError(f"expected exactly one filterSettingsCall hook; found {count}")
@@ -99,9 +110,10 @@ def verify(text: str) -> None:
         + r"\s*move-result-object\s+(v\d+)\s*(?:\r?\n)+"
         + r"\s*if-eqz\s+\1,\s*(:\S+)\s*(?:\r?\n)+"
         + r"\s*return-object\s+\1\s*(?:\r?\n)+"
+        + RESULT_DEBUG_GAP
         + r"\s*\2"
     )
-    if not re.search(pattern, body):
+    if not re.search(pattern, body, re.MULTILINE):
         raise ValueError("hook sequence does not match exact fail-closed return structure or register order")
 
     q_span = _query_method_span(text)

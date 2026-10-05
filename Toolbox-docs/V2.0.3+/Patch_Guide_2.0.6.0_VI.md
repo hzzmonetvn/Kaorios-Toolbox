@@ -381,6 +381,9 @@ Với `call()`, anchor an toàn hiện tại là:
 
 Layout high-register hoặc control-flow không được hỗ trợ sẽ fail-closed.
 
+**Sửa lỗi SettingsProvider ngày 2026-10-05:** bản patch cũ có thể chèn hook giữa `getDeviceId()` và `move-result` khi baksmali có dòng trống/debug. DEX vẫn assemble được nhưng ART có thể từ chối method và provider không khởi động. Dùng patcher mới, rebuild từ APK stock, decompile lại rồi verify. Hook phải nằm sau cả cặp invoke/result; không sửa chữ ký hoặc bật CorePatch để xử lý lỗi bytecode này. Chưa có xác nhận boot thành công trên thiết bị.
+
+
 ---
 
 ## 7. Build patch riêng Android 17
