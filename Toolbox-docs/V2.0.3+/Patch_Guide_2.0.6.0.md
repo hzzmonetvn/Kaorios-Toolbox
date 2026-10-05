@@ -10,6 +10,25 @@ Keep clean `framework.jar`, `services.jar` and `SettingsProvider.apk` from the e
 
 Obtain the matching published Kaorios framework payload for Toolbox 2.0.6.0. Extract its DEX and inspect the actual class/method descriptors before adding callers. A manager APK alone is not a framework payload. Keep every payload dependency, including AdvancedPolicy classes; importing only `KaoriosHook.smali` is insufficient.
 
+### Select the payload file
+
+The payload asset on the [v2.0.6.0 release](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0) is named `classes.dex`; `KaoriosToolbox-fix_update_sign.apk` is the manager app. Do not use a ROM or template `framework.jar` as the payload and import all its Android classes.
+
+Before importing, inspect the payload DEX for the exact hook descriptors in sections 5–7 and these eight fully named classes:
+
+```text
+android/security/kaorios/settings/IAdvancedPolicyService
+android/security/kaorios/settings/IAdvancedPolicyService$Stub
+android/security/kaorios/settings/IAdvancedPolicyService$Stub$Proxy
+android/security/kaorios/settings/AdvancedPolicyClient
+android/security/kaorios/settings/AdvancedPolicyService
+android/security/kaorios/settings/AdvancedPolicySnapshot
+android/security/kaorios/settings/ServiceManagerBridge
+android/security/kaorios/settings/SettingDecisionParcel
+```
+
+**Audit on 2026-10-05:** the release asset has SHA-256 `f122b4600535dd48776865e7ba174cf701bc4df79524d25a44f2f92bd9820497` and all 11 described hook methods, but lacks the named classes `AdvancedPolicyService` and `AdvancedPolicySnapshot` from this list. It does not satisfy the current class-name checks. A matching version label is insufficient; obtain an updated payload satisfying this checklist before deploying this integration. Do not fabricate empty classes or manually rename obfuscated classes merely to satisfy the list.
+
 Use smali/baksmali and an archive editor. For APK deployment, also arrange the ROM's platform signing process before editing. Changing a DEX invalidates the original APK content signature.
 
 The [versioned templates](../Template/Template_V2060/README.md) are examples from MIUI/HyperOS builds, not replacement classes. Select `a13/`–`a17/` matching Android, then compare the method descriptor and flow against your own ROM. AOSP/Evolution X/OEM register numbers can differ.
@@ -49,7 +68,6 @@ Import the payload into `framework.jar` by **class descriptor** across all its D
 
 For example, if `KaoriosHook` already belongs to `classes6.dex`, replace that class inside `classes6.dex`; do not replace the entire split with the release DEX. Otherwise, unrelated ROM classes in that split disappear. Import the complete payload once in the framework; services and provider call those framework classes.
 
-
 ### Using a DEX editor
 
 Open a copy of the original `framework.jar` as an archive, then open its DEX splits in a multidex view. Import **all classes from every payload DEX**. Choose replacement for matching descriptors and addition for new descriptors, while retaining the other classes. If the editor operates on one split at a time, first locate each existing descriptor across the full archive so it is replaced in its owner rather than duplicated in the currently open split. Save/export the changed DEX entries under their original names, then reopen the final archive and search across all splits again.
@@ -70,9 +88,43 @@ For an instance method, `p0` is `this`. Parameters occupy the last physical regi
 
 Adding one local changes this example to `.locals 10` (or `.registers 14`); the new scratch is `v9`, and parameters move to physical `v10..v13`. Before growth, convert **existing parameter operands** `v9..v12` to `p0..p3`, including ranges and debug register references. Keep local operands `v0..v8` intact. Do not rename quoted strings, labels, field names or descriptors.
 
+Before/after operand example (method excerpts, not full method replacements):
+
+```smali
+    # Before: .registers 13, p1 is physical v10.
+    .registers 13
+    move-object v0, v10
+    const-string v1, "v10"
+```
+
+```smali
+    # After: 10 locals + 4 parameter slots = 14 registers.
+    .locals 10
+    move-object v0, p1
+    const-string v1, "v10"
+    # v9 is now the fresh local; p1 is physical v11.
+```
+
+The first instruction uses `v10` as a parameter alias, so it becomes `p1`; the string `"v10"` stays unchanged. A method originally using `.locals 9` has the same physical alias mapping and needs the same audit.
+
 Growing locals also shifts parameters in methods already using `.locals`. Audit every instruction that uses `pN`: its physical register may now exceed the opcode limit. Ordinary `invoke-* {…}` accepts at most five register words, each at `v0..v15`. `/range` needs a contiguous physical argument sequence. `move-result*` and `return*` use an 8-bit register; `if-eqz` also needs an 8-bit register, while two-register comparisons have tighter limits. Select `move-object/from16`, `move-object/16`, `move/from16` or `move/16` as appropriate to the source/destination.
 
+| Instruction | Physical register limits |
+|---|---|
+| `invoke-static {…}`, `invoke-interface {…}` | Each argument 0–15; at most 5 words |
+| `invoke-*/range {… .. …}` | First register 0–65535; at most 255 consecutive words |
+| `move-result*`, `return*`, `if-eqz`, `const/16` | Register 0–255 |
+| `move-object/from16` | Destination 0–255, source 0–65535 |
+| `move-object/16` | Both registers 0–65535 |
+| `const/4`, `if-eq`, `iput-object` | Each encoded register 0–15 |
+
+These are encoding limits; every used register must still fit the declared register frame. Wide values also require a valid second slot.
+
+Opcode limits and result-consumption rules: [AOSP Dalvik specification](https://source.android.com/docs/core/runtime/dalvik-bytecode). Audit stock `const/4`, `iput-object` and other instructions after parameter shifts, not only invocations. The blocks below are insertion/replacement excerpts; an `Original …` comment means retain the original code there.
+
 A range that crosses the old local/parameter boundary changes its argument count when locals grow. Rewrite that call with a proven contiguous argument block, or preserve the old physical slots by copying parameters at entry and using those slots throughout the original body. Do not simply increase `.locals`.
+
+For snippets using `v0`, it must be a real local (at least one local), not the alias of `p0` in a zero-local method. If allocating a local is necessary, complete the parameter-shift/encoding audit before inserting the hook.
 
 Every snippet below states its register assumptions. Scratch registers must be unused or proven dead at the insertion point on every incoming path; choose fresh label names. Insert executable code outside annotation blocks, before a stock entry label when the hook must run only on method entry. Do not move code across exception/monitor boundaries without tracing their behavior.
 
@@ -92,7 +144,7 @@ Class `Landroid/app/Instrumentation;`, both overloads:
 Find the existing `Application.attach(Context)` on the successful application-creation path. Insert `initContext` immediately after attach, using that same Context operand. Keep the application's return register unchanged. Example for the static overload with app in `v0` and context still in `p1`:
 
 ```smali
-invoke-virtual {v0, p1}, Landroid/app/Application;->attach(Landroid/content/Context;)V
+    invoke-virtual {v0, p1}, Landroid/app/Application;->attach(Landroid/content/Context;)V
     invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
     return-object v0
 ```
@@ -106,7 +158,7 @@ Class `Landroid/app/ActivityThread;`, method `handleBindApplication(Landroid/app
 Locate the assignment to `mBoundApplication`. Trace the method-entry `this` and `AppBindData` aliases to that assignment, then insert the hook **after** the field write with the same AppBindData operand. Example where `v1` is this and `v9` is AppBindData:
 
 ```smali
-iput-object v9, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+    iput-object v9, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
     invoke-static {v9}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
 ```
 
@@ -117,7 +169,7 @@ Do not pass the ActivityThread receiver to this hook. For a high AppBindData reg
 Method `hasSystemFeature(Ljava/lang/String;I)Z` in `Landroid/app/ApplicationPackageManager;`. At method entry, `p1` is feature name and `p2` is version. Insert before the original first executable instruction. The example assumes `v0` is available and the physical parameter registers are at most 15:
 
 ```smali
-invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
     move-result-object v0
     if-eqz v0, :kaorios_feature_stock
     invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
@@ -134,7 +186,7 @@ A null Boolean means continue the stock logic. A non-null Boolean must be unboxe
 Method `generateKeyPair()Ljava/security/KeyPair;` in `Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;`. Insert at method entry, before stock instructions. The example assumes `v0` is available on entry:
 
 ```smali
-invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
     move-result-object v0
     if-eqz v0, :kaorios_key_stock
     return-object v0
@@ -149,7 +201,7 @@ The receiver is the generator (`p0`), not a context. Null falls back to the comp
 Method `engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;` in `Landroid/security/keystore2/AndroidKeyStoreSpi;`. Trace where the stock leaf and CA certificates form the final array. Filter each successful complete-chain return path; preserve stock null/error returns.
 
 ```smali
-# v3 contains the complete stock certificate array on this path.
+    # v3 contains the complete stock certificate array on this path.
     invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
     move-result-object v3
     return-object v3
@@ -168,7 +220,7 @@ Generation and chain reads are separate paths. A single-certificate `getCertific
 In `Lcom/android/server/SystemServer;->run()V`, find the actual main `Looper.loop()V` after service startup. Insert exactly one hook directly before that invocation:
 
 ```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
     invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
@@ -184,7 +236,7 @@ Find the `PackageStateInternal` overload through which this ROM's visibility che
 Do not confuse the overload accepting `SharedUserSetting`. Insert at entry before stock checks; retain the entire stock fallback. Example for the seven-parameter overload with available `v0` and all invoke operands within 0..15:
 
 ```smali
-if-eqz p1, :kaorios_visibility_stock
+    if-eqz p1, :kaorios_visibility_stock
     invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
     move-result-object v0
     if-eqz v0, :kaorios_visibility_stock
@@ -210,15 +262,19 @@ The hook takes `(ContentResolver, callingUid, userId, targetPackage, stockInstal
 Example assumes those values remain in entry `p1/p2` during capture, locals `v10..v14` have been safely reserved, and the stock installer is in `v2`:
 
 ```smali
-# v10..v14 is a reserved contiguous scratch block.
-    # v14 is filled with the stock installer string at each read site.
+    # Entry capture: p1 = target package, p2 = user ID.
+    # v10..v14 must be dedicated locals throughout the stock body.
     const/16 v10, 0x0
     invoke-static {}, Landroid/os/Binder;->getCallingUid()I
     move-result v11
     move/16 v12, p2
     move-object/16 v13, p1
+```
 
-    # At a proven stock installer return, here held in v2:
+Keep the complete stock body between the capture and read sites. At each proven installer String return, replace only `return-object v2` with:
+
+```smali
+    # Replace the stock return-object v2 at each proven installer return.
     move-object/16 v14, v2
     invoke-static/range {v10 .. v14}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
     move-result-object v2
@@ -240,7 +296,7 @@ Descriptor: `call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landro
 Find the stock initialization call to `getDeviceId()I`, or, on layouts without it, `getRequestingUserId(Landroid/os/Bundle;)I`. Keep the original call **and its original `move-result` together**. Insert the hook after that complete pair, before stock routing, while `p1/p2` still hold the method and setting name. The example assumes nine old locals and a safely added scratch `v9`; `v4` remains the stock device ID:
 
 ```smali
-invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+    invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
     move-result v4
 
     invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
@@ -266,16 +322,18 @@ Descriptor: `query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/
 At entry: `p1` URI, `p2` projection, `p3` selection, `p4` selectionArgs, `p5` sortOrder. Optimized stock code can overwrite these parameters. Allocate **three dedicated locals**, normalize old parameter aliases, and save URI/selection/selectionArgs before the first executable stock instruction:
 
 ```smali
-# Example: original query had 5 locals. Allocate 3 more: .locals 8.
+    # Example: original query had 5 locals. Allocate 3 more: .locals 8.
     move-object/from16 v5, p1
     move-object/from16 v6, p3
     move-object/from16 v7, p4
 ```
 
+Concrete mapping: this instance query has six parameter slots. Stock `.registers 11` means five locals; old `v5..v10` aliases correspond to `p0..p5`. Normalize those operands first, then use `.locals 8` (14 total registers). The new `v5..v7` locals are no longer parameters; parameters now occupy `v8..v13`.
+
 Keep `v5..v7` untouched throughout the original body. Immediately before **every** `return-object`, filter the stock Cursor using those saved inputs and return the hook's result. Example after growth where `p0` is physically `v8`, so all operands fit the ordinary invocation:
 
 ```smali
-# p0 holds the stock Cursor on this example's return path.
+    # p0 holds the stock Cursor on this example's return path.
     invoke-static {p0, v5, v6, v7}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
     move-result-object p0
     return-object p0
@@ -294,7 +352,7 @@ In `Landroid/os/Build;`, remove `final` and set the String field initializer to 
 `BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`.
 
 ```smali
-# Before:
+    # Before:
 .field public static final BRAND:Ljava/lang/String; = "example"
 # After:
 .field public static BRAND:Ljava/lang/String; = null
@@ -309,18 +367,34 @@ For `TIME:J`, remove only `final`. In `Landroid/os/Build$VERSION;`, remove `fina
 Assemble each modified smali tree to its **original DEX entry name**, then replace only those entries in a copy of the stock archive. Example for a `classes2.dex` input compatible with assembler API 34:
 
 ```bash
-mkdir -p work/framework/output
-smali a --api 34 work/framework/smali_classes2     -o work/framework/output/classes2.dex
+mkdir -p work/framework/output work/framework/recheck/input
+smali a --api 34 work/framework/smali_classes2 \
+    -o work/framework/output/classes2.dex
 cp framework.jar work/framework/output/framework.jar
-(cd work/framework/output && zip -u framework.jar classes2.dex)
-baksmali d work/framework/output/classes2.dex     -o work/framework/recheck_classes2
+(cd work/framework/output && zip framework.jar classes2.dex)
+unzip -p work/framework/output/framework.jar classes2.dex \
+    > work/framework/recheck/input/classes2.dex
+cmp work/framework/output/classes2.dex work/framework/recheck/input/classes2.dex
+baksmali d work/framework/recheck/input/classes2.dex \
+    -o work/framework/recheck/smali_classes2
 ```
+
+Use plain `zip` to replace the entry, not `zip -u`: `-u` compares timestamps and can retain the stock DEX when the JAR entry is newer than the assembled file. `cmp` compares the assembled DEX with the DEX extracted from the **final JAR**, then re-disassemble that extracted copy. Use a fresh/empty recheck workspace to avoid stale classes.
 
 Select the assembler API from the input DEX format/opcodes and supported toolchain, not by copying the ROM SDK number. Inspect the input/output DEX header. Do not force a newer DEX container format merely because the ROM is Android 17. In the supplied ROM artifact checks, framework/services used API 34 and provider used API 29; these values are evidence for that artifact, not defaults for every ROM.
 
 Repeat for every changed split and preserve untouched DEX hashes. Inspect the final ZIP entry list: no duplicate entry names, no missing splits, no accidental `work/` directory prefix.
 
 For `SettingsProvider.apk`, preserve manifest/resources and sign through the ROM build/platform signing process, then verify the output signature with the SDK's `apksigner verify`. Copying `META-INF` or the original APK Signing Block does not validate modified content. An unsigned host test artifact is not a deployable APK. A system overlay with invalid digests is usable only if the exact ROM's trusted-system scan behavior has been independently established; a generic manual guide cannot assume that bypass.
+
+After signing, check signature validity and signer identity separately:
+
+```bash
+apksigner verify --verbose --print-certs SettingsProvider.apk.orig
+apksigner verify --verbose --print-certs SettingsProvider-signed.apk
+```
+
+Successful verification validates that APK signature. Compare signer certificates/lineage with stock and the ROM platform/shared-UID requirements; an APK signed with a different key can verify yet be rejected by the ROM. Run zipalign before signing and do not modify the ZIP after signing. See the [apksigner documentation](https://developer.android.com/tools/apksigner).
 
 ---
 
@@ -371,7 +445,6 @@ Match the first NUL-terminated name in `/proc/<pid>/cmdline`, then read `/proc/<
 ## 12. Optional patches
 
 For developer/ADB status hiding, inspect the String-returning `Settings$NameValueCache.getStringForUser(...)` overload in this ROM. The versioned `framework/Settings$NameValueCache.smali` shows the `shouldHideDevStatusFromNameValueCache(ContentResolver, String, int)Z` entry hook: true returns `"0"`, false continues stock. Verify the resolver/name/user operands and scratch register before using it; keep writes intact.
-
 
 For the instance descriptor `getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;`, entry `p1/p2/p3` are resolver/name/user. With an available `v0`, insert this before the original first executable instruction:
 

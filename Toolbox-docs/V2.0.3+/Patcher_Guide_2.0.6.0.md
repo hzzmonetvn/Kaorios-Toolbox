@@ -201,6 +201,8 @@ python3 script/verify-framework-a17-hooks.py work/framework/recheck
 
 A verifier PASS proves the expected structure is present. It does not prove the ROM will boot on a real device.
 
+The full framework verifier (without `--caller-only`) checks the `ActivityThread` hook, the `initActivityThread(Object)` callee and presence of eight AdvancedPolicy classes; it does not check every Instrumentation, feature or Keystore hook. With `--caller-only`, it checks only the ActivityThread caller. Inspect the remaining hooks using section 10 of the [manual guide](Patch_Guide_2.0.6.0.md#10-inspect-the-final-bytecode-by-hand). Before payload import, read the release-asset audit and class checklist in section 1 of that guide; do not assume a same-version asset passes the full verifier.
+
 ---
 
 ## 7. When the patcher says UNSUPPORTED_LAYOUT

@@ -62,8 +62,9 @@ python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,
 - **Options**:
   - `--no-delay`: Disables terminal typing effect and runs at maximum speed (ideal for CI/automation).
 
-Follow the maintained patch guide here:  
-👉 [Kaorios Toolbox Framework 2.0.6.0 guide](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md)
+Follow the separate patcher guide here:
+
+👉 [Kaorios Toolbox Patcher 2.0.6.0 guide](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.0.md)
 
 The maintained entry point is `script/kaorios_patcher.py`. The legacy `kaorios_patcher_a17.py` filename is only a compatibility launcher. The patcher edits decompiled smali and fails closed on unsupported layouts. For ROM deployment, always rebuild/re-disassemble the affected DEX and verify against the exact ROM; Template files are references, not drop-in replacements.
 

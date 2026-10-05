@@ -10,6 +10,25 @@ Giữ bản sạch của `framework.jar`, `services.jar`, `SettingsProvider.apk`
 
 Lấy payload framework Kaorios đã phát hành, khớp Toolbox 2.0.6.0. Trích DEX và kiểm tra descriptor class/method thực trước khi chèn lệnh gọi. APK quản lý không thay thế payload framework. Giữ đủ dependency của payload, gồm các class AdvancedPolicy; chỉ import `KaoriosHook.smali` là thiếu.
 
+### Chọn đúng file payload
+
+Asset payload trên [release v2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0) mang tên `classes.dex`; APK `KaoriosToolbox-fix_update_sign.apk` là app quản lý. Không dùng `framework.jar` ROM hoặc JAR mẫu làm payload rồi import toàn bộ class Android của nó.
+
+Trước khi import, mở DEX payload và kiểm tra descriptor của các method hook ở mục 5–7, cùng tám class có tên đầy đủ dưới đây:
+
+```text
+android/security/kaorios/settings/IAdvancedPolicyService
+android/security/kaorios/settings/IAdvancedPolicyService$Stub
+android/security/kaorios/settings/IAdvancedPolicyService$Stub$Proxy
+android/security/kaorios/settings/AdvancedPolicyClient
+android/security/kaorios/settings/AdvancedPolicyService
+android/security/kaorios/settings/AdvancedPolicySnapshot
+android/security/kaorios/settings/ServiceManagerBridge
+android/security/kaorios/settings/SettingDecisionParcel
+```
+
+**Kiểm tra ngày 2026-10-05:** asset release có SHA-256 `f122b4600535dd48776865e7ba174cf701bc4df79524d25a44f2f92bd9820497`, đủ 11 method hook được mô tả, nhưng thiếu tên class `AdvancedPolicyService` và `AdvancedPolicySnapshot` trong danh sách trên. Asset này chưa đạt yêu cầu tên class của bộ kiểm tra hiện tại. Không mặc định payload tương thích chỉ vì cùng version; cần payload cập nhật đáp ứng danh sách này trước khi triển khai theo guide. Không tạo class rỗng hoặc đổi tên class đã obfuscate bằng tay để làm đủ danh sách.
+
 Cần smali/baksmali và công cụ chỉnh archive. Nếu triển khai APK, chuẩn bị quy trình ký bằng platform key của ROM trước khi sửa. Đổi DEX làm chữ ký nội dung APK gốc mất hiệu lực.
 
 [Mẫu theo phiên bản](../Template/Template_V2060/README.md) lấy từ MIUI/HyperOS, chỉ để đối chiếu. Chọn `a13/`–`a17/` khớp Android rồi so descriptor và luồng với ROM của mình. Register trên AOSP/Evolution X/OEM có thể khác.
@@ -49,7 +68,6 @@ Import payload vào `framework.jar` theo **descriptor class** trên toàn bộ D
 
 Ví dụ `KaoriosHook` đã nằm trong `classes6.dex` thì replace class đó bên trong `classes6.dex`, không thay cả split bằng DEX release. Thay nguyên split sẽ làm mất class ROM không liên quan. Import đủ payload một lần trong framework; services và provider gọi các class framework đó.
 
-
 ### Thao tác trong trình chỉnh DEX
 
 Mở bản copy `framework.jar` gốc dạng archive, rồi mở các DEX split bằng chế độ xem multidex. Import **toàn bộ class từ mọi DEX payload**. Chọn replace descriptor trùng, add descriptor mới và giữ các class còn lại. Nếu công cụ chỉ sửa từng split, phải tìm descriptor trên cả archive trước để replace trong đúng DEX owner, tránh thêm bản trùng vào split đang mở. Save/export các entry DEX đã sửa về đúng tên gốc, mở lại archive cuối rồi tìm trên mọi split lần nữa.
@@ -70,9 +88,43 @@ Method instance có `p0` là `this`. Parameter nằm ở các register vật lý
 
 Thêm một local sẽ thành `.locals 10` (hoặc `.registers 14`); scratch mới là `v9`, parameter chuyển sang `v10..v13`. Trước khi tăng, đổi **operand parameter đang dùng** `v9..v12` thành `p0..p3`, gồm range và register trong debug metadata. Giữ operand local `v0..v8`. Không đổi chuỗi trong dấu nháy, label, tên field hoặc descriptor.
 
+Ví dụ đổi operand trước/sau (đây chỉ là đoạn trích trong method, không thay cả method):
+
+```smali
+    # Before: .registers 13, p1 is physical v10.
+    .registers 13
+    move-object v0, v10
+    const-string v1, "v10"
+```
+
+```smali
+    # After: 10 locals + 4 parameter slots = 14 registers.
+    .locals 10
+    move-object v0, p1
+    const-string v1, "v10"
+    # v9 is now the fresh local; p1 is physical v11.
+```
+
+`v10` trong instruction đầu là alias parameter nên đổi thành `p1`; chuỗi `"v10"` giữ nguyên. Với method vốn dùng `.locals 9`, alias vật lý cũ vẫn giống bảng trên và vẫn phải xử lý.
+
 Method đã dùng `.locals` vẫn bị dịch parameter khi tăng local. Kiểm tra từng lệnh dùng `pN`: register vật lý mới có thể vượt giới hạn opcode. `invoke-* {…}` thường nhận tối đa năm word register, mỗi register ở `v0..v15`. `/range` cần các đối số liên tiếp về vật lý. `move-result*`, `return*`, `if-eqz` cần register 8-bit; lệnh so sánh hai register có giới hạn chặt hơn. Chọn `move-object/from16`, `move-object/16`, `move/from16`, `move/16` phù hợp nguồn và đích.
 
+| Instruction | Giới hạn register vật lý |
+|---|---|
+| `invoke-static {…}`, `invoke-interface {…}` | Mỗi đối số 0–15; tối đa 5 word |
+| `invoke-*/range {… .. …}` | Register đầu 0–65535; tối đa 255 word liên tiếp |
+| `move-result*`, `return*`, `if-eqz`, `const/16` | Register 0–255 |
+| `move-object/from16` | Đích 0–255, nguồn 0–65535 |
+| `move-object/16` | Cả hai register 0–65535 |
+| `const/4`, `if-eq`, `iput-object` | Mỗi register trong encoding 0–15 |
+
+Bảng trên là giới hạn encoding; mọi register được dùng vẫn phải nằm trong tổng register đã khai báo. Giá trị wide còn cần slot thứ hai hợp lệ.
+
+Nguồn giới hạn opcode và quy tắc nhận kết quả: [đặc tả Dalvik của AOSP](https://source.android.com/docs/core/runtime/dalvik-bytecode). Khi shift parameter, kiểm tra cả `const/4`, `iput-object` và các lệnh stock khác, không chỉ `invoke`. Các block bên dưới là phần chèn/thay tại điểm đã nêu; comment `Original …` nghĩa là giữ tiếp code gốc, không xóa nó.
+
 Range đi qua ranh giới local/parameter cũ sẽ đổi số đối số khi tăng local. Viết lại lời gọi bằng một block đối số liên tiếp đã kiểm tra, hoặc copy parameter lúc vào method để giữ các slot vật lý cũ rồi dùng chúng trong toàn bộ thân gốc. Không chỉ tăng `.locals` rồi giữ nguyên range.
+
+Trong snippet dùng `v0`, `v0` phải là local thực (ít nhất một local), không phải alias của `p0` khi method có zero local. Nếu phải cấp thêm local, hoàn tất kiểm tra shift/encoding trước khi chèn hook.
 
 Mỗi snippet dưới đây có giả định register riêng. Scratch phải chưa dùng hoặc đã hết giá trị sống tại điểm chèn trên mọi nhánh đi vào; chọn label chưa tồn tại. Chèn lệnh ngoài annotation, trước label entry gốc nếu hook chỉ được chạy lúc vào method. Không chuyển code qua ranh giới try/catch hay monitor khi chưa theo dõi luồng.
 
@@ -92,7 +144,7 @@ Class `Landroid/app/Instrumentation;`, sửa cả hai overload:
 Tìm lệnh `Application.attach(Context)` trên nhánh tạo app thành công. Chèn `initContext` ngay sau attach, dùng đúng operand Context đã đưa vào attach. Giữ nguyên register trả về app. Ví dụ overload static có app ở `v0`, context vẫn ở `p1`:
 
 ```smali
-invoke-virtual {v0, p1}, Landroid/app/Application;->attach(Landroid/content/Context;)V
+    invoke-virtual {v0, p1}, Landroid/app/Application;->attach(Landroid/content/Context;)V
     invoke-static {p1}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V
     return-object v0
 ```
@@ -106,7 +158,7 @@ Class `Landroid/app/ActivityThread;`, method `handleBindApplication(Landroid/app
 Tìm phép gán `mBoundApplication`. Theo dõi alias của `this` và `AppBindData` từ entry đến phép gán, rồi chèn hook **sau** lệnh ghi field, dùng cùng operand AppBindData. Ví dụ `v1` là this, `v9` là AppBindData:
 
 ```smali
-iput-object v9, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
+    iput-object v9, v1, Landroid/app/ActivityThread;->mBoundApplication:Landroid/app/ActivityThread$AppBindData;
     invoke-static {v9}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V
 ```
 
@@ -117,7 +169,7 @@ Không truyền receiver ActivityThread vào hook này. AppBindData ở register
 Method `hasSystemFeature(Ljava/lang/String;I)Z` trong `Landroid/app/ApplicationPackageManager;`. Lúc vào method, `p1` là tên feature, `p2` là version. Chèn trước instruction gốc đầu tiên. Ví dụ giả định `v0` dùng được và register vật lý của parameter không vượt 15:
 
 ```smali
-invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
     move-result-object v0
     if-eqz v0, :kaorios_feature_stock
     invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
@@ -134,7 +186,7 @@ Boolean null thì chạy logic stock. Boolean khác null phải unbox; không tr
 Method `generateKeyPair()Ljava/security/KeyPair;` trong `Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;`. Chèn ở entry trước instruction stock. Ví dụ giả định `v0` dùng được lúc vào method:
 
 ```smali
-invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
     move-result-object v0
     if-eqz v0, :kaorios_key_stock
     return-object v0
@@ -149,7 +201,7 @@ Receiver là generator (`p0`), không phải context. Null thì chạy toàn b�
 Method `engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;` trong `Landroid/security/keystore2/AndroidKeyStoreSpi;`. Theo dõi nơi stock ghép leaf và CA thành mảng cuối. Lọc từng nhánh return chain hoàn chỉnh thành công; giữ nhánh null/lỗi gốc.
 
 ```smali
-# v3 contains the complete stock certificate array on this path.
+    # v3 contains the complete stock certificate array on this path.
     invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
     move-result-object v3
     return-object v3
@@ -168,7 +220,7 @@ Tạo key và đọc chain là hai đường riêng. Đường `getCertificate()
 Trong `Lcom/android/server/SystemServer;->run()V`, tìm `Looper.loop()V` chính sau bước khởi động service. Chèn đúng một hook ngay trước lời gọi đó:
 
 ```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V
     invoke-static {}, Landroid/os/Looper;->loop()V
 ```
 
@@ -184,7 +236,7 @@ Tìm overload `PackageStateInternal` mà các nhánh kiểm tra visibility của
 Không nhầm overload nhận `SharedUserSetting`. Chèn tại entry trước stock check; giữ toàn bộ fallback gốc. Ví dụ overload bảy parameter, `v0` dùng được và tất cả operand invoke nằm trong 0..15:
 
 ```smali
-if-eqz p1, :kaorios_visibility_stock
+    if-eqz p1, :kaorios_visibility_stock
     invoke-interface {p1}, Lcom/android/server/pm/pkg/PackageStateInternal;->getPackageName()Ljava/lang/String;
     move-result-object v0
     if-eqz v0, :kaorios_visibility_stock
@@ -210,15 +262,19 @@ Hook nhận `(ContentResolver, callingUid, userId, targetPackage, stockInstaller
 Ví dụ giả định lúc capture giá trị vẫn ở entry `p1/p2`, đã cấp an toàn `v10..v14`, chuỗi installer stock ở `v2`:
 
 ```smali
-# v10..v14 is a reserved contiguous scratch block.
-    # v14 is filled with the stock installer string at each read site.
+    # Entry capture: p1 = target package, p2 = user ID.
+    # v10..v14 must be dedicated locals throughout the stock body.
     const/16 v10, 0x0
     invoke-static {}, Landroid/os/Binder;->getCallingUid()I
     move-result v11
     move/16 v12, p2
     move-object/16 v13, p1
+```
 
-    # At a proven stock installer return, here held in v2:
+Giữ toàn bộ thân stock giữa block capture và các vị trí đọc bên dưới. Tại mỗi return chuỗi installer đã chứng minh, thay đúng `return-object v2` bằng:
+
+```smali
+    # Replace the stock return-object v2 at each proven installer return.
     move-object/16 v14, v2
     invoke-static/range {v10 .. v14}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
     move-result-object v2
@@ -240,7 +296,7 @@ Descriptor: `call(Ljava/lang/String;Ljava/lang/String;Landroid/os/Bundle;)Landro
 Tìm lệnh khởi tạo stock `getDeviceId()I`; nếu layout không có thì tìm `getRequestingUserId(Landroid/os/Bundle;)I`. Giữ lệnh gọi **liền với `move-result` gốc**. Chèn hook sau cả cặp, trước routing stock, khi `p1/p2` vẫn giữ method và tên setting. Ví dụ có chín local cũ, thêm an toàn scratch `v9`; `v4` vẫn là device ID stock:
 
 ```smali
-invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
+    invoke-direct {p0}, Lcom/android/providers/settings/SettingsProvider;->getDeviceId()I
     move-result v4
 
     invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->filterSettingsCall(Ljava/lang/String;Ljava/lang/String;)Landroid/os/Bundle;
@@ -266,16 +322,18 @@ Descriptor: `query(Landroid/net/Uri;[Ljava/lang/String;Ljava/lang/String;[Ljava/
 Entry: `p1` URI, `p2` projection, `p3` selection, `p4` selectionArgs, `p5` sortOrder. Code stock đã tối ưu có thể ghi đè parameter. Cấp **ba local riêng**, chuẩn hóa alias parameter cũ và lưu URI/selection/selectionArgs trước instruction stock đầu tiên:
 
 ```smali
-# Example: original query had 5 locals. Allocate 3 more: .locals 8.
+    # Example: original query had 5 locals. Allocate 3 more: .locals 8.
     move-object/from16 v5, p1
     move-object/from16 v6, p3
     move-object/from16 v7, p4
 ```
 
+Mapping cụ thể: query instance này có sáu slot parameter. Nếu stock là `.registers 11` thì có năm local; alias cũ `v5..v10` tương ứng `p0..p5`. Đổi những operand alias đó trước, rồi chuyển thành `.locals 8` (tổng 14 register). Ba local mới `v5..v7` không còn là parameter; parameter mới nằm ở `v8..v13`.
+
 Giữ `v5..v7` không bị ghi trong toàn bộ thân gốc. Ngay trước **mọi** `return-object`, lọc Cursor stock với input đã lưu rồi return kết quả hook. Ví dụ sau tăng local, `p0` là `v8` vật lý nên tất cả operand vẫn vừa lời gọi thường:
 
 ```smali
-# p0 holds the stock Cursor on this example's return path.
+    # p0 holds the stock Cursor on this example's return path.
     invoke-static {p0, v5, v6, v7}, Landroid/security/kaorios/KaoriosHook;->filterSettingsQueryResult(Landroid/database/Cursor;Landroid/net/Uri;Ljava/lang/String;[Ljava/lang/String;)Landroid/database/Cursor;
     move-result-object p0
     return-object p0
@@ -294,7 +352,7 @@ Trong `Landroid/os/Build;`, xóa `final`, đặt initializer String thành `null
 `BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`.
 
 ```smali
-# Before:
+    # Before:
 .field public static final BRAND:Ljava/lang/String; = "example"
 # After:
 .field public static BRAND:Ljava/lang/String; = null
@@ -309,18 +367,34 @@ Với `TIME:J`, chỉ xóa `final`. Trong `Landroid/os/Build$VERSION;`, chỉ x�
 Assemble từng cây smali đã đổi về **đúng tên entry DEX gốc**, rồi replace các entry đó trong bản copy archive stock. Ví dụ input `classes2.dex` tương thích assembler API 34:
 
 ```bash
-mkdir -p work/framework/output
-smali a --api 34 work/framework/smali_classes2     -o work/framework/output/classes2.dex
+mkdir -p work/framework/output work/framework/recheck/input
+smali a --api 34 work/framework/smali_classes2 \
+    -o work/framework/output/classes2.dex
 cp framework.jar work/framework/output/framework.jar
-(cd work/framework/output && zip -u framework.jar classes2.dex)
-baksmali d work/framework/output/classes2.dex     -o work/framework/recheck_classes2
+(cd work/framework/output && zip framework.jar classes2.dex)
+unzip -p work/framework/output/framework.jar classes2.dex \
+    > work/framework/recheck/input/classes2.dex
+cmp work/framework/output/classes2.dex work/framework/recheck/input/classes2.dex
+baksmali d work/framework/recheck/input/classes2.dex \
+    -o work/framework/recheck/smali_classes2
 ```
+
+Dùng `zip` replace entry trực tiếp, không dùng `zip -u`: tùy chọn `-u` phụ thuộc timestamp và có thể giữ DEX stock nếu entry JAR có thời gian mới hơn file build. `cmp` kiểm tra byte của DEX đã build với DEX trích từ **JAR cuối**, rồi mới decompile bản trích đó. Workspace recheck phải mới/rỗng để không lẫn class cũ.
 
 Chọn assembler API theo format/opcode DEX input và toolchain hỗ trợ, không copy số SDK của ROM. Kiểm tra header DEX trước/sau. Không ép format container DEX mới chỉ vì ROM là Android 17. Trong lần kiểm tra artifact ROM đã gửi, framework/services dùng API 34, provider dùng API 29; đó là kết quả cho artifact ấy, không phải mặc định mọi ROM.
 
 Làm tương tự cho mọi split đã sửa, giữ hash DEX không sửa. Kiểm tra danh sách entry ZIP cuối: không trùng tên entry, không mất split, không lồng nhầm thư mục `work/`.
 
 Với `SettingsProvider.apk`, giữ manifest/resources, ký qua quy trình build/platform signing của ROM rồi kiểm tra bằng `apksigner verify` của SDK. Copy `META-INF` hoặc APK Signing Block gốc không làm nội dung đã sửa hợp lệ. Artifact unsigned để test host không phải APK triển khai được. Overlay system có digest sai chỉ dùng khi đã xác minh riêng nhánh trusted-system scan của đúng ROM; guide patch tay chung không thể mặc định có bypass đó.
+
+Sau ký, kiểm tra riêng tính hợp lệ chữ ký và signer:
+
+```bash
+apksigner verify --verbose --print-certs SettingsProvider.apk.orig
+apksigner verify --verbose --print-certs SettingsProvider-signed.apk
+```
+
+Lệnh verify thành công chỉ xác minh chữ ký của APK đó. So signer certificate/lineage với bản stock và yêu cầu platform/shared UID của ROM; ký bằng key khác vẫn có thể verify nhưng không được ROM chấp nhận. Thực hiện zipalign trước khi ký, không sửa ZIP sau ký. Xem [tài liệu apksigner](https://developer.android.com/tools/apksigner).
 
 ---
 
@@ -371,7 +445,6 @@ Khớp tên đầu tiên kết thúc bằng NUL trong `/proc/<pid>/cmdline`, r�
 ## 12. Patch tùy chọn
 
 Ẩn trạng thái developer/ADB: xem overload `Settings$NameValueCache.getStringForUser(...)` trả String của đúng ROM. Mẫu `framework/Settings$NameValueCache.smali` theo phiên bản có entry hook `shouldHideDevStatusFromNameValueCache(ContentResolver, String, int)Z`: true trả `"0"`, false chạy stock. Xác minh operand resolver/name/user và scratch trước khi dùng; giữ logic ghi nguyên vẹn.
-
 
 Với descriptor instance `getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;`, entry `p1/p2/p3` là resolver/name/user. Khi `v0` dùng được, chèn trước instruction stock đầu tiên:
 
