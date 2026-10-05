@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kaorios Android 13-17 Auto-Patcher (v2.0.6.0, fail-closed).
+"""Kaorios Android 13-17 Auto-Patcher (v2.0.6.1, fail-closed).
 
 Canonical cross-version entry point for Android 13, 14, 15, 16 and 17 smali.
 Hook patching is selected by verified class/method layout rather than by blindly
@@ -11,7 +11,7 @@ Supported targets:
 - SettingsProvider.smali (per-app Advanced Settings spoof hook with call & query)
 - SystemServer.smali (initSystemServer lifecycle hook)
 - AndroidKeyStoreKeyPairGeneratorSpi.smali (keypair generation hook)
-- AndroidKeyStoreSpi.smali (certificate chain hook)
+- AndroidKeyStoreSpi.smali (certificate chain hook and single-leaf delegation)
 - Instrumentation.smali & ApplicationPackageManager.smali (legacy hooks)
 - Build.smali & Build$VERSION.smali (optional Android 17-only Build spoof)
 """
@@ -165,8 +165,9 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
     return content[:start] + new_body + content[end:], True
 
 
-def patch_keystore_spi(content: str) -> tuple[str, bool]:
-    start = content.find("engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;")
+def _patch_certificate_chain(content: str) -> tuple[str, bool]:
+    anchor = re.search(r'(?m)^\.method[^\n]* engineGetCertificateChain\(Ljava/lang/String;\)\[Ljava/security/cert/Certificate;[ \t]*$', content)
+    start = anchor.start() if anchor else -1
     if start == -1:
         raise ValueError("engineGetCertificateChain anchor method not found in KeyStoreSpi")
     end = content.find('.end method', start)
@@ -175,7 +176,16 @@ def patch_keystore_spi(content: str) -> tuple[str, bool]:
 
     method_body = content[start:end]
     if "KaoriosHook;->CertificateChainIfNeeded" in method_body:
-        return content, False
+        # Repair the historical hook that discarded its result at return.
+        debug_gap = r'(?:\s*\.(?:line|local|end local|restart local)[^\n]*\n|\s*\n)*\s*'
+        old_hook = re.compile(
+            r'(?P<prefix>aput-object\s+[vp]\d+,\s*(?P<array>[vp]\d+),\s*[vp]\d+'
+            + debug_gap + r'invoke-static(?:/range)?\s*\{(?P=array)(?:\s*\.\.\s*(?P=array))?\},\s*'
+            r'Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded\(\[Ljava/security/cert/Certificate;\)\[Ljava/security/cert/Certificate;'
+            + debug_gap + r'move-result-object\s+)(?P<result>[vp]\d+)'
+            r'(?P<tail>' + debug_gap + r'return-object\s+(?P=array))')
+        repaired = old_hook.sub(lambda match: match['prefix'] + match['array'] + match['tail'], method_body)
+        return content[:start] + repaired + content[end:], repaired != method_body
 
     # The actual A13-A17 methods have two null returns and one populated
     # certificate array return. Match the leaf insertion immediately before
@@ -213,6 +223,42 @@ def patch_keystore_spi(content: str) -> tuple[str, bool]:
         inject = f"{invoke}\n    move-result-object {array}\n    "
         new_body = new_body[:match.start('ret')] + inject + new_body[match.start('ret'):]
     return content[:start] + new_body + content[end:], True
+
+
+def patch_keystore_spi(content: str) -> tuple[str, bool]:
+    content, changed = _patch_certificate_chain(content)
+    signature = "engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;"
+    anchor = re.search(r'(?m)^\.method[^\n]* ' + re.escape(signature) + r'[ \t]*$', content)
+    start = anchor.start() if anchor else -1
+    if start == -1:
+        raise ValueError("engineGetCertificate anchor method not found in KeyStoreSpi")
+    end = content.find('.end method', start)
+    if end == -1:
+        raise ValueError("unterminated engineGetCertificate method in KeyStoreSpi")
+    body = content[start:end]
+    if '->engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;' in body:
+        verify_target_content('AndroidKeyStoreSpi.smali', content)
+        return content, changed
+    directive = re.search(r'\.(registers|locals)\s+(\d+)', body)
+    if not directive:
+        raise ValueError("engineGetCertificate register directive not found")
+    locals_count = int(directive.group(2)) - (2 if directive.group(1) == 'registers' else 0)
+    if locals_count < 2:
+        raise ValueError("engineGetCertificate requires two existing local registers")
+    label = _unique_label(':kaorios_certificate_stock', body)
+    inject = f"""
+    invoke-virtual/range {{p0 .. p1}}, Landroid/security/keystore2/AndroidKeyStoreSpi;->engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    move-result-object v0
+    if-eqz v0, {label}
+    array-length v1, v0
+    if-eqz v1, {label}
+    const/4 v1, 0x0
+    aget-object v0, v0, v1
+    return-object v0
+    {label}
+"""
+    body = body[:directive.end()] + inject + body[directive.end():]
+    return content[:start] + body + content[end:], True
 
 
 def patch_instrumentation(content: str) -> tuple[str, bool]:
@@ -396,7 +442,8 @@ def get_diff_text(old_text: str, new_text: str, filename: str) -> str:
 
 def _extract_method_body(content: str, method_anchor: str, label: str) -> str:
     """Return the text of the method containing method_anchor, exclusive of .end method."""
-    start = content.find(method_anchor)
+    anchor = re.search(r'(?m)^\.method[^\n]* ' + re.escape(method_anchor) + r'[ \t]*$', content)
+    start = anchor.start() if anchor else -1
     if start == -1:
         raise ValueError(f"{label}: method anchor '{method_anchor}' not found")
     end = content.find('.end method', start)
@@ -450,8 +497,10 @@ def verify_target_content(filename: str, content: str) -> None:
             r'aput-object\s+[vp]\d+,\s*(?P<array>[vp]\d+),\s*[vp]\d+'
             r'(?:\s*\.(?:line|local|end local|restart local)[^\n]*\n|\s*\n)*\s*'
             r'invoke-static(?:/range)?\s*\{(?P=array)(?:\s*\.\.\s*(?P=array))?\},\s*'
-            r'Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded\(\[Ljava/security/cert/Certificate;\)\[Ljava/security/cert/Certificate;\s+'
-            r'move-result-object\s+(?P=array)\s+'
+            r'Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded\(\[Ljava/security/cert/Certificate;\)\[Ljava/security/cert/Certificate;'
+            r'(?:\s*\.(?:line|local|end local|restart local)[^\n]*\n|\s*\n)*\s*'
+            r'move-result-object\s+(?P=array)'
+            r'(?:\s*\.(?:line|local|end local|restart local)[^\n]*\n|\s*\n)*\s*'
             r'return-object\s+(?P=array)', body
         ))
         if len(pairs) != hook_count:
@@ -464,6 +513,17 @@ def verify_target_content(filename: str, content: str) -> None:
                 raise ValueError("AndroidKeyStoreSpi: unsupported null-return layout")
         elif return_count != hook_count:
             raise ValueError("AndroidKeyStoreSpi: unsupported return layout")
+        leaf_body = _extract_method_body(
+            content, "engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;",
+            "AndroidKeyStoreSpi")
+        leaf_body = re.sub(r'(?m)^[ \t]*\.(?:line|local|end local|restart local|param)[^\n]*\n', '', leaf_body)
+        if not re.search(
+            r'invoke-virtual/range \{p0 \.\. p1\}, Landroid/security/keystore2/AndroidKeyStoreSpi;->engineGetCertificateChain'
+            r'\(Ljava/lang/String;\)\[Ljava/security/cert/Certificate;\s+'
+            r'move-result-object v0\s+if-eqz v0, (?P<label>:[\w]+)\s+'
+            r'array-length v1, v0\s+if-eqz v1, (?P=label)\s+'
+            r'const/4 v1, 0x0\s+aget-object v0, v0, v1\s+return-object v0\s+(?P=label)', leaf_body):
+            raise ValueError("AndroidKeyStoreSpi: single certificate must delegate to the chain with stock fallback")
     elif filename == "Instrumentation.smali":
         body1 = _extract_method_body(
             content,

@@ -43,9 +43,11 @@ For **version 2.0.4.0 and below**, see:
 
 ## 🚀 How to use
 
-## 📦 Latest release: v2.0.6.0
+## 📦 Framework and patcher release: v2.0.6.1
 
-See the manual Patch Guide v2.0.6.0 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.0_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.0.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.0_VI.md).
+See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1_VI.md).
+
+The signed manager APK remains on [release 2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Version 2.0.6.1 publishes the framework DEX and patcher; compatibility checks cover the released manager's direct framework calls.
 
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
 
@@ -64,7 +66,7 @@ python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,
 
 Follow the separate patcher guide here:
 
-👉 [Kaorios Toolbox Patcher 2.0.6.0 guide](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.0.md)
+👉 [Kaorios Toolbox Patcher 2.0.6.1 guide](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md)
 
 The maintained entry point is `script/kaorios_patcher.py`. The legacy `kaorios_patcher_a17.py` filename is only a compatibility launcher. The patcher edits decompiled smali and fails closed on unsupported layouts. For ROM deployment, always rebuild/re-disassemble the affected DEX and verify against the exact ROM; Template files are references, not drop-in replacements.
 

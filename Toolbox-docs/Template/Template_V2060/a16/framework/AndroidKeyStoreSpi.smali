@@ -4742,6 +4742,16 @@
 
 .method public whitelist test-api engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;
     .registers 6
+    invoke-virtual/range {p0 .. p1}, Landroid/security/keystore2/AndroidKeyStoreSpi;->engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    move-result-object v0
+    if-eqz v0, :kaorios_certificate_stock
+    array-length v1, v0
+    if-eqz v1, :kaorios_certificate_stock
+    const/4 v1, 0x0
+    aget-object v0, v0, v1
+    return-object v0
+    :kaorios_certificate_stock
+
     .param p1, "alias"    # Ljava/lang/String;
 
     .line 217
