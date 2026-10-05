@@ -213,7 +213,7 @@ python3 script/verify-framework-a17-hooks.py work/framework/recheck
 
 Verifier PASS chỉ chứng minh cấu trúc hook đúng. Nó chưa chứng minh ROM boot được trên máy thật.
 
-Full framework verifier (không có `--caller-only`) kiểm tra hook `ActivityThread`, overload callee `initActivityThread(Object)` và sự có mặt của tám class AdvancedPolicy; nó không kiểm tra toàn bộ hook Instrumentation, feature và Keystore. Với `--caller-only`, chỉ kiểm tra caller ActivityThread. Kiểm tra các hook còn lại theo mục 10 của [guide patch tay](Patch_Guide_2.0.6.1_VI.md#10-kiểm-tra-bytecode-cuối-bằng-tay). Trước import payload, xem kết quả kiểm tra asset release và danh sách class tại mục 1 của guide tay; không mặc định asset cùng version sẽ qua full verifier.
+Full framework verifier (không có `--caller-only`) kiểm tra hook `ActivityThread`, overload callee `initActivityThread(Object)` và sự có mặt của tám class AdvancedPolicy; nó không kiểm tra toàn bộ hook Instrumentation, feature và Keystore. Với `--caller-only`, chỉ kiểm tra caller ActivityThread. Kiểm tra các hook còn lại theo [guide patch tay](Patch_Guide_2.0.6.1_VI.md), rồi làm mục [Lưu file và kiểm tra](Patch_Guide_2.0.6.1_VI.md#lưu-file-và-kiểm-tra). Import toàn bộ class payload như hướng dẫn ở mục framework.jar.
 
 ---
 
