@@ -312,6 +312,10 @@ Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security
 
 Tham chiếu: mẫu cùng Android version tại `framework/AndroidKeyStoreSpi.smali`.
 
+Hook generation và hook đọc chain phục vụ hai đường khác nhau. `getCertificate()` đọc riêng một chứng chỉ trong AOSP 17 và Evolution X cnb; chỉ cài hook chain chưa bao phủ API này. Sau khi đổi target hoặc mode, kiểm tra bằng khóa mới. Xem [xử lý target/unlocked và đối chiếu AOSP/Evolution X tại commit cố định](Attestation_Guide_2.0.6.0_VI.md).
+
+---
+
 ### `services.jar`
 
 #### Khởi tạo SystemServer

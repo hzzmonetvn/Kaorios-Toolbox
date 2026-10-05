@@ -298,6 +298,10 @@ Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security
 
 Reference: `framework/AndroidKeyStoreSpi.smali` in the matching `a13`–`a17` folder.
 
+The generation and chain-read hooks cover different paths. `getCertificate()` reads a single certificate independently in AOSP 17 and Evolution X cnb; installing only the chain hook does not cover that API. After changing targets or mode, test a fresh key. See [target/unlocked troubleshooting and pinned AOSP/Evolution X comparison](Attestation_Guide_2.0.6.0.md).
+
+---
+
 ### `services.jar`
 
 #### SystemServer initialization
