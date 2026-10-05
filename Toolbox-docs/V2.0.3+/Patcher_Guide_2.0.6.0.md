@@ -233,6 +233,3 @@ script/patch-settingsprovider-a17-artifact.sh
 They discover owner DEX files, rebuild only modified DEXes, verify untouched DEX hashes and re-run structural verification.
 
 Use them only when you understand their required smali/baksmali inputs and, for direct `SettingsProvider.apk` deployment, the platform signing requirements.
-
----
-
