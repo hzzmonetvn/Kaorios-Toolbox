@@ -45,4 +45,4 @@ Yêu cầu JDK 21, Android SDK 36/37, NDK 27.3.13750724, CMake, Rust stable vớ
 
 ## Kiểm tra
 
-Chạy `python3 -m unittest discover -s Kaorios-Helper/tests -v`: 11 test host pass, gồm kiểm tra installer trước khi gọi `pm`, giữ DEX riêng, checksum, chặn module trùng và lifecycle TEE. Task xuất dependency source/POM đã được kiểm tra bằng Gradle 9.3.1 trên fixture Maven thật. Native/Android build HMA và TEE đã pass ở CI đầu; bước đóng gói source/license đang được chạy lại sau khi sửa task Gradle. Chưa có kết quả trên thiết bị thật.
+Chạy `python3 -m unittest discover -s Kaorios-Helper/tests -v`: 11 test host pass, gồm kiểm tra installer trước khi gọi `pm`, giữ DEX riêng, checksum, chặn module trùng và lifecycle TEE. Task xuất dependency source/POM đã được kiểm tra bằng Gradle 9.3.1 trên fixture Maven thật. Snapshot Rust đã lọc key mẫu được kiểm tra bằng `cargo check --locked --offline --lib`; checksum vendor vẫn hợp lệ. Native/Android build HMA và TEE đã pass ở CI đầu; bước đóng gói source/license đang được chạy lại sau khi sửa task Gradle. Chưa có kết quả trên thiết bị thật.
