@@ -28,7 +28,7 @@ Cấu hình HMA bằng trình quản lý HMA-OSS; cấu hình TEE bằng trình 
 
 Đã kiểm tra nguồn và giấy phép của [HMA-OSS](https://github.com/frknkrc44/HMA-OSS), [TEE Simulator RS](https://github.com/Enginex0/TEESimulator-RS) và phần mã công khai của [COPG](https://github.com/AlirezaParsi/COPG). COPG công khai chưa có source native mà script build yêu cầu, nên chưa thể build bản gộp đủ cả ba từ source. Xem [rà soát giấy phép Helper](Kaorios_Helper_Licensing_VI.md).
 
-Helper vẫn cần tích hợp runtime, cấu hình và trình cài đặt trước khi xuất bản. Ghép các ZIP hiện có lại với nhau chưa tạo thành một module hoạt động.
+Source [Helper HMA + TEE](../Kaorios-Helper/README.md) hiện đã có installer, quản lý daemon TEE theo lựa chọn của người dùng và workflow build riêng. ZIP còn chờ build/kiểm tra CI; chưa có kiểm chứng trên máy thật. COPG chưa tích hợp. Ghép các ZIP hiện có lại với nhau chưa tạo thành một module hoạt động.
 
 ## Dùng Toolbox khi chưa patch Framework
 

@@ -1,0 +1,6 @@
+{
+  "hma": {"url": "https://github.com/frknkrc44/HMA-OSS.git", "commit": "1fe86ce2b4a6f21197e6e92d15e054d609b7d77c", "license": "AGPL-3.0"},
+  "tee": {"url": "https://github.com/Enginex0/TEESimulator-RS.git", "commit": "6d241e56d6e8146cd67ed4ac3dadc9c632969549", "license": "GPL-3.0"},
+  "zygote-loader": {"url": "https://github.com/aerath-stuff/ZygoteLoader.git", "commit": "2a2160fea2ed3bdbcb84fe48114718408731d9ad", "license": "MIT"},
+  "panama": {"url": "https://github.com/aerath-stuff/PanamaPort.git", "commit": "c0d8fa431e9a747dd974b8f8c02695dc3ae38b6f", "license": "MIT; OpenJDK GPL-2.0 with file-specific Classpath exception"}
+}

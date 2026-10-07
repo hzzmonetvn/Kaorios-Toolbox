@@ -1,0 +1,20 @@
+Kaorios Helper original packaging, installer and lifecycle glue:
+Copyright (C) 2026 hzzmonetvn. AGPL-3.0-only.
+
+This distribution contains modified HMA-OSS and TEESimulator-RS.
+HMA-OSS: frknkrc44 and the original Hide My Applist contributors; AGPLv3.
+TEESimulator-RS: Enginex0, JingMatrix and upstream contributors; GPLv3.
+Their original licenses and notices are included under licenses/.
+
+AndroidVMTools and ZygoteLoader: MIT.
+PanamaPort: MIT except its OpenJDK portion, which retains its own GPLv2
+and applicable file-specific Classpath exception notices.
+LSPlt: LGPLv3. AOSP: Apache-2.0.
+Linux binder headers: GPL-2.0 WITH Linux-syscall-note.
+Rust and Gradle dependency notices remain under their original licenses.
+
+Exact upstream revisions are listed in upstreams.json.
+Changes made by hzzmonetvn on 2026-10-07 are reproduced by
+Kaorios-Helper/tools/prepare_sources.py; changed file lists accompany source.
+The optional TEE program remains independent from the HMA Zygisk DEX.
+This module contains no Toolbox private implementation or signing key material.

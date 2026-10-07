@@ -1,0 +1,8 @@
+.work/
+.out/
+*.zip
+*.tar.gz
+*.jks
+*.keystore
+local.properties
+keybox.xml

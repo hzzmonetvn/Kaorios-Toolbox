@@ -1,6 +1,6 @@
 # Kaorios Helper — Giấy phép source
 
-Rà soát ngày 06/10/2026. Đây là kết quả kiểm tra upstream để chuẩn bị làm module; chưa có bản Helper gồm đủ ba thành phần được build hoặc phát hành.
+Rà soát upstream ngày 06/10/2026; bổ sung source Helper ngày 07/10/2026. Đây là kết quả kiểm tra upstream để chuẩn bị làm module; chưa có bản Helper gồm đủ ba thành phần được build hoặc phát hành.
 
 ## Giấy phép chính
 
@@ -44,3 +44,7 @@ Không đưa source riêng tư của Toolbox vào Helper. Tách app và module q
 Đã kiểm tra cây file của nhánh JSON, rewrite, bkp và tag v7.3.0. Các bản này không có thư mục `src/` hay file C++ mà script build yêu cầu, như `src/spoof_module.cpp` và `src/unified_controller.cpp`.
 
 Cần lấy source native và xác minh giấy phép áp dụng cho phần đó trước khi tích hợp. File Apache-2.0 trong repo không đủ để kết luận về code native không được cung cấp. Không dùng binary release để tuyên bố Helper đã build hoàn toàn từ source.
+
+## Bản thử nghiệm HMA + TEE — 07/10/2026
+
+Phần glue mới trong `Kaorios-Helper/` dùng AGPL-3.0-only. HMA và daemon TEE giữ DEX riêng. Workflow dự kiến đóng gói source HMA, TEE, AndroidVMTools, ZygoteLoader, PanamaPort, LSPlt, Rust vendor cùng source JAR/POM Gradle và các license/notice tìm được. Keybox mẫu và mọi keystore bị loại khỏi artifact. Các thay đổi upstream có danh sách file và ngày sửa trong source snapshot. Native build và kiểm kê dependency của artifact thực tế vẫn đang chờ CI; chưa tuyên bố bản phân phối đủ điều kiện release production.

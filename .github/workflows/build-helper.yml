@@ -1,0 +1,130 @@
+name: Build Kaorios Helper experimental
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Kaorios-Helper/**'
+      - '.github/workflows/build-helper.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helper-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hma:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+      - name: Host regressions
+        run: python3 -m unittest discover -s Kaorios-Helper/tests -v
+      - name: Fetch pinned public HMA sources
+        run: |
+          python3 Kaorios-Helper/tools/fetch_sources.py "$RUNNER_TEMP/helper-hma" hma zygote-loader panama
+          python3 Kaorios-Helper/tools/prepare_sources.py hma "$RUNNER_TEMP/helper-hma/hma"
+          touch "$RUNNER_TEMP/helper-hma/hma/local.properties"
+      - name: Install HMA SDK
+        run: |
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "platforms;android-36" "build-tools;37.0.0" "build-tools;36.0.0"
+          if [ ! -d "$ANDROID_SDK_ROOT/platforms/android-37" ]; then
+            ln -s android-37.0 "$ANDROID_SDK_ROOT/platforms/android-37"
+          fi
+      - name: Build matched HMA manager and Zygisk runtime
+        working-directory: ${{ runner.temp }}/helper-hma/hma
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon
+          ./gradlew :zygote:assembleRelease --no-daemon
+          ./gradlew :app:helperDependencySources :zygote:helperDependencySources -I "$GITHUB_WORKSPACE/Kaorios-Helper/tools/dependencies.init.gradle" --no-daemon
+      - name: Prepare HMA distribution inputs
+        run: |
+          mkdir -p "$RUNNER_TEMP/helper-inputs/hma"
+          cp "$RUNNER_TEMP/helper-hma/hma"/zygote/build/outputs/magisk/release/*.zip "$RUNNER_TEMP/helper-inputs/hma/runtime.zip"
+          python3 Kaorios-Helper/tools/source_bundle.py "$RUNNER_TEMP/helper-hma" "$RUNNER_TEMP/helper-inputs/hma"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: helper-hma-inputs
+          path: ${{ runner.temp }}/helper-inputs/hma
+          retention-days: 14
+
+  tee:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb
+      - name: Fetch pinned public TEE sources
+        run: |
+          python3 Kaorios-Helper/tools/fetch_sources.py "$RUNNER_TEMP/helper-tee" tee
+          python3 Kaorios-Helper/tools/prepare_sources.py tee "$RUNNER_TEMP/helper-tee/tee"
+      - name: Install TEE SDK and Rust
+        run: |
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;27.3.13750724" "cmake;3.22.1"
+          rustup toolchain install stable --profile minimal --target aarch64-linux-android
+          cargo install cargo-ndk --locked
+      - name: Build release TEE runtime without bundled keybox
+        working-directory: ${{ runner.temp }}/helper-tee/tee
+        run: |
+          chmod +x gradlew
+          ./gradlew zipRelease --no-daemon
+          ./gradlew :app:helperDependencySources -I "$GITHUB_WORKSPACE/Kaorios-Helper/tools/dependencies.init.gradle" --no-daemon
+          cd native-certgen
+          mkdir -p ../helper-dependencies/rust
+          cargo vendor --locked ../helper-dependencies/rust/vendor > ../helper-dependencies/rust/config.toml
+      - name: Prepare TEE distribution inputs
+        run: |
+          mkdir -p "$RUNNER_TEMP/helper-inputs/tee"
+          cp "$RUNNER_TEMP/helper-tee/tee"/out/*Release.zip "$RUNNER_TEMP/helper-inputs/tee/runtime.zip"
+          python3 Kaorios-Helper/tools/source_bundle.py "$RUNNER_TEMP/helper-tee" "$RUNNER_TEMP/helper-inputs/tee"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: helper-tee-inputs
+          path: ${{ runner.temp }}/helper-inputs/tee
+          retention-days: 14
+
+  package:
+    needs: [hma, tee]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: helper-hma-inputs
+          path: inputs/hma
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: helper-tee-inputs
+          path: inputs/tee
+      - name: Build and verify Helper module and source distribution
+        run: |
+          python3 -m unittest discover -s Kaorios-Helper/tests -v
+          mkdir -p dist/licenses/hma dist/licenses/tee
+          cp -r inputs/hma/licenses/. dist/licenses/hma/
+          cp -r inputs/tee/licenses/. dist/licenses/tee/
+          python3 Kaorios-Helper/tools/package_helper.py --hma inputs/hma/runtime.zip --tee inputs/tee/runtime.zip --licenses dist/licenses --output dist/Kaorios-Helper-0.1.0-experimental.zip
+          cp inputs/hma/sources.tar.gz dist/hma-sources.tar.gz
+          cp inputs/tee/sources.tar.gz dist/tee-sources.tar.gz
+          git archive --format=tar HEAD Kaorios-Helper .github/workflows/build-helper.yml | gzip > dist/helper-build-source.tar.gz
+          rm -r dist/licenses
+          cd dist
+          sha256sum *.zip *.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Kaorios-Helper-experimental-${{ github.run_number }}
+          path: dist/
+          retention-days: 30

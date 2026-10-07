@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 hzzmonetvn
+// Export exact runtime coordinates, POMs and source archives beside public sources.
+allprojects { project ->
+    afterEvaluate {
+        def runtime = project.configurations.findByName('releaseRuntimeClasspath')
+        if (runtime != null && runtime.canBeResolved) {
+            tasks.register('helperDependencySources') {
+                doLast {
+                    def dest = new File(rootProject.projectDir, 'helper-dependencies')
+                    dest.mkdirs()
+                    def report = []
+                    runtime.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+                        def id = artifact.moduleVersion.id
+                        if (id.group && id.group != rootProject.name && !id.version.contains('unspecified')) {
+                            def coordinate = "${id.group}:${id.name}:${id.version}"
+                            if (!report.contains(coordinate)) {
+                                report.add(coordinate)
+                                ['@pom', ':sources@jar'].each { suffix ->
+                                    def configuration = project.configurations.detachedConfiguration(
+                                        project.dependencies.create(coordinate + suffix))
+                                    configuration.transitive = false
+                                    configuration.resolvedConfiguration.lenientConfiguration.artifacts.each { source ->
+                                        project.copy {
+                                            from(source.file)
+                                            into(new File(dest, "${id.group}/${id.name}/${id.version}"))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    new File(dest, project.name + '-runtime.txt').text = report.unique().sort().join('\n') + '\n'
+                }
+            }
+        }
+    }
+}
