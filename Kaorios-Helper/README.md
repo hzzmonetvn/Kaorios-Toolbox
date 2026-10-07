@@ -2,14 +2,14 @@
 
 Một module gồm HMA-OSS chạy bằng Zygisk và TEE Simulator RS chạy bằng daemon riêng. COPG chưa tích hợp vì source native công khai còn thiếu.
 
-Source bản thử nghiệm đã có; ZIP còn chờ build CI. Đây là bản **arm64, Android 12 trở lên**. Build/kiểm tra host không xác nhận boot hoặc hook trên máy thật. Module giữ nguyên SettingsProvider và framework/services của ROM; không patch APK hệ thống. Module chưa cung cấp API Kaorios Framework cho Toolbox. Toolbox hiện nhận diện trạng thái cài đặt; cấu hình HMA bằng manager đi kèm.
+Source và ZIP thử nghiệm được cung cấp trong artifact **Kaorios-Helper-experimental** của [workflow Build Kaorios Helper](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml). Mở một lần chạy thành công rồi tải artifact; bên trong có ZIP để flash, source và checksum. Đây chưa phải bản release production. Đây là bản **arm64, Android 12 trở lên**. Build/kiểm tra host không xác nhận boot hoặc hook trên máy thật. Module giữ nguyên SettingsProvider và framework/services của ROM; không patch APK hệ thống. Module chưa cung cấp API Kaorios Framework cho Toolbox. Toolbox hiện nhận diện trạng thái cài đặt; cấu hình HMA bằng manager đi kèm.
 
 ## Cài và dùng HMA
 
 1. Gỡ module HMA-OSS và Tricky Store/TEE cũ nếu có, rồi khởi động lại. Helper không tự gỡ module hay xóa dữ liệu của bạn.
 2. Bật một runtime Zygisk phù hợp với root manager.
 3. Cài ZIP bằng Magisk, KernelSU hoặc APatch rồi khởi động lại.
-4. Bấm **Action** trong trình quản lý root để mở manager HMA đi kèm. App có package `io.github.hzzmonetvn.kaorioshelper.hma`, tách khỏi manager HMA-OSS chính thức.
+4. Trong Toolbox, mở **Tools → Plugins → Kiểm tra module → Mở manager HMA**. Hoặc bấm **Action** trong trình quản lý root để mở manager đi kèm. App có package `io.github.hzzmonetvn.kaorioshelper.hma`, tách khỏi manager HMA-OSS chính thức.
 5. Chọn app cần áp dụng và cấu hình trong manager. Không bật đồng thời HMA Helper và hook HMA Kaorios đã patch trong ROM.
 
 Manager trong artifact CI dùng khóa debug được tạo riêng cho lần build; runtime kiểm tra đúng chữ ký của manager đó. Không cài APK manager từ một build khác. Nếu cập nhật bằng khóa khác, sao lưu cấu hình rồi tự gỡ manager Helper trước khi cài bản mới. Không dùng bản này làm kênh cập nhật production.
@@ -45,4 +45,4 @@ Yêu cầu JDK 21, Android SDK 36/37, NDK 27.3.13750724, CMake, Rust stable vớ
 
 ## Kiểm tra
 
-Chạy `python3 -m unittest discover -s Kaorios-Helper/tests -v`: 11 test host pass, gồm kiểm tra installer trước khi gọi `pm`, giữ DEX riêng, checksum, chặn module trùng và lifecycle TEE. Task xuất dependency source/POM đã được kiểm tra bằng Gradle 9.3.1 trên fixture Maven thật. Snapshot Rust đã lọc key mẫu được kiểm tra bằng `cargo check --locked --offline --lib`; checksum vendor vẫn hợp lệ. Native/Android build HMA và TEE đã pass ở CI đầu; bước đóng gói source/license đang được chạy lại sau khi sửa task Gradle. Chưa có kết quả trên thiết bị thật.
+Chạy `python3 -m unittest discover -s Kaorios-Helper/tests -v`: 11 test host pass, gồm kiểm tra installer trước khi gọi `pm`, giữ DEX riêng, checksum, chặn module trùng và lifecycle TEE. Task xuất dependency source/POM đã được kiểm tra bằng Gradle 9.3.1 trên fixture Maven thật. Snapshot Rust đã lọc key mẫu được kiểm tra bằng `cargo check --locked --offline --lib`; checksum vendor vẫn hợp lệ. CI [37632934944](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37632934944) đã build HMA, TEE và đóng gói ZIP/source/license thành công. Checksum, ZIP, ELF arm64 và kiểm tra không chứa keybox/khóa riêng của artifact đã pass. Các thay đổi sau đó cần lần chạy thành công tương ứng với commit tải về. Chưa có kết quả trên thiết bị thật.

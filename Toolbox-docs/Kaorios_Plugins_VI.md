@@ -20,15 +20,15 @@ Mở **Tools → Plugins** để xem kết nối Kaorios Framework và kiểm tr
 
 Toolbox hiện nhận diện Kaorios Helper, HMA-OSS, COPG và Tricky Store / TEE Simulator RS. TEE Simulator RS dùng cùng ID module với Tricky Store; dòng chung này không xác định module nào đang hoạt động.
 
-Cấu hình HMA bằng trình quản lý HMA-OSS; cấu hình TEE bằng trình quản lý của module tương ứng. Plugins chưa thay thế các trình quản lý đó.
+Khi Helper đã cài, bấm **Mở manager HMA** để cấu hình HMA trong manager đi kèm. Nếu chưa có manager, Plugins báo để bạn cài lại cùng module. TEE của Helper được bật/tắt bằng lệnh trong [hướng dẫn Helper](../Kaorios-Helper/README.md); Plugins chưa có trình sửa cấu hình TEE.
 
 ## Helper hiện đến đâu?
 
-**Chưa có ZIP Kaorios Helper để cài.** Không có link tải Helper chính thức ở thời điểm cập nhật tài liệu này (2026-10-07).
+Đã có source và ZIP thử nghiệm **HMA + TEE Simulator RS**, arm64 / Android 12 trở lên. Tải artifact **Kaorios-Helper-experimental** trong một lần chạy thành công của [Build Kaorios Helper](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml). Artifact có ZIP flash, source và SHA256SUMS; không phải APK Toolbox. Xem [cách cài và dùng](../Kaorios-Helper/README.md).
 
-Đã kiểm tra nguồn và giấy phép của [HMA-OSS](https://github.com/frknkrc44/HMA-OSS), [TEE Simulator RS](https://github.com/Enginex0/TEESimulator-RS) và phần mã công khai của [COPG](https://github.com/AlirezaParsi/COPG). COPG công khai chưa có source native mà script build yêu cầu, nên chưa thể build bản gộp đủ cả ba từ source. Xem [rà soát giấy phép Helper](Kaorios_Helper_Licensing_VI.md).
+HMA chạy qua Zygisk. TEE chạy bằng daemon riêng, mặc định tắt ở lần cài đầu, không kèm keybox. Helper không patch SettingsProvider hay framework/services của ROM. Build CI và kiểm tra artifact đã pass ở [37632934944](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37632934944); chưa kiểm chứng boot/hook trên máy thật.
 
-Source [Helper HMA + TEE](../Kaorios-Helper/README.md) hiện đã có installer, quản lý daemon TEE theo lựa chọn của người dùng và workflow build riêng. ZIP còn chờ build/kiểm tra CI; chưa có kiểm chứng trên máy thật. COPG chưa tích hợp. Ghép các ZIP hiện có lại với nhau chưa tạo thành một module hoạt động.
+COPG chưa tích hợp vì source native công khai còn thiếu. Giữ license và copyright upstream, đồng thời cung cấp source snapshot với artifact. Xem [rà soát giấy phép](Kaorios_Helper_Licensing_VI.md).
 
 ## Dùng Toolbox khi chưa patch Framework
 
