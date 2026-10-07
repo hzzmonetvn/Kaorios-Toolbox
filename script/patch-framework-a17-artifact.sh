@@ -65,7 +65,8 @@ unzip -q "$TASK_INPUT" -d "$TASK_UNPACKED"
 # 3. Plan patch: discover ActivityThread owner, KaoriosHook slot, and snapshot before hashes
 TASK_PLAN_OUTPUT="$TASK_WORK/plan.txt"
 TASK_HASHES_JSON="$TASK_WORK/before_hashes.json"
-python "$TASK_DIR/patch-framework-a17-plan.py" plan "$TASK_UNPACKED" --save-hashes "$TASK_HASHES_JSON" > "$TASK_PLAN_OUTPUT"
+python "$TASK_DIR/patch-framework-a17-plan.py" plan "$TASK_UNPACKED" \
+    --kaorios-dex "$TASK_KAORIOS_DEX" --save-hashes "$TASK_HASHES_JSON" > "$TASK_PLAN_OUTPUT"
 
 TASK_OWNER_DEX=$(grep '^OWNER_DEX=' "$TASK_PLAN_OUTPUT" | cut -d= -f2)
 TASK_KAORIOS_SLOT=$(grep '^KAORIOS_SLOT=' "$TASK_PLAN_OUTPUT" | cut -d= -f2)

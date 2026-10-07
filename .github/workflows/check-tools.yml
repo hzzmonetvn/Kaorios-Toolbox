@@ -1,0 +1,48 @@
+name: Check patch tools and Helper
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'script/**'
+      - 'Kaorios-Helper/module/**'
+      - 'Kaorios-Helper/tools/**'
+      - 'Kaorios-Helper/tests/**'
+      - '.github/workflows/check-tools.yml'
+  pull_request:
+    paths:
+      - 'script/**'
+      - 'Kaorios-Helper/module/**'
+      - 'Kaorios-Helper/tools/**'
+      - 'Kaorios-Helper/tests/**'
+      - '.github/workflows/check-tools.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Fetch smali tools for assembly regressions
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/smali"
+          for artifact in smali smali-baksmali smali-dexlib2 smali-util; do
+            curl -fsSL --retry 3 "https://dl.google.com/dl/android/maven2/com/android/tools/smali/$artifact/3.0.8/$artifact-3.0.8.jar" -o "$RUNNER_TEMP/smali/$artifact.jar"
+          done
+          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/org/antlr/antlr-runtime/3.5.2/antlr-runtime-3.5.2.jar -o "$RUNNER_TEMP/smali/antlr.jar"
+          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/com/beust/jcommander/1.82/jcommander-1.82.jar -o "$RUNNER_TEMP/smali/jcommander.jar"
+          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/com/google/guava/guava/31.1-android/guava-31.1-android.jar -o "$RUNNER_TEMP/smali/guava.jar"
+      - name: Verify patcher planning and assemble register boundaries
+        shell: bash
+        run: KAORIOS_SMALI_CLASSPATH="$RUNNER_TEMP/smali/*" python3 -m unittest discover -s script -v
+      - name: Verify Helper packaging and lifecycle
+        run: python3 -m unittest discover -s Kaorios-Helper/tests -v

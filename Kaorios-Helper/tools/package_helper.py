@@ -11,6 +11,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = '0.1.0-experimental'
+INSTALL_PARTS = {'10-enforce-api-version.sh', '11-enforce-arch.sh', '20-enforce-magisk-version.sh',
+                 '21-enforce-ksu-kernel.sh', '22-check-zygisk.sh'}
 FORBIDDEN = re.compile(rb'-----BEGIN (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----\s+[A-Za-z0-9+/=]{32,}|<AndroidAttestation>|<Keybox\b')
 
 
@@ -41,6 +43,7 @@ def check_payload(files):
                 'zygisk/arm64-v8a.so', 'helperctl.sh', 'service.sh',
                 'tee/classes.dex', 'tee/daemon', 'tee/supervisor', 'tee/inject',
                 'tee/libTEESimulator.so', 'tee/libcertgen.so', 'LICENSE', 'upstreams.json']
+    required += ['customize.d/' + name for name in sorted(INSTALL_PARTS)]
     for name in required:
         if name not in files or not files[name]:
             raise ValueError(f'Missing runtime member: {name}')
@@ -72,10 +75,8 @@ def package(hma_zip, tee_zip, licenses, destination):
     files['module.prop'] = ''.join(f'{key}={value}\n' for key, value in props.items()).encode()
     for path in (ROOT / 'module').glob('*.sh'):
         files[path.name] = path.read_bytes()
-    keep_parts = {'10-enforce-api-version.sh', '11-enforce-arch.sh', '20-enforce-magisk-version.sh',
-                  '21-enforce-ksu-kernel.sh', '22-check-zygisk.sh'}
     files = {name: data for name, data in files.items()
-             if not name.startswith('customize.d/') or name.split('/')[-1] in keep_parts}
+             if not name.startswith('customize.d/') or name.split('/')[-1] in INSTALL_PARTS}
     files.pop('hmaoss.sh', None)
     files.pop('update_desc.sh', None)
     files['tee/classes.dex'] = tee['classes.dex']

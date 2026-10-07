@@ -29,6 +29,7 @@ running_pid() {
 }
 
 tee_ready() {
+    [ ! -f "$MODDIR/disable" ] && [ ! -f "$MODDIR/remove" ] || { echo "Helper is disabled or pending removal."; return 1; }
     conflicts && return 1
     [ -s "$TEE_CONFIG/keybox.xml" ] && [ -s "$TEE_CONFIG/target.txt" ] || {
         echo "TEE needs your keybox.xml and a non-empty target.txt in $TEE_CONFIG."
@@ -41,7 +42,6 @@ tee_ready() {
 
 start_tee() {
     [ -f "$CONFIG/tee.enabled" ] || { echo "TEE is disabled."; return 0; }
-    [ ! -f "$MODDIR/disable" ] && [ ! -f "$MODDIR/remove" ] || { echo "Helper is disabled or pending removal."; return 1; }
     tee_ready || return 1
     running_pid && { echo "TEE supervisor is already running; hook readiness is unverified."; return 0; }
     mkdir -p "$CONFIG"

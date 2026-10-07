@@ -27,27 +27,41 @@ def read_uleb128(data: bytes, offset: int) -> tuple[int, int]:
     return result, offset
 
 
-def get_dex_classes(data: bytes) -> set[str]:
+def get_dex_classes(data: bytes, strict: bool = False) -> set[str]:
     """Parse class_def_item descriptors from DEX binary header."""
     if len(data) < 0x70 or not data.startswith(b"dex\n"):
+        if strict:
+            raise ValueError("invalid DEX header; class inventory cannot be verified")
         return set()
     try:
         string_ids_size, string_ids_off = struct.unpack_from("<II", data, 0x38)
         type_ids_size, type_ids_off = struct.unpack_from("<II", data, 0x40)
         class_defs_size, class_defs_off = struct.unpack_from("<II", data, 0x60)
+        if strict:
+            for count, offset, width in ((string_ids_size, string_ids_off, 4),
+                                         (type_ids_size, type_ids_off, 4),
+                                         (class_defs_size, class_defs_off, 32)):
+                if offset + count * width > len(data) or count and offset < 0x70:
+                    raise ValueError("invalid DEX descriptor table")
 
         def get_string(idx: int) -> str:
             if idx >= string_ids_size:
+                if strict:
+                    raise ValueError("invalid DEX string index")
                 return ""
             str_off = struct.unpack_from("<I", data, string_ids_off + idx * 4)[0]
             _, cur = read_uleb128(data, str_off)
             null_idx = data.find(b"\x00", cur)
             if null_idx == -1:
+                if strict:
+                    raise ValueError("unterminated DEX descriptor")
                 return ""
             return data[cur:null_idx].decode("utf-8", errors="replace")
 
         def get_type_desc(type_idx: int) -> str:
             if type_idx >= type_ids_size:
+                if strict:
+                    raise ValueError("invalid DEX type index")
                 return ""
             desc_idx = struct.unpack_from("<I", data, type_ids_off + type_idx * 4)[0]
             return get_string(desc_idx)
@@ -56,10 +70,14 @@ def get_dex_classes(data: bytes) -> set[str]:
         for i in range(class_defs_size):
             class_idx = struct.unpack_from("<I", data, class_defs_off + i * 32)[0]
             desc = get_type_desc(class_idx)
+            if strict and not (desc.startswith("L") and desc.endswith(";")):
+                raise ValueError("invalid DEX class descriptor")
             if desc:
                 classes.add(desc)
         return classes
-    except Exception:
+    except Exception as error:
+        if strict:
+            raise ValueError("invalid DEX class inventory; safe import cannot be verified") from error
         return set()
 
 
@@ -113,7 +131,7 @@ def validate_kaorios_dex_dir(smali_dir: Path) -> Path:
     return hook_path
 
 
-def plan_patch(unpacked_dir: Path) -> dict:
+def plan_patch(unpacked_dir: Path, kaorios_dex: Path | None = None) -> dict:
     """
     Inspect all classes*.dex in unpacked_dir.
     Identifies ActivityThread owner dex, KaoriosHook status, and computes initial hashes.
@@ -129,11 +147,13 @@ def plan_patch(unpacked_dir: Path) -> dict:
     before_hashes = {}
     activity_owners = []
     kaorios_owners = []
+    dex_classes = {}
 
     for p in dex_paths:
         data = p.read_bytes()
         before_hashes[p.name] = compute_sha256(data)
-        classes = get_dex_classes(data)
+        classes = get_dex_classes(data, strict=True)
+        dex_classes[p.name] = classes
         if ACTIVITY_THREAD_DESC in classes:
             activity_owners.append(p.name)
         if KAORIOS_HOOK_DESC in classes:
@@ -161,6 +181,33 @@ def plan_patch(unpacked_dir: Path) -> dict:
             f"ActivityThread owner DEX ({owner_dex}) also contains KaoriosHook; "
             "safe replacement requires class-level DEX merge which is currently unsupported"
         )
+
+    if kaorios_dex is None:
+        if kaorios_action == "replace":
+            raise ValueError(
+                "replacement requires --kaorios-dex to verify that no ROM classes are lost; "
+                "otherwise class merge/import is required"
+            )
+    else:
+        incoming = get_dex_classes(kaorios_dex.read_bytes(), strict=True)
+        if KAORIOS_HOOK_DESC not in incoming:
+            raise ValueError("supplied Kaorios DEX does not define KaoriosHook")
+        if kaorios_action == "replace":
+            retained = dex_classes[kaorios_slot] - incoming
+            if retained:
+                raise ValueError(
+                    f"replacement would remove {len(retained)} existing classes from {kaorios_slot}; "
+                    "class merge/import is required"
+                )
+        for name, classes in dex_classes.items():
+            if name == kaorios_slot:
+                continue
+            duplicates = classes & incoming
+            if duplicates:
+                raise ValueError(
+                    f"supplied payload duplicates {len(duplicates)} existing classes in {name}; "
+                    "class merge/import is required"
+                )
 
     return {
         "owner_dex": owner_dex,
@@ -202,6 +249,7 @@ def main() -> None:
     p_plan = subparsers.add_parser("plan")
     p_plan.add_argument("unpacked_dir", type=Path)
     p_plan.add_argument("--save-hashes", type=Path, default=None)
+    p_plan.add_argument("--kaorios-dex", type=Path, default=None)
 
     # verify-untouched
     p_untouched = subparsers.add_parser("verify-untouched")
@@ -217,7 +265,7 @@ def main() -> None:
         print(f"valid KaoriosHook: {hook}")
 
     elif args.command == "plan":
-        plan = plan_patch(args.unpacked_dir)
+        plan = plan_patch(args.unpacked_dir, args.kaorios_dex)
         if args.save_hashes:
             args.save_hashes.write_text(json.dumps(plan["before_hashes"], indent=2), encoding="utf-8")
         print(f"OWNER_DEX={plan['owner_dex']}")

@@ -159,6 +159,15 @@ def _find_injection_point(body: str) -> int:
     return sum(len(lines[j]) for j in range(injected_idx))
 
 
+def _canonicalize_parameter_aliases(body, base, width):
+    parts = re.split(r'("(?:\\.|[^"\\])*"|#[^\n]*)', body)
+    for index in range(0, len(parts), 2):
+        for parameter in range(width):
+            parts[index] = re.sub(rf'(?<![\w/$;>:])v{base+parameter}(?![\w/$;])',
+                                  f'p{parameter}', parts[index])
+    return ''.join(parts)
+
+
 def _patch_visibility(text: str) -> tuple[str, bool]:
     """Inject Kaorios HMA visibility hook into ComputerEngine.shouldFilterApplication using register-safe allocation."""
     start, end, param_count = _method_span(text)
@@ -182,6 +191,7 @@ def _patch_visibility(text: str) -> tuple[str, bool]:
 
     if loc_match:
         current_locs = int(loc_match.group("num"))
+        updated_body = _canonicalize_parameter_aliases(body, current_locs, param_width)
         new_locs = current_locs + 1
         hook_reg = f"v{current_locs}"
         indent = loc_match.group("indent")
@@ -199,13 +209,7 @@ def _patch_visibility(text: str) -> tuple[str, bool]:
         # .registers may reference parameter slots numerically as vN. Adding a
         # local shifts the physical parameter registers, so canonicalize those aliases
         # to stable pN names before converting the directive to .locals.
-        for register_index in range(current_regs - 1, existing_locals - 1, -1):
-            parameter_index = register_index - existing_locals
-            updated_body = re.sub(
-                rf"(?<![A-Za-z0-9_])v{register_index}(?![0-9])",
-                f"p{parameter_index}",
-                updated_body,
-            )
+        updated_body = _canonicalize_parameter_aliases(body, existing_locals, param_width)
         new_locs = existing_locals + 1
         hook_reg = f"v{existing_locals}"
         indent = reg_match.group("indent")
@@ -227,7 +231,7 @@ def _patch_visibility(text: str) -> tuple[str, bool]:
 
     locals_match = LOCALS_RE.search(updated_body)
     new_locals = int(locals_match.group("num")) if locals_match else 1
-    if max(new_locals + int(user_param[1:]), int(hook_reg[1:])) > 15:
+    if max(new_locals + param_width - 1, int(hook_reg[1:])) > 15:
         original_directive = LOCALS_RE.search(body) or REGISTERS_RE.search(body)
         old_count = int(original_directive.group("num"))
         old_base = old_count if original_directive.re == LOCALS_RE else old_count - param_width
@@ -238,7 +242,7 @@ def _patch_visibility(text: str) -> tuple[str, bool]:
         for line in body.splitlines(keepends=True):
             if not line.strip().startswith('.param'):
                 parts = re.split(r'("(?:\\.|[^"\\])*"|#[^\n]*)', line)
-                line = ''.join(part if i % 2 else re.sub(r'\bp(\d+)\b', lambda m: f'v{old_base+int(m[1])}', part) for i, part in enumerate(parts))
+                line = ''.join(part if i % 2 else re.sub(r'(?<![\w/$;>:])p(\d+)(?![\w/$;])', lambda m: f'v{old_base+int(m[1])}', part) for i, part in enumerate(parts))
             lines.append(line)
         updated_body = ''.join(lines)
         directive = LOCALS_RE.search(updated_body) or REGISTERS_RE.search(updated_body)

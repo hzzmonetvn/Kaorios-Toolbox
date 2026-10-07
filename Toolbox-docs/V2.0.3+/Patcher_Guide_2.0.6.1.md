@@ -4,6 +4,8 @@
 
 This file covers patcher commands, modes, output and artifact helpers. For editing smali yourself, payload imports, register allocation and deployment, use the separate [manual patch guide](Patch_Guide_2.0.6.1.md).
 
+The patcher returns `UNSUPPORTED_LAYOUT` without changing the input when added registers would make stock instructions unencodable. The artifact helper replaces a DEX only when every old class in that slot exists in the incoming payload and no incoming class duplicates another ROM DEX. If class merge/import is required, follow the [manual guide](Patch_Guide_2.0.6.1.md) to import classes and replace duplicate classes; preserve other ROM classes.
+
 ## 1. What you need
 
 From the target ROM, keep clean copies of:

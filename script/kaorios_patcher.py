@@ -99,12 +99,42 @@ def patch_system_server(content: str) -> tuple[str, bool]:
 def _canonicalize_param_aliases(method_body: str, registers: int, param_count: int) -> str:
     """Replace v(R-P+N) aliases with pN so .registers bump doesn't corrupt them."""
     first_param_v = registers - param_count
-    for n in range(param_count):
-        vN = f"v{first_param_v + n}"
-        pN = f"p{n}"
-        # Replace only whole-word occurrences — e.g. v5 but not v50
-        method_body = re.sub(rf'\b{re.escape(vN)}\b', pN, method_body)
-    return method_body
+    if first_param_v < 0 or registers + 1 > 65535:
+        raise ValueError("unsupported register allocation")
+    # Register names inside strings/comments are data and must retain their bytes.
+    parts = re.split(r'("(?:\\.|[^"\\])*"|#[^\n]*)', method_body)
+    for index in range(0, len(parts), 2):
+        for n in range(param_count):
+            parts[index] = re.sub(rf'(?<![\w/$;>:])v{first_param_v + n}(?![\w/$;])', f'p{n}', parts[index])
+    normalized = ''.join(parts)
+    _verify_register_encoding(normalized, registers + 1, param_count)
+    return normalized
+
+
+def _verify_register_encoding(method_body: str, registers: int, param_count: int) -> None:
+    """Reject stock operands whose encoding is invalid after a parameter shift."""
+    for line in method_body.splitlines():
+        instruction = re.sub(r'"(?:\\.|[^"\\])*"|#.*', '', line).strip()
+        if not instruction or instruction.startswith(('.', ':')):
+            continue
+        opcode = instruction.split()[0]
+        operands = re.split(r',\s*(?:L|\[)', instruction, maxsplit=1)[0]
+        names = re.findall(r'\b([vp]\d+)\b', operands)
+        narrow = (opcode in ('move', 'move-wide', 'move-object', 'const/4', 'array-length',
+                             'new-array', 'instance-of', 'if-eq', 'if-ne', 'if-lt',
+                             'if-ge', 'if-gt', 'if-le')
+                  or opcode.startswith(('iget', 'iput', 'neg-', 'not-'))
+                  or '-to-' in opcode or opcode.endswith('/2addr')
+                  or (opcode.startswith(('invoke-', 'filled-new-array')) and '/range' not in opcode))
+        for index, name in enumerate(names):
+            physical = int(name[1:]) + (registers - param_count if name.startswith('p') else 0)
+            limit = 15 if narrow else 255
+            if opcode.startswith(('invoke-', 'filled-new-array')) and '/range' in opcode or opcode.startswith('move') and opcode.endswith('/16'):
+                limit = 65535
+            elif opcode.startswith('move') and opcode.endswith('/from16') and index == 1:
+                limit = 65535
+            if physical > limit:
+                raise ValueError(f"unsupported register shift: {opcode} operand {name} becomes v{physical}, encoding limit v{limit}")
 
 
 def patch_keystore_generator(content: str) -> tuple[str, bool]:
@@ -465,6 +495,11 @@ def verify_target_content(filename: str, content: str) -> None:
             raise ValueError(
                 f"AndroidKeyStoreKeyPairGeneratorSpi: expected exactly 1 initGenerateSoftwareKeyPair hook in generateKeyPair, found {count}"
             )
+        directive = re.search(r'\.(registers|locals)\s+(\d+)', body)
+        if directive is None:
+            raise ValueError("generateKeyPair register directive not found")
+        registers = int(directive[2]) + (1 if directive[1] == 'locals' else 0)
+        _verify_register_encoding(body, registers, 1)
     elif filename == "AndroidKeyStoreSpi.smali":
         body = _extract_method_body(
             content,
@@ -554,6 +589,11 @@ def verify_target_content(filename: str, content: str) -> None:
         if pat is None:
             raise ValueError("ApplicationPackageManager: hasSystemFeature(Ljava/lang/String;I)Z method not found")
         body = pat.group(1)
+        directive = re.search(r'\.(registers|locals)\s+(\d+)', body)
+        if directive is None:
+            raise ValueError("hasSystemFeature register directive not found")
+        registers = int(directive[2]) + (3 if directive[1] == 'locals' else 0)
+        _verify_register_encoding(body, registers, 3)
         sequence = re.search(
             r'invoke-static(?:/range)?\s*\{p1(?:,\s*p2|\s*\.\.\s*p2)\},\s*'
             r'Landroid/security/kaorios/KaoriosHook;->hasSystemFeature\(Ljava/lang/String;I\)Ljava/lang/Boolean;\s+'

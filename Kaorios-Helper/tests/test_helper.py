@@ -45,6 +45,8 @@ class HelperPackagingTest(unittest.TestCase):
             'packages/android': b'', 'hmaoss.sh': b'# host boundary',
             'customize.d/00-verify-resources.sh': b'old checksums'
         }
+        for name in packager.INSTALL_PARTS:
+            self.hma_files['customize.d/' + name] = b': # host boundary\n'
         self.tee_files = {'classes.dex': b'dex\n035\0TEE', 'daemon': b'#!/system/bin/sh', 'sepolicy.rule': b'# test'}
         for name in ('libinject.so', 'libsupervisor.so', 'libTEESimulator.so', 'libcertgen.so'):
             self.tee_files[f'lib/arm64-v8a/{name}'] = elf()
@@ -128,6 +130,12 @@ pm() {{ touch '{calls}'; return 0; }}
         with self.assertRaises((KeyError, ValueError)):
             self.package()
 
+    def test_missing_installer_compatibility_script_is_rejected(self):
+        del self.hma_files['customize.d/22-check-zygisk.sh']
+        write_zip(self.hma, self.hma_files)
+        with self.assertRaisesRegex(ValueError, '22-check-zygisk.sh'):
+            self.package()
+
     def test_zip_traversal_and_duplicate_entries_are_rejected(self):
         for member in ('../outside', '/outside', 'bad\\path', 'bad\npath'):
             write_zip(self.hma, {member: b'x'})
@@ -168,6 +176,21 @@ class HelperLifecycleTest(unittest.TestCase):
     def test_enable_requires_config_and_does_not_write_flag_on_failure(self):
         self.assertNotEqual(0, self.run_ctl('enable-tee').returncode)
         self.assertFalse((self.adb / 'kaorios_helper/tee.enabled').exists())
+
+    def test_disabled_or_removing_helper_cannot_persist_tee_opt_in(self):
+        (self.config / 'keybox.xml').write_text('opaque user-owned placeholder')
+        (self.config / 'target.txt').write_text('com.example.target\n')
+        runtime = self.module / 'tee'
+        runtime.mkdir()
+        for name in ('daemon', 'supervisor', 'inject', 'libTEESimulator.so', 'libcertgen.so', 'classes.dex'):
+            (runtime / name).write_text('host runtime boundary')
+        for state in ('disable', 'remove'):
+            marker = self.module / state
+            marker.touch()
+            self.assertNotEqual(0, self.run_ctl('enable-tee').returncode)
+            self.assertFalse((self.adb / 'kaorios_helper/tee.enabled').exists(), state)
+            self.assertFalse((self.adb / 'kaorios_helper/tee-supervisor.pid').exists())
+            marker.unlink()
 
     def test_conflicting_disabled_or_pending_module_is_rejected(self):
         conflict = self.adb / 'modules_update/tricky_store'

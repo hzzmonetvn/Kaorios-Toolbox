@@ -4,6 +4,8 @@
 
 File này dành cho lệnh patcher, mode, kết quả và helper build artifact. Cách tự sửa smali, import payload, cấp register và triển khai nằm trong [guide patch tay riêng](Patch_Guide_2.0.6.1_VI.md).
 
+Patcher hiện chặn trường hợp thêm register làm lệnh stock không còn encode được; kết quả là `UNSUPPORTED_LAYOUT`, file đầu vào được giữ nguyên. Helper build artifact chỉ thay một DEX khi mọi class cũ trong DEX đó đều có trong payload mới và payload không trùng class ở DEX khác. Nếu báo cần class merge/import, dùng [guide patch tay](Patch_Guide_2.0.6.1_VI.md) để import class và replace class trùng; không thay cả DEX chứa class ROM khác.
+
 ## 1. Cần chuẩn bị gì
 
 Lấy từ ROM đích và giữ bản sạch của:
