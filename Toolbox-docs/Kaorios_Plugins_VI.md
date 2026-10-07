@@ -24,9 +24,9 @@ Khi Helper đã cài, bấm **Mở manager HMA** để cấu hình HMA trong man
 
 ## Helper hiện đến đâu?
 
-Đã có source và ZIP thử nghiệm **HMA + TEE Simulator RS**, arm64 / Android 12 trở lên. Tải artifact **Kaorios-Helper-experimental** trong một lần chạy thành công của [Build Kaorios Helper](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml). Artifact có ZIP flash, source và SHA256SUMS; không phải APK Toolbox. Xem [cách cài và dùng](../Kaorios-Helper/README.md).
+Đã có source và ZIP thử nghiệm **HMA + TEE Simulator RS**, arm64 / Android 12 trở lên. Bản đã kiểm tra: [Kaorios-Helper-experimental-5](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37634740330/artifacts/11487619507), source `fd0f2a60ccf60d27619b49c18bddbb3a1b14fa41`. ZIP flash có SHA-256 `03b89676b8d8fdee629ff0019b9a15342e9e0cfa701110a96e1c6c9f18222207`. Bạn cũng có thể tải artifact **Kaorios-Helper-experimental** trong một lần chạy thành công của [Build Kaorios Helper](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml). Artifact có ZIP flash, source và SHA256SUMS; không phải APK Toolbox. Xem [cách cài và dùng](../Kaorios-Helper/README.md).
 
-HMA chạy qua Zygisk. TEE chạy bằng daemon riêng, mặc định tắt ở lần cài đầu, không kèm keybox. Helper không patch SettingsProvider hay framework/services của ROM. Build CI và kiểm tra artifact đã pass ở [37632934944](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37632934944); chưa kiểm chứng boot/hook trên máy thật.
+HMA chạy qua Zygisk. TEE chạy bằng daemon riêng, mặc định tắt ở lần cài đầu, không kèm keybox. Helper không patch SettingsProvider hay framework/services của ROM. Build CI và kiểm tra artifact đã pass ở [37634740330](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37634740330); chưa kiểm chứng boot/hook trên máy thật.
 
 COPG chưa tích hợp vì source native công khai còn thiếu. Giữ license và copyright upstream, đồng thời cung cấp source snapshot với artifact. Xem [rà soát giấy phép](Kaorios_Helper_Licensing_VI.md).
 
