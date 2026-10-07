@@ -72,7 +72,12 @@ def package(hma_zip, tee_zip, licenses, destination):
     files['module.prop'] = ''.join(f'{key}={value}\n' for key, value in props.items()).encode()
     for path in (ROOT / 'module').glob('*.sh'):
         files[path.name] = path.read_bytes()
-    files.pop('customize.d/00-verify-resources.sh', None)
+    keep_parts = {'10-enforce-api-version.sh', '11-enforce-arch.sh', '20-enforce-magisk-version.sh',
+                  '21-enforce-ksu-kernel.sh', '22-check-zygisk.sh'}
+    files = {name: data for name, data in files.items()
+             if not name.startswith('customize.d/') or name.split('/')[-1] in keep_parts}
+    files.pop('hmaoss.sh', None)
+    files.pop('update_desc.sh', None)
     files['tee/classes.dex'] = tee['classes.dex']
     files['tee/daemon'] = tee['daemon']
     for original, renamed in [('libinject.so', 'inject'), ('libsupervisor.so', 'supervisor'),

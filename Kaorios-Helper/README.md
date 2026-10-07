@@ -2,7 +2,7 @@
 
 Một module gồm HMA-OSS chạy bằng Zygisk và TEE Simulator RS chạy bằng daemon riêng. COPG chưa tích hợp vì source native công khai còn thiếu.
 
-Source bản thử nghiệm đã có; ZIP còn chờ build CI. Đây là bản **arm64, Android 12 trở lên**. Build/kiểm tra host không xác nhận boot hoặc hook trên máy thật. Module chưa cung cấp API Kaorios Framework cho Toolbox. Toolbox hiện nhận diện trạng thái cài đặt; cấu hình HMA bằng manager đi kèm.
+Source bản thử nghiệm đã có; ZIP còn chờ build CI. Đây là bản **arm64, Android 12 trở lên**. Build/kiểm tra host không xác nhận boot hoặc hook trên máy thật. Module giữ nguyên SettingsProvider và framework/services của ROM; không patch APK hệ thống. Module chưa cung cấp API Kaorios Framework cho Toolbox. Toolbox hiện nhận diện trạng thái cài đặt; cấu hình HMA bằng manager đi kèm.
 
 ## Cài và dùng HMA
 
@@ -35,7 +35,7 @@ su -c 'sh /data/adb/modules/kaorios_helper/helperctl.sh disable-tee'
 
 Khởi động lại sau khi tắt để tháo các hook đã inject. “Supervisor running” chỉ xác nhận process, chưa xác nhận hook sẵn sàng. TEE mô phỏng attestation bằng phần mềm; không bảo đảm Wallet/Play Integrity pass và không tạo trust phần cứng thật.
 
-Gỡ module giữ cấu hình và khóa đã tạo. Không dùng Action của TEE upstream vì chức năng đó xóa persistent keys; Action Helper chỉ mở HMA và in trạng thái.
+Helper không cài script khởi động ngoài thư mục module; trạng thái HMA xem trong manager, không lấy trạng thái cũ để đổi mô tả module. Nếu gặp lỗi boot, dùng safe mode của trình quản lý root để tắt module rồi khởi động lại. Gỡ module giữ cấu hình và khóa đã tạo. Không dùng Action của TEE upstream vì chức năng đó xóa persistent keys; Action Helper chỉ mở HMA và in trạng thái.
 
 ## Build từ source
 

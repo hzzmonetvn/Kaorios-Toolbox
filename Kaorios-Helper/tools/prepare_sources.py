@@ -49,8 +49,6 @@ val gitCommitCount = {count} // Pinned upstream snapshot; no Git metadata needed
         replace(manifest, 'android:name=".MainActivityLauncher',
                 f'android:name="{MANAGER}.MainActivityLauncher', count=5)
         replace(source / 'zygote/build.gradle.kts', 'id = "hma_oss_zygisk"', 'id = "kaorios_helper"')
-        replace(source / 'zygote/src/main/assets/hmaoss.sh',
-                '/data/adb/modules/hma_oss_zygisk', '/data/adb/modules/kaorios_helper')
         # The fork manager must never offer an upstream APK as its own update.
         p = source / 'app/src/main/java/icu/nullptr/hidemyapplist/data/UpdateInfo.kt'
         text = p.read_text()

@@ -31,10 +31,8 @@ chmod 700 /data/adb/kaorios_helper /data/adb/kaorios_helper/tee
 [ -f /data/adb/kaorios_helper/tee/target.txt ] || touch /data/adb/kaorios_helper/tee/target.txt
 [ -f /data/adb/kaorios_helper/tee/security_patch.txt ] || printf 'system=prop\n' > /data/adb/kaorios_helper/tee/security_patch.txt
 chmod 600 /data/adb/kaorios_helper/tee/target.txt /data/adb/kaorios_helper/tee/security_patch.txt
-mkdir -p /data/adb/boot-completed.d
-cp "$MODPATH/hmaoss.sh" /data/adb/boot-completed.d/kaorios_helper_hma.sh
-chmod 755 /data/adb/boot-completed.d/kaorios_helper_hma.sh
-cp "$MODPATH/module.prop" "$MODPATH/module.prop.bak"
+# Remove only the status script installed by older experimental Helper builds.
+rm -f /data/adb/boot-completed.d/kaorios_helper_hma.sh
 rm -rf "$MODPATH/customize.d"
 ui_print "- Kaorios Helper installed. Reboot, then open Helper HMA manager."
 ui_print "- TEE defaults to off on first install. No keybox is bundled."

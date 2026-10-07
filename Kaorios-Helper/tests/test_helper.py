@@ -103,7 +103,7 @@ pm() {{ touch '{calls}'; return 0; }}
         self.assertTrue(calls.exists())
         self.assertFalse((adb / 'kaorios_helper/tee.enabled').exists())
         self.assertEqual('', (adb / 'kaorios_helper/tee/target.txt').read_text())
-        self.assertTrue((adb / 'boot-completed.d/kaorios_helper_hma.sh').exists())
+        self.assertFalse((adb / 'boot-completed.d/kaorios_helper_hma.sh').exists())
 
     def test_installer_rejects_corruption_and_conflicts_before_manager_install(self):
         result, calls, _ = self.run_installer(corrupt=True)
