@@ -34,7 +34,7 @@ def prepare(kind, source):
         text = text[:start] + text[end:]
         text = text.replace('val ciBuild = providers.environmentVariable("CI").isPresent\n', '')
         start = text.index('fun getUncommittedSuffix()')
-        end = text.index('// 432 is the count of commits', start)
+        end = text.index('val minSdkVer', start)
         text = text[:start] + f'''val gitVersionName: String get() = "helper-0.1.0"
 val gitCommitCount = {count} // Pinned upstream snapshot; no Git metadata needed to rebuild.
 
@@ -68,7 +68,14 @@ val gitCommitCount = {count} // Pinned upstream snapshot; no Git metadata needed
         text = p.read_text()
         start = text.index('    val urlConnection = if (crowdinApiKey.isNotBlank())')
         end = text.index('    val translatorJson =', start)
-        p.write_text(text[:start] + text[end:])
+        text = text[:start] + text[end:]
+        text = '\n'.join(line for line in text.splitlines()
+                         if not line.startswith(('import com.google.gson.JsonParser',
+                                                 'import java.io.DataInputStream',
+                                                 'import java.net.HttpURLConnection',
+                                                 'import java.net.URL',
+                                                 'val crowdinProjectId:', 'val crowdinApiKey:'))) + '\n'
+        p.write_text(text)
     elif kind == 'tee':
         p = source / 'app/build.gradle.kts'
         text = p.read_text()

@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import subprocess
 import tempfile
+import os
 import unittest
 import zipfile
 
@@ -66,6 +67,51 @@ class HelperPackagingTest(unittest.TestCase):
         write_zip(self.out, files)
         with self.assertRaises(ValueError):
             packager.verify(self.out)
+
+    def run_installer(self, arch='arm64', corrupt=False, conflict=False):
+        for name in ('10-enforce-api-version.sh', '11-enforce-arch.sh', '20-enforce-magisk-version.sh',
+                     '21-enforce-ksu-kernel.sh', '22-check-zygisk.sh'):
+            self.hma_files['customize.d/' + name] = b': # host boundary\n'
+        write_zip(self.hma, self.hma_files)
+        self.package()
+        if corrupt:
+            files = packager.read_zip(self.out)
+            files['manager.apk'] += b'corrupt'
+            write_zip(self.out, files)
+        adb = self.base / 'adb'
+        if conflict:
+            other = adb / 'modules_update/tricky_store'
+            other.mkdir(parents=True)
+            (other / 'module.prop').write_text('id=tricky_store\n')
+        modpath = self.base / 'installed'
+        modpath.mkdir(exist_ok=True)
+        calls = self.base / 'pm-calls'
+        env = dict(os.environ, BOOTMODE='true', ARCH=arch, API='37', ZIPFILE=str(self.out), MODPATH=str(modpath))
+        script = (ROOT / 'module/customize.sh').read_text().replace('/data/adb', str(adb))
+        boundary = f"""abort() {{ echo "$1"; exit 1; }}
+ui_print() {{ echo "$1"; }}
+set_perm_recursive() {{ :; }}
+set_perm() {{ :; }}
+pm() {{ touch '{calls}'; return 0; }}
+"""
+        result = subprocess.run(['sh', '-c', boundary + script], env=env, text=True, capture_output=True, timeout=5)
+        return result, calls, adb
+
+    def test_installer_verifies_before_pm_and_stays_off_on_first_install(self):
+        result, calls, adb = self.run_installer()
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertTrue(calls.exists())
+        self.assertFalse((adb / 'kaorios_helper/tee.enabled').exists())
+        self.assertEqual('', (adb / 'kaorios_helper/tee/target.txt').read_text())
+        self.assertTrue((adb / 'boot-completed.d/kaorios_helper_hma.sh').exists())
+
+    def test_installer_rejects_corruption_and_conflicts_before_manager_install(self):
+        result, calls, _ = self.run_installer(corrupt=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse(calls.exists())
+        result, calls, _ = self.run_installer(conflict=True)
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse(calls.exists())
 
     def test_no_key_material_or_wrong_architecture(self):
         for member, data in [('keybox.xml', b'placeholder'), ('secret.jks', b'placeholder'),
