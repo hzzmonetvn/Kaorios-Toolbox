@@ -21,20 +21,11 @@ def package(source, native, output):
         verify_elf(data)
         files[name] = data
     files['copg/native-build.json'] = (native / 'native-build.json').read_bytes()
-    for name in ('COPG.json', 'list.json', 'cpuinfo_spoof'):
+    for name in ('COPG.json', 'cpuinfo_spoof'):
         files['copg/' + name] = (source / 'module' / name).read_bytes()
-    config = json.loads(files['copg/COPG.json'])
-    if not isinstance(config, dict):
+    if not isinstance(json.loads(files['copg/COPG.json']), dict):
         raise ValueError('COPG defaults must be a JSON object')
-    for name in config:
-        if name.startswith('PACKAGES_') and not name.endswith('_DEVICE'):
-            config[name] = []
-    config['cpu_spoof'] = {'blacklist': [], 'cpu_only_packages': []}
-    files['copg/COPG.json'] = (json.dumps(config, indent=2) + '\n').encode()
-    files['copg/list.json'] = b'{}\n'
-    for path in (source / 'webroot').rglob('*'):
-        if path.is_file():
-            files['webroot/copg/' + path.relative_to(source / 'webroot').as_posix()] = path.read_bytes()
+    files['copg/COPG.json'] = b'{"cpu_spoof":{"blacklist":[],"cpu_only_packages":[]}}\n'
     pin = json.loads((ROOT / 'upstreams.json').read_text())['copg']['commit']
     files['copg/upstream.prop'] = f'version=5.1.1\ncommit={pin}\n'.encode()
     output.parent.mkdir(parents=True, exist_ok=True)

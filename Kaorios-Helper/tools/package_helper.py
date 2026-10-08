@@ -53,8 +53,8 @@ def check_payload(files):
     elif any(name.startswith('tee/') for name in files):
         raise ValueError('Zygisk-only build must not contain TEE runtime files')
     if profile == 'profile=full':
-        required += ['copg/controller', 'copg/COPG.json', 'copg/list.json', 'copg/upstream.prop', 'copg/native-build.json',
-                     'webroot/index.html', 'webroot/copg/index.html']
+        required += ['copg/controller', 'copg/COPG.json', 'copg/cpuinfo_spoof',
+                     'copg/upstream.prop', 'copg/native-build.json']
     elif any(name.startswith('copg/') for name in files):
         raise ValueError('COPG runtime requires the full Helper profile')
     required += ['customize.d/' + name for name in sorted(INSTALL_PARTS)]
@@ -74,8 +74,8 @@ def check_payload(files):
     if with_tee and files['classes.dex'] == files['tee/classes.dex']:
         raise ValueError('HMA and TEE DEX must remain separate')
     if profile == 'profile=full':
-        if not isinstance(json.loads(files['copg/COPG.json']), dict) or not isinstance(json.loads(files['copg/list.json']), dict):
-            raise ValueError('COPG defaults must be JSON objects')
+        if not isinstance(json.loads(files['copg/COPG.json']), dict):
+            raise ValueError('COPG defaults must be a JSON object')
 
 
 def package(hma_zip, tee_zip, licenses, destination, copg_zip=None):
@@ -96,7 +96,7 @@ def package(hma_zip, tee_zip, licenses, destination, copg_zip=None):
     prop = files['module.prop'].decode()
     updates = {'id': 'kaorios_helper', 'name': 'Kaorios Helper', 'version': VERSION,
                'versionCode': '3', 'author': 'hzzmonetvn',
-               'description': ('HMA + COPG + TEE Simulator RS. Configure with Helper WebUI; COPG/TEE opt-in.'
+               'description': ('HMA + COPG + TEE Simulator RS. Configure with Kaorios Toolbox; COPG/TEE opt-in.'
                                if copg is not None else 'Experimental HMA Zygisk + optional TEE Simulator RS; TEE off by default.'
                                if tee is not None else 'Experimental HMA Zygisk; configure using Helper HMA manager.')}
     props = dict(line.split('=', 1) for line in prop.splitlines() if '=' in line and not line.startswith('#'))
@@ -104,7 +104,8 @@ def package(hma_zip, tee_zip, licenses, destination, copg_zip=None):
     props.pop('updateJson', None)
     files['module.prop'] = ''.join(f'{key}={value}\n' for key, value in props.items()).encode()
     for path in (ROOT / 'module').glob('*.sh'):
-        files[path.name] = path.read_bytes()
+        if path.name != 'action.sh':
+            files[path.name] = path.read_bytes()
     files = {name: data for name, data in files.items()
              if not name.startswith('customize.d/') or name.split('/')[-1] in INSTALL_PARTS}
     files.pop('hmaoss.sh', None)
@@ -114,9 +115,6 @@ def package(hma_zip, tee_zip, licenses, destination, copg_zip=None):
                                             (b'zygisk_require_external\n' if copg is not None else b'zygisk_require\n'))
     if copg is not None:
         files.update(copg)
-        for path in (ROOT / 'webroot').rglob('*'):
-            if path.is_file():
-                files['webroot/' + path.relative_to(ROOT / 'webroot').as_posix()] = path.read_bytes()
     if tee is not None:
         files['tee/classes.dex'] = tee['classes.dex']
         files['tee/daemon'] = tee['daemon']

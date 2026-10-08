@@ -52,20 +52,20 @@ class FullPackageTest(unittest.TestCase):
         self.assertEqual(self.fixture.hma_files['classes.dex'], files['classes.dex'])
         self.assertEqual(self.fixture.tee_files['classes.dex'], files['tee/classes.dex'])
         self.assertEqual((self.native / 'zygisk/arm64-v8a.so').read_bytes(), files['zygisk/arm64-v8a.so'])
-        self.assertIn('webroot/index.html', files)
-        self.assertIn('webroot/copg/index.html', files)
+        self.assertNotIn('webroot/index.html', files)
+        self.assertNotIn('webroot/copg/index.html', files)
+        self.assertNotIn('action.sh', files)
         self.assertNotIn('copg/service.sh', files)
         self.assertIn(b'zygisk_require_external', files['customize.d/22-check-zygisk.sh'])
         package_helper.verify(self.fixture.out)
 
-    def test_no_default_targets_and_source_profiles_are_preserved(self):
+    def test_no_upstream_profiles_or_targets_are_packaged(self):
         self.build_inputs()
         files = package_helper.read_zip(self.copg)
         config = json.loads(files['copg/COPG.json'])
-        self.assertEqual([], config['PACKAGES_PHONE'])
-        self.assertEqual(self.config['PACKAGES_PHONE_DEVICE'], config['PACKAGES_PHONE_DEVICE'])
-        self.assertEqual({'blacklist': [], 'cpu_only_packages': []}, config['cpu_spoof'])
-        self.assertEqual({}, json.loads(files['copg/list.json']))
+        self.assertEqual({'cpu_spoof': {'blacklist': [], 'cpu_only_packages': []}}, config)
+        self.assertNotIn('copg/list.json', files)
+        self.assertNotIn('webroot/copg/index.html', files)
         self.assertEqual(self.config, json.loads((self.source / 'module/COPG.json').read_text()))
 
     def test_missing_composite_cannot_fall_back_to_hma_only_binary(self):
@@ -90,7 +90,7 @@ class FullPackageTest(unittest.TestCase):
 
     def test_missing_or_corrupt_component_is_rejected(self):
         files = self.build_full()
-        for member in ('copg/controller', 'copg/COPG.json', 'copg/native-build.json', 'webroot/copg/index.html'):
+        for member in ('copg/controller', 'copg/COPG.json', 'copg/cpuinfo_spoof', 'copg/native-build.json'):
             missing = dict(files)
             del missing[member]
             with self.assertRaises(ValueError):

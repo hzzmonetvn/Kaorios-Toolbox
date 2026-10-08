@@ -133,29 +133,6 @@ def prepare(source):
     replace(controller, '/data/adb/copg_defaults', CONFIG_DIR + '/defaults')
     replace(controller, 'int main() {\n', CHECK_CONFIG)
 
-    data = 'webroot/js/copg-data.js'
-    replace(data, "  const MODULE_DIR = '/data/adb/modules/COPG';",
-            f"  const MODULE_DIR = '{MODULE_DIR}/copg';\n  const CONFIG_DIR = '{CONFIG_DIR}';")
-    replace(data, '${MODULE_DIR}/COPG.json', '${CONFIG_DIR}/COPG.json')
-    replace(data, "await execCommand(`echo '${shq(cfgStr)}' > ${CONFIG_PATH}`);",
-            "await execCommand(`umask 077; echo '${shq(cfgStr)}' > ${CONFIG_PATH}`);")
-    replace(data, "await execCommand(`echo '${shq(listStr)}' > ${LIST_PATH}`);",
-            "await execCommand(`umask 077; echo '${shq(listStr)}' > ${LIST_PATH}`);")
-    replace(data, 'chmod 644 ${CONFIG_PATH} ${LIST_PATH}', 'chmod 600 ${CONFIG_PATH} ${LIST_PATH}')
-    replace(data, '${MODULE_DIR}/list.json', '${CONFIG_DIR}/list.json')
-    replace(data, '/sdcard/Download/COPG', '/sdcard/Download/KaoriosHelper/COPG', count=2)
-    replace(data, 'refs/heads/JSON/module', pin + '/module', count=2)
-    replace(data, "'../COPG.json'", "'../../copg/COPG.json'")
-    replace(data, "'../list.json'", "'../../copg/list.json'")
-    replace(data, '/data/adb/modules/COPG/module.prop', MODULE_DIR + '/module.prop')
-    replace(data, '/data/adb/modules/COPG/disable', MODULE_DIR + '/disable')
-    replace(data, '/data/adb/modules/COPG/webroot/icons', MODULE_DIR + '/webroot/copg/icons')
-    replace(data, '/data/adb/modules/COPG/icons_fetch.sh', MODULE_DIR + '/copg/icons_fetch.sh')
-    replace(data, "const MODULE_ID = 'COPG';", "const MODULE_ID = 'kaorios_helper';")
-    replace(data, "w['$' + SANITIZED_ID] || w.$COPG || w.$copg || null", "w['$' + SANITIZED_ID] || null")
-    replace(data, "    else if (primary && primary.name === 'Magisk') zygisk = { variant: 'Magisk Zygisk', version: '', on: true };\n", '')
-    replace('webroot/js/library.js', '/data/adb/modules/COPG', CONFIG_DIR)
-
     # Keep the two permissive notices verbatim and include the JSON/Hedley MIT terms.
     licenses = {'JSON-HEDLEY-LICENSE-MIT.txt': MIT_LICENSE}
     for name, destination in (('src/include/zygisk.hpp', 'ZYGISK-LICENSE-ISC.txt'),

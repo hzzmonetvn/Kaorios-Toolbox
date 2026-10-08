@@ -80,10 +80,10 @@ class CopgPreparationTest(unittest.TestCase):
                 self.assertEqual(content, (self.source / name).read_text())
 
     def test_unexpected_upstream_is_rejected_before_any_write(self):
-        path = self.source / 'webroot/js/copg-data.js'
-        path.write_text(DATA.replace("const MODULE_ID = 'COPG';", "const MODULE_ID = 'changed';"))
+        path = self.source / 'src/unified_controller.cpp'
+        path.write_text(self.files['src/unified_controller.cpp'].replace('int main() {', 'int unexpected() {'))
         before = {p: p.read_bytes() for p in self.source.rglob('*') if p.is_file()}
-        with self.assertRaisesRegex(ValueError, 'copg-data.js'):
+        with self.assertRaisesRegex(ValueError, 'unified_controller.cpp'):
             self.prepare()
         self.assertEqual(before, {p: p.read_bytes() for p in self.source.rglob('*') if p.is_file()})
 
@@ -106,22 +106,10 @@ class CopgPreparationTest(unittest.TestCase):
         self.assertIn('--check-config', controller)
         self.assertEqual(self.files['module/COPG.json'], (self.source / 'module/COPG.json').read_text())
 
-    def test_editor_uses_persistent_config_and_helper_bridge_without_unverified_builtin_status(self):
+    def test_upstream_webroot_is_not_modified_for_headless_packaging(self):
         self.prepare()
-        data = (self.source / 'webroot/js/copg-data.js').read_text()
-        self.assertIn('${CONFIG_DIR}/COPG.json', data)
-        self.assertIn('${CONFIG_DIR}/list.json', data)
-        self.assertIn('umask 077; echo', data)
-        self.assertIn('chmod 600 ${CONFIG_PATH} ${LIST_PATH}', data)
-        self.assertNotIn('chmod 644 ${CONFIG_PATH} ${LIST_PATH}', data)
-        self.assertIn(preparer.MODULE_DIR + '/webroot/copg/icons', data)
-        self.assertIn(preparer.MODULE_DIR + '/module.prop', data)
-        self.assertIn("MODULE_ID = 'kaorios_helper'", data)
-        self.assertNotIn('w.$COPG', data)
-        self.assertNotIn('Magisk Zygisk', data)
-        self.assertEqual(2, data.count(PIN + '/module/'))
-        self.assertNotIn('refs/heads/JSON', data)
-        self.assertNotIn('/data/adb/modules/COPG', data)
+        self.assertEqual(DATA, (self.source / 'webroot/js/copg-data.js').read_text())
+        self.assertEqual(self.files['webroot/js/library.js'], (self.source / 'webroot/js/library.js').read_text())
 
     def test_original_notices_and_reproducible_provenance_are_distributed(self):
         self.prepare()

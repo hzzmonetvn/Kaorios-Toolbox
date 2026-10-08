@@ -5,7 +5,7 @@ Module hỗ trợ ba profile: **Zygisk/HMA** (chỉ HMA-OSS chạy qua Zygisk), 
 Source và ZIP được cung cấp qua [workflow Build Kaorios Helper](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml):
 - `Kaorios-Helper-Zygisk`: Profile Zygisk (HMA-OSS).
 - `Kaorios-Helper-experimental`: Profile Combined (HMA + TEE).
-- `Kaorios-Helper-Full`: Profile Full (HMA + COPG + TEE), kèm WebUI và controller hợp nhất.
+- `Kaorios-Helper-Full`: Profile Full (HMA + COPG + TEE), kèm controller hợp nhất; không đóng gói WebUI COPG.
 
 Đây chưa phải bản release production. Module nhắm tới **arm64, Android 12 trở lên**. Build/kiểm tra host không xác nhận boot hoặc hook trên máy thật. Module giữ nguyên SettingsProvider và framework/services của ROM; không patch APK hệ thống.
 
@@ -14,7 +14,7 @@ Source và ZIP được cung cấp qua [workflow Build Kaorios Helper](https://g
 1. Nếu đang dùng HMA/Helper cũ, **export cấu hình trong manager trước khi cập nhật**. Bản mới dùng thư mục HMA riêng; cấu hình cũ vẫn được giữ nhưng không tự chuyển. Gỡ module HMA-OSS rồi khởi động lại.
 2. Magisk: bật Zygisk tích hợp hoặc dùng một runtime Zygisk ngoài. KernelSU/APatch: cài runtime Zygisk tương thích. Chỉ bật **một** runtime; installer chặn runtime trùng, kể cả hai module cùng tên hiển thị. Runtime đang chờ cài cần reboot để áp dụng.
 3. Cài ZIP bằng Magisk, KernelSU hoặc APatch rồi khởi động lại.
-4. Trong Toolbox, mở **Tools → Plugins → Kiểm tra module → Mở manager HMA**. Hoặc bấm **Action** trong trình quản lý root để mở manager đi kèm. App có package `io.github.hzzmonetvn.kaorioshelper.hma`, tách khỏi manager HMA-OSS chính thức.
+4. Trong Toolbox, mở **Tools → Plugins → Kiểm tra module → Mở manager HMA**. App có package `io.github.hzzmonetvn.kaorioshelper.hma`, tách khỏi manager HMA-OSS chính thức.
 5. Import cấu hình đã export nếu có, rồi chọn app cần áp dụng trong manager. Không bật đồng thời HMA Helper và hook HMA Kaorios đã patch trong ROM.
 
 ## TEE Simulator RS (Bản Combined và Full)
@@ -40,10 +40,10 @@ Khởi động lại sau khi tắt để tháo các hook đã inject.
 
 ## COPG (Chỉ có trong bản Full)
 
-COPG được tích hợp vào binary Zygisk tổng hợp (`libkaorios_helper.so`) cùng controller native (`copg/controller`) và WebUI module. Mặc định tắt ở lần cài đầu; app thông thường không thể tự đọc cấu hình hay bật tính năng này.
+COPG được tích hợp vào binary Zygisk tổng hợp (`libkaorios_helper.so`) cùng controller native (`copg/controller`). Module không đóng gói editor, WebUI, `action.sh` hay `list.json`; chỉ giữ cấu hình mặc định không có target để khởi tạo lần đầu, dữ liệu runtime và CLI root `helperctl.sh`. COPG mặc định tắt ở lần cài đầu; quyền root là bắt buộc để sửa cấu hình hoặc đổi trạng thái.
 
 1. Yêu cầu chính xác **một** runtime Zygisk ngoài (Zygisk Next / Zygisk Assistant); không dùng Magisk built-in Zygisk cho COPG.
-2. Cấu hình danh sách spoofing và targets trong `/data/adb/kaorios_helper/copg/COPG.json` (hoặc cấu hình qua WebUI của module). Cấu hình được bảo vệ bằng quyền `0600`/`0700`.
+2. Cấu hình danh sách spoofing và targets trong `/data/adb/kaorios_helper/copg/COPG.json` bằng công cụ có quyền root. Cấu hình được bảo vệ bằng quyền `0600`/`0700`; dữ liệu người dùng trong thư mục persistent không bị xóa khi nâng cấp.
 3. Bật COPG bằng lệnh root:
 
 ```sh

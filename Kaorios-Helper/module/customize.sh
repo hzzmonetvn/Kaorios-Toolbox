@@ -34,7 +34,7 @@ done
 pm install -r --user 0 "$MODPATH/manager.apk" >/dev/null 2>&1 || abort "! Cannot install Helper HMA manager. For a different signing key, back up its config and uninstall that Helper manager first."
 
 set_perm_recursive "$MODPATH" 0 0 0755 0644
-for file in service.sh action.sh uninstall.sh helperctl.sh zygisk.sh; do
+for file in service.sh uninstall.sh helperctl.sh zygisk.sh; do
     set_perm "$MODPATH/$file" 0 0 0755
 done
 if [ -d "$MODPATH/tee" ]; then
@@ -51,7 +51,7 @@ if [ -d "$MODPATH/copg" ]; then
     set_perm "$MODPATH/copg/controller" 0 0 0755
     mkdir -p /data/adb/kaorios_helper/copg
     chmod 700 /data/adb/kaorios_helper /data/adb/kaorios_helper/copg
-    for file in COPG.json list.json; do
+    for file in COPG.json; do
         [ -f "/data/adb/kaorios_helper/copg/$file" ] || cp "$MODPATH/copg/$file" "/data/adb/kaorios_helper/copg/$file" || abort "! Cannot initialize COPG config."
         chmod 600 "/data/adb/kaorios_helper/copg/$file"
     done
@@ -61,7 +61,7 @@ rm -f /data/adb/boot-completed.d/kaorios_helper_hma.sh
 rm -rf "$MODPATH/customize.d"
 ui_print "- Kaorios Helper installed. Reboot, then open Helper HMA manager."
 if [ -d "$MODPATH/copg" ]; then
-    ui_print "- HMA + COPG + TEE installed. Open Helper WebUI; COPG and TEE require explicit opt-in."
+    ui_print "- HMA + COPG + TEE installed. Use Kaorios Toolbox for control; COPG and TEE require explicit opt-in."
 fi
 if [ -d "$MODPATH/tee" ]; then
     ui_print "- TEE defaults to off on first install. No keybox is bundled."
