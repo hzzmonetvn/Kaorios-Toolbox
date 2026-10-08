@@ -9,7 +9,14 @@
 #include <fstream>
 #include <string>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
+
+#if __has_include(<zygisk.hpp>)
+#include <zygisk.hpp>
+#elif __has_include("zygisk.hpp")
+#include "zygisk.hpp"
+#endif
 
 constexpr uint32_t HELPER_CONFIG_MAX = 1024 * 1024;
 
