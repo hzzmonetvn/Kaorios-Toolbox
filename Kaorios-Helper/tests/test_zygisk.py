@@ -104,6 +104,18 @@ class ZygiskDetectionTest(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertIn('2:conflict', result.stdout)
 
+    def test_full_helper_rejects_builtin_while_accepting_one_external(self):
+        script = 'abort() { echo "$1"; exit 1; }; ui_print() { :; };\n' + self.script + '\nzygisk_require_external\n'
+        env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ['PATH'], KSU='', APATCH='',
+                   ZYGISK_ENABLED='1', HELPER_TEST_BUILTIN='0')
+        result = subprocess.run(['sh', '-c', script], env=env, capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn('COPG requires', result.stdout)
+        self.runtime('rezygisk')
+        env['ZYGISK_ENABLED'] = '0'
+        result = subprocess.run(['sh', '-c', script], env=env, capture_output=True, text=True, timeout=5)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()

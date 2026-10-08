@@ -65,7 +65,7 @@ def prepare(kind, source):
         text = text.replace('val ciBuild = providers.environmentVariable("CI").isPresent\n', '')
         start = text.index('fun getUncommittedSuffix()')
         end = text.index('val minSdkVer', start)
-        text = text[:start] + f'''val gitVersionName: String get() = "helper-0.2.0"
+        text = text[:start] + f'''val gitVersionName: String get() = "helper-0.3.0"
 val gitCommitCount = {count} // Pinned upstream snapshot; no Git metadata needed to rebuild.
 
 ''' + text[end:]

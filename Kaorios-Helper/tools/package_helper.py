@@ -10,7 +10,7 @@ import re
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.2.0-experimental'
+VERSION = '0.3.0-experimental'
 INSTALL_PARTS = {'10-enforce-api-version.sh', '11-enforce-arch.sh', '20-enforce-magisk-version.sh',
                  '21-enforce-ksu-kernel.sh', '22-check-zygisk.sh'}
 FORBIDDEN = re.compile(rb'-----BEGIN (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----\s+[A-Za-z0-9+/=]{32,}|<AndroidAttestation>|<Keybox\b')
@@ -40,9 +40,9 @@ def verify_elf(data):
 
 def check_payload(files):
     profile = files.get('helper.prop', b'profile=combined\n').decode().strip()
-    if profile not in ('profile=zygisk', 'profile=combined'):
+    if profile not in ('profile=zygisk', 'profile=combined', 'profile=full'):
         raise ValueError('Unknown Helper build profile')
-    with_tee = profile == 'profile=combined'
+    with_tee = profile != 'profile=zygisk'
     required = ['module.prop', 'customize.sh', 'manager.apk', 'classes.dex',
                 'zygisk/arm64-v8a.so', 'helperctl.sh', 'service.sh', 'LICENSE', 'upstreams.json']
     if 'helper.prop' in files:
@@ -52,6 +52,11 @@ def check_payload(files):
                      'tee/libTEESimulator.so', 'tee/libcertgen.so']
     elif any(name.startswith('tee/') for name in files):
         raise ValueError('Zygisk-only build must not contain TEE runtime files')
+    if profile == 'profile=full':
+        required += ['copg/controller', 'copg/COPG.json', 'copg/list.json', 'copg/upstream.prop', 'copg/native-build.json',
+                     'webroot/index.html', 'webroot/copg/index.html']
+    elif any(name.startswith('copg/') for name in files):
+        raise ValueError('COPG runtime requires the full Helper profile')
     required += ['customize.d/' + name for name in sorted(INSTALL_PARTS)]
     for name in required:
         if name not in files or not files[name]:
@@ -61,18 +66,28 @@ def check_payload(files):
     for name, data in files.items():
         if name.endswith(('.jks', '.keystore')) or name.endswith('keybox.xml') or FORBIDDEN.search(data):
             raise ValueError(f'Forbidden key material in artifact: {name}')
-        if name.endswith('.so') or name in ('tee/inject', 'tee/supervisor'):
+        if name.endswith('.so') or name in ('tee/inject', 'tee/supervisor', 'copg/controller'):
             verify_elf(data)
     for name in ('classes.dex', 'tee/classes.dex') if with_tee else ('classes.dex',):
         if not files[name].startswith(b'dex\n'):
             raise ValueError('Expected a compiled DEX payload')
     if with_tee and files['classes.dex'] == files['tee/classes.dex']:
         raise ValueError('HMA and TEE DEX must remain separate')
+    if profile == 'profile=full':
+        if not isinstance(json.loads(files['copg/COPG.json']), dict) or not isinstance(json.loads(files['copg/list.json']), dict):
+            raise ValueError('COPG defaults must be JSON objects')
 
 
-def package(hma_zip, tee_zip, licenses, destination):
+def package(hma_zip, tee_zip, licenses, destination, copg_zip=None):
     hma = read_zip(hma_zip)
     tee = read_zip(tee_zip) if tee_zip is not None else None
+    copg = read_zip(copg_zip) if copg_zip is not None else None
+    if copg is not None and tee is None:
+        raise ValueError('Full Helper packaging requires the TEE runtime')
+    if copg is not None and not copg.get('zygisk/arm64-v8a.so'):
+        raise ValueError('COPG distribution requires the composite Zygisk runtime')
+    if copg is not None and any(not name.startswith(('copg/', 'webroot/copg/', 'zygisk/')) for name in copg):
+        raise ValueError('Unexpected COPG distribution member')
     for part in INSTALL_PARTS:
         if not hma.get("customize.d/" + part):
             raise ValueError("Missing installer part: " + part)
@@ -80,8 +95,9 @@ def package(hma_zip, tee_zip, licenses, destination):
              if not name.startswith(('lib/', 'zygisk/')) or name.startswith(('lib/arm64-v8a/', 'zygisk/arm64-v8a.so'))}
     prop = files['module.prop'].decode()
     updates = {'id': 'kaorios_helper', 'name': 'Kaorios Helper', 'version': VERSION,
-               'versionCode': '2', 'author': 'hzzmonetvn',
-               'description': ('Experimental HMA Zygisk + optional TEE Simulator RS; TEE off by default.'
+               'versionCode': '3', 'author': 'hzzmonetvn',
+               'description': ('HMA + COPG + TEE Simulator RS. Configure with Helper WebUI; COPG/TEE opt-in.'
+                               if copg is not None else 'Experimental HMA Zygisk + optional TEE Simulator RS; TEE off by default.'
                                if tee is not None else 'Experimental HMA Zygisk; configure using Helper HMA manager.')}
     props = dict(line.split('=', 1) for line in prop.splitlines() if '=' in line and not line.startswith('#'))
     props.update(updates)
@@ -93,8 +109,14 @@ def package(hma_zip, tee_zip, licenses, destination):
              if not name.startswith('customize.d/') or name.split('/')[-1] in INSTALL_PARTS}
     files.pop('hmaoss.sh', None)
     files.pop('update_desc.sh', None)
-    files['helper.prop'] = b'profile=combined\n' if tee is not None else b'profile=zygisk\n'
-    files['customize.d/22-check-zygisk.sh'] = b'. "$MODPATH/zygisk.sh"\nzygisk_require\n'
+    files['helper.prop'] = b'profile=full\n' if copg is not None else b'profile=combined\n' if tee is not None else b'profile=zygisk\n'
+    files['customize.d/22-check-zygisk.sh'] = (b'. "$MODPATH/zygisk.sh"\n' +
+                                            (b'zygisk_require_external\n' if copg is not None else b'zygisk_require\n'))
+    if copg is not None:
+        files.update(copg)
+        for path in (ROOT / 'webroot').rglob('*'):
+            if path.is_file():
+                files['webroot/' + path.relative_to(ROOT / 'webroot').as_posix()] = path.read_bytes()
     if tee is not None:
         files['tee/classes.dex'] = tee['classes.dex']
         files['tee/daemon'] = tee['daemon']
@@ -119,7 +141,7 @@ def package(hma_zip, tee_zip, licenses, destination):
         for name, data in sorted(files.items()):
             info = zipfile.ZipInfo(name, (2026, 10, 7, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = (0o100755 if name.endswith('.sh') or name in ('tee/daemon', 'tee/inject', 'tee/supervisor') else 0o100644) << 16
+            info.external_attr = (0o100755 if name.endswith('.sh') or name in ('tee/daemon', 'tee/inject', 'tee/supervisor', 'copg/controller') else 0o100644) << 16
             archive.writestr(info, data)
     verify(destination)
 
@@ -141,6 +163,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--hma', type=Path)
     parser.add_argument('--tee', type=Path)
+    parser.add_argument('--copg', type=Path)
     parser.add_argument('--licenses', type=Path)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--verify', type=Path)
@@ -150,5 +173,5 @@ if __name__ == '__main__':
     else:
         if not all((args.hma, args.licenses, args.output)):
             parser.error('Packaging requires --hma, --licenses and --output; --tee selects the combined build')
-        package(args.hma, args.tee, args.licenses, args.output)
+        package(args.hma, args.tee, args.licenses, args.output, args.copg)
     print('Helper artifact checks: PASS (host; device hooks unverified)')

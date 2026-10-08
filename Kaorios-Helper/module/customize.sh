@@ -19,6 +19,11 @@ if [ -d "$MODPATH/tee" ]; then
         [ ! -f "$base/tricky_store/module.prop" ] || abort "! Remove tricky_store and reboot before installing combined Helper."
     done
 fi
+if [ -d "$MODPATH/copg" ]; then
+    for base in /data/adb/modules /data/adb/modules_update; do
+        [ ! -f "$base/COPG/module.prop" ] || abort "! Remove COPG and reboot before installing Helper."
+    done
+fi
 
 for part in 10-enforce-api-version.sh 11-enforce-arch.sh 20-enforce-magisk-version.sh 21-enforce-ksu-kernel.sh 22-check-zygisk.sh; do
     [ -f "$MODPATH/customize.d/$part" ] || abort "! Missing installer part: $part"
@@ -42,10 +47,22 @@ if [ -d "$MODPATH/tee" ]; then
     [ -f /data/adb/kaorios_helper/tee/security_patch.txt ] || printf 'system=prop\n' > /data/adb/kaorios_helper/tee/security_patch.txt
     chmod 600 /data/adb/kaorios_helper/tee/target.txt /data/adb/kaorios_helper/tee/security_patch.txt
 fi
+if [ -d "$MODPATH/copg" ]; then
+    set_perm "$MODPATH/copg/controller" 0 0 0755
+    mkdir -p /data/adb/kaorios_helper/copg
+    chmod 700 /data/adb/kaorios_helper /data/adb/kaorios_helper/copg
+    for file in COPG.json list.json; do
+        [ -f "/data/adb/kaorios_helper/copg/$file" ] || cp "$MODPATH/copg/$file" "/data/adb/kaorios_helper/copg/$file" || abort "! Cannot initialize COPG config."
+        chmod 600 "/data/adb/kaorios_helper/copg/$file"
+    done
+fi
 # Remove only the status script installed by older experimental Helper builds.
 rm -f /data/adb/boot-completed.d/kaorios_helper_hma.sh
 rm -rf "$MODPATH/customize.d"
 ui_print "- Kaorios Helper installed. Reboot, then open Helper HMA manager."
+if [ -d "$MODPATH/copg" ]; then
+    ui_print "- HMA + COPG + TEE installed. Open Helper WebUI; COPG and TEE require explicit opt-in."
+fi
 if [ -d "$MODPATH/tee" ]; then
     ui_print "- TEE defaults to off on first install. No keybox is bundled."
 else

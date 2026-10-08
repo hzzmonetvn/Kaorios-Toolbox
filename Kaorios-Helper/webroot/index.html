@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kaorios Helper</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 720px; margin: auto; padding: 24px; font-family: system-ui, sans-serif; }
+    h1 { font-size: 24px; } h2 { font-size: 18px; }
+    section { padding: 16px 0; border-bottom: 1px solid #8886; }
+    button, a { font: inherit; } button { padding: 8px 12px; margin: 4px 4px 4px 0; }
+    p { line-height: 1.5; } pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+    #message { min-height: 24px; }
+  </style>
+</head>
+<body>
+  <h1>Kaorios Helper</h1>
+  <p>HMA, COPG and TEE Simulator RS in one module. COPG and TEE require explicit opt-in.</p>
+  <section>
+    <h2>Hide My Applist</h2>
+    <p>Configure targets and templates in the bundled HMA manager. Its status confirms the HMA service connection.</p>
+    <button data-action="hma">Open HMA manager</button>
+  </section>
+  <section>
+    <h2>COPG</h2>
+    <p><a href="copg/index.html">Edit app profiles</a>. Changes apply when the target app starts again.</p>
+    <button data-action="enable-copg">Enable COPG</button>
+    <button data-action="disable-copg">Disable COPG</button>
+  </section>
+  <section>
+    <h2>TEE Simulator RS</h2>
+    <p>Provide your own keybox.xml and target.txt in /data/adb/kaorios_helper/tee before enabling.</p>
+    <button data-action="enable-tee">Enable TEE</button>
+    <button data-action="disable-tee">Disable TEE</button>
+  </section>
+  <section>
+    <h2>Status</h2>
+    <button data-action="status">Refresh</button>
+    <pre id="status">Checking module…</pre>
+  </section>
+  <p id="message" role="status"></p>
+  <script src="helper.js"></script>
+</body>
+</html>

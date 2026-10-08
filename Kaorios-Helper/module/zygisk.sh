@@ -49,3 +49,10 @@ zygisk_require() {
     }
     ui_print "- Zygisk provider:$ZYGISK_PROVIDERS ($ZYGISK_STATE). Reboot before testing HMA."
 }
+
+zygisk_require_external() {
+    zygisk_require
+    case "$ZYGISK_PROVIDERS" in
+        *magisk-builtin*) abort "! COPG requires Zygisk Next, ReZygisk or NeoZygisk. Disable built-in Magisk Zygisk and reboot." ;;
+    esac
+}
