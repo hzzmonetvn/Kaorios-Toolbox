@@ -51,6 +51,23 @@ jobs:
           mkdir -p "$RUNNER_TEMP/helper-inputs/hma"
           cp "$RUNNER_TEMP/helper-hma/hma"/zygote/build/outputs/magisk/release/*.zip "$RUNNER_TEMP/helper-inputs/hma/runtime.zip"
           python3 Kaorios-Helper/tools/source_bundle.py "$RUNNER_TEMP/helper-hma" "$RUNNER_TEMP/helper-inputs/hma"
+      - name: Package Zygisk-first Helper without TEE
+        run: |
+          mkdir -p dist/licenses/hma
+          cp -r "$RUNNER_TEMP/helper-inputs/hma/licenses/." dist/licenses/hma/
+          python3 Kaorios-Helper/tools/package_helper.py --hma "$RUNNER_TEMP/helper-inputs/hma/runtime.zip" --licenses dist/licenses --output dist/Kaorios-Helper-0.2.0-zygisk-experimental.zip
+          cp "$RUNNER_TEMP/helper-inputs/hma/sources.tar.gz" dist/hma-sources.tar.gz
+          git archive --format=tar HEAD Kaorios-Helper .github/workflows/build-helper.yml | gzip > dist/helper-build-source.tar.gz
+          rm -r dist/licenses
+          cd dist
+          sha256sum *.zip *.tar.gz > SHA256SUMS
+      - name: Upload Zygisk-first module and sources
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Kaorios-Helper-Zygisk-${{ github.run_number }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: helper-hma-inputs
@@ -116,7 +133,7 @@ jobs:
           mkdir -p dist/licenses/hma dist/licenses/tee
           cp -r inputs/hma/licenses/. dist/licenses/hma/
           cp -r inputs/tee/licenses/. dist/licenses/tee/
-          python3 Kaorios-Helper/tools/package_helper.py --hma inputs/hma/runtime.zip --tee inputs/tee/runtime.zip --licenses dist/licenses --output dist/Kaorios-Helper-0.1.0-experimental.zip
+          python3 Kaorios-Helper/tools/package_helper.py --hma inputs/hma/runtime.zip --tee inputs/tee/runtime.zip --licenses dist/licenses --output dist/Kaorios-Helper-0.2.0-experimental.zip
           cp inputs/hma/sources.tar.gz dist/hma-sources.tar.gz
           cp inputs/tee/sources.tar.gz dist/tee-sources.tar.gz
           git archive --format=tar HEAD Kaorios-Helper .github/workflows/build-helper.yml | gzip > dist/helper-build-source.tar.gz

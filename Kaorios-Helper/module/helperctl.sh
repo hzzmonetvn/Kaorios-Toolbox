@@ -29,6 +29,7 @@ running_pid() {
 }
 
 tee_ready() {
+    [ -d "$MODDIR/tee" ] || { echo "TEE is not included in this Zygisk build."; return 1; }
     [ ! -f "$MODDIR/disable" ] && [ ! -f "$MODDIR/remove" ] || { echo "Helper is disabled or pending removal."; return 1; }
     conflicts && return 1
     [ -s "$TEE_CONFIG/keybox.xml" ] && [ -s "$TEE_CONFIG/target.txt" ] || {
@@ -41,6 +42,7 @@ tee_ready() {
 }
 
 start_tee() {
+    [ -d "$MODDIR/tee" ] || { echo "Zygisk/HMA build; TEE is not included."; return 0; }
     [ -f "$CONFIG/tee.enabled" ] || { echo "TEE is disabled."; return 0; }
     tee_ready || return 1
     running_pid && { echo "TEE supervisor is already running; hook readiness is unverified."; return 0; }
@@ -69,8 +71,18 @@ stop_tee() {
 case "${1:-status}" in
     status)
         echo "Kaorios Helper: $(sed -n 's/^version=//p' "$MODDIR/module.prop")"
-        [ -f "$CONFIG/tee.enabled" ] && echo "TEE desired state: enabled" || echo "TEE desired state: disabled"
-        running_pid && echo "TEE supervisor: running (hooks unverified)" || echo "TEE supervisor: not running"
+        [ -f "$MODDIR/disable" ] && echo "Module: disabled"
+        [ -f "$MODDIR/remove" ] && echo "Module: pending removal"
+        . "$MODDIR/zygisk.sh"
+        zygisk_detect
+        echo "Zygisk provider:$ZYGISK_PROVIDERS ($ZYGISK_STATE)"
+        echo "HMA hooks: check the Helper HMA manager; provider configuration is not hook acknowledgment."
+        if [ -d "$MODDIR/tee" ]; then
+            [ -f "$CONFIG/tee.enabled" ] && echo "TEE desired state: enabled" || echo "TEE desired state: disabled"
+            running_pid && echo "TEE supervisor: running (hooks unverified)" || echo "TEE supervisor: not running"
+        else
+            echo "TEE: not included"
+        fi
         ;;
     enable-tee)
         tee_ready || exit 1

@@ -70,12 +70,32 @@ class HelperPackagingTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             packager.verify(self.out)
 
-    def run_installer(self, arch='arm64', corrupt=False, conflict=False):
+    def test_zygisk_only_package_has_no_tee_runtime_or_policy(self):
+        self.hma_files['sepolicy.rule'] = b'# HMA policy\n'
+        write_zip(self.hma, self.hma_files)
+        packager.package(self.hma, None, self.licenses, self.out)
+        files = packager.read_zip(self.out)
+        self.assertEqual(b'profile=zygisk\n', files['helper.prop'])
+        self.assertFalse(any(name.startswith('tee/') for name in files))
+        self.assertEqual(b'# HMA policy\n', files['sepolicy.rule'])
+        packager.verify(self.out)
+        files['tee/classes.dex'] = b'dex\n035\0TEE'
+        with self.assertRaisesRegex(ValueError, 'must not contain TEE'):
+            packager.check_payload(files)
+
+    def test_zygisk_only_installer_preserves_separate_tee_module(self):
+        result, calls, adb = self.run_installer(conflict=True, with_tee=False)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertTrue(calls.exists())
+        self.assertFalse((adb / 'kaorios_helper/tee').exists())
+        self.assertIn('Zygisk/HMA build installed', result.stdout)
+
+    def run_installer(self, arch='arm64', corrupt=False, conflict=False, with_tee=True):
         for name in ('10-enforce-api-version.sh', '11-enforce-arch.sh', '20-enforce-magisk-version.sh',
                      '21-enforce-ksu-kernel.sh', '22-check-zygisk.sh'):
             self.hma_files['customize.d/' + name] = b': # host boundary\n'
         write_zip(self.hma, self.hma_files)
-        self.package()
+        packager.package(self.hma, self.tee if with_tee else None, self.licenses, self.out)
         if corrupt:
             files = packager.read_zip(self.out)
             files['manager.apk'] += b'corrupt'
@@ -88,7 +108,7 @@ class HelperPackagingTest(unittest.TestCase):
         modpath = self.base / 'installed'
         modpath.mkdir(exist_ok=True)
         calls = self.base / 'pm-calls'
-        env = dict(os.environ, BOOTMODE='true', ARCH=arch, API='37', ZIPFILE=str(self.out), MODPATH=str(modpath))
+        env = dict(os.environ, BOOTMODE='true', ARCH=arch, API='37', ZYGISK_ENABLED='1', ZIPFILE=str(self.out), MODPATH=str(modpath))
         script = (ROOT / 'module/customize.sh').read_text().replace('/data/adb', str(adb))
         boundary = f"""abort() {{ echo "$1"; exit 1; }}
 ui_print() {{ echo "$1"; }}
@@ -162,6 +182,8 @@ class HelperLifecycleTest(unittest.TestCase):
         script = script.replace('id -u', 'printf 0')
         (self.module / 'helperctl.sh').write_text(script)
         (self.module / 'module.prop').write_text('version=host-fixture\n')
+        (self.module / 'tee').mkdir()
+        (self.module / 'zygisk.sh').write_text((ROOT / 'module/zygisk.sh').read_text().replace('/data/adb', str(self.adb)))
 
     def run_ctl(self, action):
         return subprocess.run(['sh', str(self.module / 'helperctl.sh'), action], text=True,
@@ -181,7 +203,7 @@ class HelperLifecycleTest(unittest.TestCase):
         (self.config / 'keybox.xml').write_text('opaque user-owned placeholder')
         (self.config / 'target.txt').write_text('com.example.target\n')
         runtime = self.module / 'tee'
-        runtime.mkdir()
+        runtime.mkdir(exist_ok=True)
         for name in ('daemon', 'supervisor', 'inject', 'libTEESimulator.so', 'libcertgen.so', 'classes.dex'):
             (runtime / name).write_text('host runtime boundary')
         for state in ('disable', 'remove'):
@@ -213,6 +235,15 @@ class HelperLifecycleTest(unittest.TestCase):
         self.assertIsNone(process.poll())
         self.assertEqual('opaque user-owned placeholder', keyfile.read_text())
         self.assertFalse(pidfile.exists())
+
+    def test_zygisk_only_build_does_not_start_or_enable_tee(self):
+        (self.module / 'tee').rmdir()
+        (self.adb / 'kaorios_helper/tee.enabled').touch()
+        self.assertEqual(0, self.run_ctl('start').returncode)
+        self.assertNotEqual(0, self.run_ctl('enable-tee').returncode)
+        self.assertFalse((self.adb / 'kaorios_helper/tee-supervisor.pid').exists())
+        self.assertIn('TEE: not included', self.run_ctl('status').stdout)
+        self.assertIn('hook acknowledgment', self.run_ctl('status').stdout)
 
     def test_all_installer_scripts_have_valid_shell_syntax(self):
         for script in (ROOT / 'module').glob('*.sh'):

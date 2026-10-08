@@ -18,6 +18,36 @@ def replace(path, old, new, count=1):
     path.write_text(text.replace(old, new))
 
 
+def prepare_hma_runtime(source):
+    service = source / 'zygote/src/main/java/org/frknkrc44/hma_oss/zygote/service'
+    replace(service / 'SystemServerHook.kt',
+            'assert(loader != null) { "Class loader is null, aborting!" }',
+            'requireNotNull(loader) { "Class loader is null, aborting!" }')
+    replace(service / 'SystemServerHook.kt', '''        thread {
+            val pms = waitForService(PACKAGE_MANAGER_SERVICE) as IPackageManager
+            val pmn = waitForService(PACKAGE_MANAGER_NATIVE_SERVICE)
+            logD(TAG) { "Got pms: $pms, $pmn" }
+
+            try {
+''', '''        thread {
+            try {
+                val pms = waitForService(PACKAGE_MANAGER_SERVICE) as IPackageManager
+                val pmn = waitForService(PACKAGE_MANAGER_NATIVE_SERVICE)
+                logD(TAG) { "Got pms: $pms, $pmn" }
+
+''')
+    replace(service / 'HMAService.kt', 'it.startsWith("hide_my_applist")',
+            'it.startsWith("kaorios_helper_hma_")', count=2)
+    replace(service / 'HMAService.kt', '/data/misc/hide_my_applist_',
+            '/data/misc/kaorios_helper_hma_')
+    replace(source / 'app/src/main/java/icu/nullptr/hidemyapplist/ui/fragment/SettingsFragment.kt',
+            'rm -rf /data/misc/hide_my_applist*',
+            'rm -rf /data/misc/kaorios_helper_hma_*')
+    for path in sorted((source / 'app/src/main/res').rglob('strings.xml')):
+        if '/data/misc/hide_my_applist_*' in path.read_text():
+            replace(path, '/data/misc/hide_my_applist_*', '/data/misc/kaorios_helper_hma_*')
+
+
 def prepare(kind, source):
     pin = json.loads((ROOT / 'upstreams.json').read_text())[kind]['commit']
     actual = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
@@ -35,7 +65,7 @@ def prepare(kind, source):
         text = text.replace('val ciBuild = providers.environmentVariable("CI").isPresent\n', '')
         start = text.index('fun getUncommittedSuffix()')
         end = text.index('val minSdkVer', start)
-        text = text[:start] + f'''val gitVersionName: String get() = "helper-0.1.0"
+        text = text[:start] + f'''val gitVersionName: String get() = "helper-0.2.0"
 val gitCommitCount = {count} // Pinned upstream snapshot; no Git metadata needed to rebuild.
 
 ''' + text[end:]
@@ -74,6 +104,7 @@ val gitCommitCount = {count} // Pinned upstream snapshot; no Git metadata needed
                                                  'import java.net.URL',
                                                  'val crowdinProjectId:', 'val crowdinApiKey:'))) + '\n'
         p.write_text(text)
+        prepare_hma_runtime(source)
     elif kind == 'tee':
         p = source / 'app/build.gradle.kts'
         text = p.read_text()
@@ -106,7 +137,7 @@ val gitCommitHash = "{pin[:7]}"
                 '        ndk { abiFilters += "arm64-v8a" }\n        minSdk = 29')
     changed = subprocess.check_output(['git', '-C', str(source), 'diff', '--name-only'], text=True)
     (source / 'KAORIOS-CHANGES.md').write_text(
-        f'# Kaorios Helper fork changes — 2026-10-07\n\nUpstream: {pin}\n\n'
+        f'# Kaorios Helper fork changes — 2026-10-08\n\nUpstream: {pin}\n\n'
         'Modified by hzzmonetvn. Original copyright and licenses are retained.\n\n'
         + ''.join(f'- {name}\n' for name in changed.splitlines())
         + '\nReproduce these changes using Kaorios-Helper/tools/prepare_sources.py.\n')

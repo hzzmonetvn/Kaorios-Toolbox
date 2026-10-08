@@ -10,7 +10,7 @@ import re
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.1.0-experimental'
+VERSION = '0.2.0-experimental'
 INSTALL_PARTS = {'10-enforce-api-version.sh', '11-enforce-arch.sh', '20-enforce-magisk-version.sh',
                  '21-enforce-ksu-kernel.sh', '22-check-zygisk.sh'}
 FORBIDDEN = re.compile(rb'-----BEGIN (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----\s+[A-Za-z0-9+/=]{32,}|<AndroidAttestation>|<Keybox\b')
@@ -39,10 +39,19 @@ def verify_elf(data):
 
 
 def check_payload(files):
+    profile = files.get('helper.prop', b'profile=combined\n').decode().strip()
+    if profile not in ('profile=zygisk', 'profile=combined'):
+        raise ValueError('Unknown Helper build profile')
+    with_tee = profile == 'profile=combined'
     required = ['module.prop', 'customize.sh', 'manager.apk', 'classes.dex',
-                'zygisk/arm64-v8a.so', 'helperctl.sh', 'service.sh',
-                'tee/classes.dex', 'tee/daemon', 'tee/supervisor', 'tee/inject',
-                'tee/libTEESimulator.so', 'tee/libcertgen.so', 'LICENSE', 'upstreams.json']
+                'zygisk/arm64-v8a.so', 'helperctl.sh', 'service.sh', 'LICENSE', 'upstreams.json']
+    if 'helper.prop' in files:
+        required.append('zygisk.sh')
+    if with_tee:
+        required += ['tee/classes.dex', 'tee/daemon', 'tee/supervisor', 'tee/inject',
+                     'tee/libTEESimulator.so', 'tee/libcertgen.so']
+    elif any(name.startswith('tee/') for name in files):
+        raise ValueError('Zygisk-only build must not contain TEE runtime files')
     required += ['customize.d/' + name for name in sorted(INSTALL_PARTS)]
     for name in required:
         if name not in files or not files[name]:
@@ -54,21 +63,26 @@ def check_payload(files):
             raise ValueError(f'Forbidden key material in artifact: {name}')
         if name.endswith('.so') or name in ('tee/inject', 'tee/supervisor'):
             verify_elf(data)
-    for name in ('classes.dex', 'tee/classes.dex'):
+    for name in ('classes.dex', 'tee/classes.dex') if with_tee else ('classes.dex',):
         if not files[name].startswith(b'dex\n'):
             raise ValueError('Expected a compiled DEX payload')
-    if files['classes.dex'] == files['tee/classes.dex']:
+    if with_tee and files['classes.dex'] == files['tee/classes.dex']:
         raise ValueError('HMA and TEE DEX must remain separate')
 
 
 def package(hma_zip, tee_zip, licenses, destination):
-    hma, tee = read_zip(hma_zip), read_zip(tee_zip)
+    hma = read_zip(hma_zip)
+    tee = read_zip(tee_zip) if tee_zip is not None else None
+    for part in INSTALL_PARTS:
+        if not hma.get("customize.d/" + part):
+            raise ValueError("Missing installer part: " + part)
     files = {name: data for name, data in hma.items()
              if not name.startswith(('lib/', 'zygisk/')) or name.startswith(('lib/arm64-v8a/', 'zygisk/arm64-v8a.so'))}
     prop = files['module.prop'].decode()
     updates = {'id': 'kaorios_helper', 'name': 'Kaorios Helper', 'version': VERSION,
-               'versionCode': '1', 'author': 'hzzmonetvn',
-               'description': 'Experimental HMA Zygisk + optional TEE Simulator RS; TEE off by default.'}
+               'versionCode': '2', 'author': 'hzzmonetvn',
+               'description': ('Experimental HMA Zygisk + optional TEE Simulator RS; TEE off by default.'
+                               if tee is not None else 'Experimental HMA Zygisk; configure using Helper HMA manager.')}
     props = dict(line.split('=', 1) for line in prop.splitlines() if '=' in line and not line.startswith('#'))
     props.update(updates)
     props.pop('updateJson', None)
@@ -79,12 +93,15 @@ def package(hma_zip, tee_zip, licenses, destination):
              if not name.startswith('customize.d/') or name.split('/')[-1] in INSTALL_PARTS}
     files.pop('hmaoss.sh', None)
     files.pop('update_desc.sh', None)
-    files['tee/classes.dex'] = tee['classes.dex']
-    files['tee/daemon'] = tee['daemon']
-    for original, renamed in [('libinject.so', 'inject'), ('libsupervisor.so', 'supervisor'),
-                               ('libTEESimulator.so', 'libTEESimulator.so'), ('libcertgen.so', 'libcertgen.so')]:
-        files[f'tee/{renamed}'] = tee[f'lib/arm64-v8a/{original}']
-    files['sepolicy.rule'] = hma.get('sepolicy.rule', b'') + b'\n' + tee['sepolicy.rule']
+    files['helper.prop'] = b'profile=combined\n' if tee is not None else b'profile=zygisk\n'
+    files['customize.d/22-check-zygisk.sh'] = b'. "$MODPATH/zygisk.sh"\nzygisk_require\n'
+    if tee is not None:
+        files['tee/classes.dex'] = tee['classes.dex']
+        files['tee/daemon'] = tee['daemon']
+        for original, renamed in [('libinject.so', 'inject'), ('libsupervisor.so', 'supervisor'),
+                                   ('libTEESimulator.so', 'libTEESimulator.so'), ('libcertgen.so', 'libcertgen.so')]:
+            files[f'tee/{renamed}'] = tee[f'lib/arm64-v8a/{original}']
+        files['sepolicy.rule'] = hma.get('sepolicy.rule', b'') + b'\n' + tee['sepolicy.rule']
     files['LICENSE'] = (ROOT / 'LICENSE').read_bytes()
     files['NOTICE'] = (ROOT / 'NOTICE').read_bytes()
     files['README.md'] = (ROOT / 'README.md').read_bytes()
@@ -131,7 +148,7 @@ if __name__ == '__main__':
     if args.verify:
         verify(args.verify)
     else:
-        if not all((args.hma, args.tee, args.licenses, args.output)):
-            parser.error('Packaging requires --hma, --tee, --licenses and --output')
+        if not all((args.hma, args.licenses, args.output)):
+            parser.error('Packaging requires --hma, --licenses and --output; --tee selects the combined build')
         package(args.hma, args.tee, args.licenses, args.output)
     print('Helper artifact checks: PASS (host; device hooks unverified)')
