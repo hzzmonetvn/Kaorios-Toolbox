@@ -86,13 +86,14 @@ def package(hma_zip, tee_zip, licenses, destination, copg_zip=None):
         raise ValueError('Full Helper packaging requires the TEE runtime')
     if copg is not None and not copg.get('zygisk/arm64-v8a.so'):
         raise ValueError('COPG distribution requires the composite Zygisk runtime')
-    if copg is not None and any(not name.startswith(('copg/', 'webroot/copg/', 'zygisk/')) for name in copg):
+    if copg is not None and any(not name.startswith(('copg/', 'zygisk/')) for name in copg):
         raise ValueError('Unexpected COPG distribution member')
     for part in INSTALL_PARTS:
         if not hma.get("customize.d/" + part):
             raise ValueError("Missing installer part: " + part)
     files = {name: data for name, data in hma.items()
-             if not name.startswith(('lib/', 'zygisk/')) or name.startswith(('lib/arm64-v8a/', 'zygisk/arm64-v8a.so'))}
+             if (not name.startswith(('lib/', 'zygisk/')) or name.startswith(('lib/arm64-v8a/', 'zygisk/arm64-v8a.so')))
+             and not name.startswith('webroot/')}
     prop = files['module.prop'].decode()
     updates = {'id': 'kaorios_helper', 'name': 'Kaorios Helper', 'version': VERSION,
                'versionCode': '3', 'author': 'hzzmonetvn',
@@ -104,12 +105,12 @@ def package(hma_zip, tee_zip, licenses, destination, copg_zip=None):
     props.pop('updateJson', None)
     files['module.prop'] = ''.join(f'{key}={value}\n' for key, value in props.items()).encode()
     for path in (ROOT / 'module').glob('*.sh'):
-        if path.name != 'action.sh':
-            files[path.name] = path.read_bytes()
+        files[path.name] = path.read_bytes()
     files = {name: data for name, data in files.items()
              if not name.startswith('customize.d/') or name.split('/')[-1] in INSTALL_PARTS}
     files.pop('hmaoss.sh', None)
     files.pop('update_desc.sh', None)
+    files.pop('action.sh', None)
     files['helper.prop'] = b'profile=full\n' if copg is not None else b'profile=combined\n' if tee is not None else b'profile=zygisk\n'
     files['customize.d/22-check-zygisk.sh'] = (b'. "$MODPATH/zygisk.sh"\n' +
                                             (b'zygisk_require_external\n' if copg is not None else b'zygisk_require\n'))

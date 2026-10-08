@@ -16,27 +16,6 @@ preparer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(preparer)
 PIN = json.loads((ROOT / 'upstreams.json').read_text())['copg']['commit']
 
-DATA = '''  const MODULE_DIR = '/data/adb/modules/COPG';
-  const CONFIG_PATH = `${MODULE_DIR}/COPG.json`;
-      await execCommand(`echo '${shq(cfgStr)}' > ${CONFIG_PATH}`);
-      await execCommand(`echo '${shq(listStr)}' > ${LIST_PATH}`);
-      await execCommand(`chmod 644 ${CONFIG_PATH} ${LIST_PATH}`);
-  const LIST_PATH = `${MODULE_DIR}/list.json`;
-  const BACKUP_DIR = '/sdcard/Download/COPG';
-  const LOG_DIR = '/sdcard/Download/COPG/LOGS';
-  const SYNC_CONFIG_URL = 'https://raw.githubusercontent.com/AlirezaParsi/COPG/refs/heads/JSON/module/COPG.json';
-  const SYNC_LIST_URL = 'https://raw.githubusercontent.com/AlirezaParsi/COPG/refs/heads/JSON/module/list.json';
-  readFilePreview('../COPG.json'); readFilePreview('../list.json');
-  tryCmd('cat /data/adb/modules/COPG/module.prop');
-  tryCmd('ls /data/adb/modules/COPG/disable');
-  const ICON_DIR_ABS = '/data/adb/modules/COPG/webroot/icons';
-  const ICON_SCRIPT = '/data/adb/modules/COPG/icons_fetch.sh';
-  const MODULE_ID = 'COPG';
-  function moduleInterface() { return w['$' + SANITIZED_ID] || w.$COPG || w.$copg || null; }
-    else if (primary && primary.name === 'Magisk') zygisk = { variant: 'Magisk Zygisk', version: '', on: true };
-'''
-
-
 class CopgPreparationTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -55,8 +34,6 @@ class CopgPreparationTest(unittest.TestCase):
                 'config=/data/adb/modules/COPG/COPG.json\ncpu=/data/adb/modules/COPG/cpuinfo_spoof\n',
             'src/unified_controller.cpp': '    #include <sys/inotify.h>\n'
                 'config=/data/adb/modules/COPG/COPG.json\ndefaults=/data/adb/copg_defaults\nint main() {\nreturn 0;\n}\n',
-            'webroot/js/copg-data.js': DATA,
-            'webroot/js/library.js': 'Saved to /data/adb/modules/COPG\n',
             'src/include/zygisk.hpp': '/* Original Zygisk permission notice */\n#define ZYGISK_API_VERSION 4\n',
             'src/atexit.cpp': '/* Original AOSP redistribution notice */\nvoid originalAtexit();\n',
             'module/COPG.json': '{"PACKAGES_TEST": ["com.example.test"]}\n',
@@ -105,11 +82,6 @@ class CopgPreparationTest(unittest.TestCase):
         self.assertIn(preparer.CONFIG_DIR + '/defaults', controller)
         self.assertIn('--check-config', controller)
         self.assertEqual(self.files['module/COPG.json'], (self.source / 'module/COPG.json').read_text())
-
-    def test_upstream_webroot_is_not_modified_for_headless_packaging(self):
-        self.prepare()
-        self.assertEqual(DATA, (self.source / 'webroot/js/copg-data.js').read_text())
-        self.assertEqual(self.files['webroot/js/library.js'], (self.source / 'webroot/js/library.js').read_text())
 
     def test_original_notices_and_reproducible_provenance_are_distributed(self):
         self.prepare()

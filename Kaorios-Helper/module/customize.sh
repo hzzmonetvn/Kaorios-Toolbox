@@ -51,10 +51,8 @@ if [ -d "$MODPATH/copg" ]; then
     set_perm "$MODPATH/copg/controller" 0 0 0755
     mkdir -p /data/adb/kaorios_helper/copg
     chmod 700 /data/adb/kaorios_helper /data/adb/kaorios_helper/copg
-    for file in COPG.json; do
-        [ -f "/data/adb/kaorios_helper/copg/$file" ] || cp "$MODPATH/copg/$file" "/data/adb/kaorios_helper/copg/$file" || abort "! Cannot initialize COPG config."
-        chmod 600 "/data/adb/kaorios_helper/copg/$file"
-    done
+    [ -f /data/adb/kaorios_helper/copg/COPG.json ] || cp "$MODPATH/copg/COPG.json" /data/adb/kaorios_helper/copg/COPG.json || abort "! Cannot initialize COPG config."
+    chmod 600 /data/adb/kaorios_helper/copg/COPG.json
 fi
 # Remove only the status script installed by older experimental Helper builds.
 rm -f /data/adb/boot-completed.d/kaorios_helper_hma.sh

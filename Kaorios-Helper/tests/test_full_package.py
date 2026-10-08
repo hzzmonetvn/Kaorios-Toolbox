@@ -35,6 +35,9 @@ class FullPackageTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(fixtures.elf() + b'composite host boundary')
         (self.native / 'native-build.json').write_text('{"abi":"arm64-v8a"}')
+        self.fixture.hma_files['action.sh'] = b'upstream Action'
+        self.fixture.hma_files['webroot/index.html'] = b'upstream WebUI'
+        fixtures.write_zip(self.fixture.hma, self.fixture.hma_files)
         self.copg = self.base / 'copg.zip'
 
     def build_inputs(self):
