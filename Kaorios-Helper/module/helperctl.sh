@@ -216,9 +216,13 @@ case "${1:-status}" in
         lifecycle_lock || exit 1
         tee_ready || exit 1
         mkdir -p "$CONFIG"
+        [ -f "$CONFIG/tee.enabled" ] && helper_was_enabled=1 || helper_was_enabled=0
         touch "$CONFIG/tee.enabled"
         chmod 600 "$CONFIG/tee.enabled"
-        start_tee
+        start_tee || {
+            [ "$helper_was_enabled" = 1 ] || rm -f "$CONFIG/tee.enabled"
+            exit 1
+        }
         ;;
     disable-tee)
         lifecycle_lock || exit 1

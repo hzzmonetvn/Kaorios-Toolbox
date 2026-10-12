@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-10-12 — Functional audit and guide clarity
+
+- Replaced the Build spoof field initializer rather than appending a second one; an initialized stock field otherwise produced invalid smali. Added a regression for patching and rejecting the previously malformed output.
+- Required the ComputerEngine visibility hook to appear before an unconditional return/throw, rather than accepting an unreachable pre-existing hook. Kept the verifier scoped to this provable case rather than claiming general control-flow analysis.
+- Canonicalized artifact input/output paths and compared existing file identity before invoking toolchains to prevent lexical, symlink and hardlink aliases from overwriting the input; kept output names free to differ. Retained the compatibility launchers and unknown external entry points.
+- When first-time `enable-tee` fails to start the supervisor, remove only the opt-in flag created by that attempt; preserve a flag that existed before retry. Do not remove runtime user configuration or key material.
+- Recast the four bilingual 2.0.6.1 guides into short JAR → class → method → insertion steps modeled on the Secure Flag guide while retaining register/owner/packaged-JAR stop checks. Kept the system-feature hook scope distinct from full GMS functionality and the separately installed Helper module distinct from artifact patch scripts; rejected a bare command-only recipe because it obscures split DEX ownership and partial writes.
+- No dead-code deletion was justified in the audited public paths: external entry points and module hooks can be reached outside local callers.
+
 ## 2026-10-12 — Beginner patch guides and manual agent procedure
 
 - Reorganized the four current 2.0.6.1 guides around an end-to-end stock-copy → DEX owner → patch → final-archive verification workflow for readers who know basic smali, retaining exact method and hook examples. Rejected a shorter command-only checklist because register and DEX ownership mistakes require explicit stop conditions.

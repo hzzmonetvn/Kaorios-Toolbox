@@ -246,6 +246,18 @@ int main(int argc, char **argv) {
         self.assertFalse((self.config / 'copg.enabled').exists())
         self.assertNotIn('COPG controller: running', self.run_ctl('status').stdout)
 
+    def test_supervisor_exiting_during_enable_restores_tee_opt_in(self):
+        self.env['TEST_EXIT_ON_START'] = '1'
+        result = self.run_ctl('enable-tee')
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse((self.config / 'tee.enabled').exists())
+        self.assertIn('TEE desired state: disabled', self.run_ctl('status').stdout)
+
+        (self.config / 'tee.enabled').touch()
+        result = self.run_ctl('enable-tee')
+        self.assertNotEqual(0, result.returncode)
+        self.assertTrue((self.config / 'tee.enabled').exists())
+
     def test_bad_tee_configuration_does_not_prevent_enabled_copg_start(self):
         (self.config / 'tee.enabled').touch()
         (self.config / 'copg.enabled').touch()

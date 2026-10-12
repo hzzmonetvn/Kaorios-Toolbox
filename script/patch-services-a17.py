@@ -89,6 +89,12 @@ def _verify_visibility(text: str) -> None:
     count = _hook_count(body)
     if count != 1:
         raise ValueError(f"expected exactly one shouldHideAppListForCaller hook; found {count}")
+    directive = LOCALS_RE.search(body) or REGISTERS_RE.search(body)
+    if directive is None:
+        raise ValueError("missing register directive for visibility hook")
+    prefix = body[directive.end():body.find(HOOK_TARGET)]
+    if re.search(r'(?m)^\s*(?:return(?:-[\w]+)?|throw)\b', prefix):
+        raise ValueError("hook must precede a terminating instruction")
     if GET_PACKAGE_NAME_CALL not in body:
         directive = LOCALS_RE.search(body) or REGISTERS_RE.search(body)
         width = 8 if param_count == 7 else 4

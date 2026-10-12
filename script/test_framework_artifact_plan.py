@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Ensure whole-DEX planning preserves ROM classes and never duplicates payload classes."""
 import importlib.util
+import os
 from pathlib import Path
 import struct
+import subprocess
 import tempfile
 import unittest
 
@@ -34,6 +36,31 @@ def dex(descriptors):
         encoded = descriptor.encode()
         data.extend(bytes([len(encoded)]) + encoded + b'\0')
     return bytes(data)
+
+
+class ArtifactPathGuardTest(unittest.TestCase):
+    def test_input_alias_cannot_be_used_as_output(self):
+        scripts = ('patch-framework-a17-artifact.sh', 'patch-services-a17-artifact.sh')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'input.jar').write_bytes(b'stock copy')
+            (root / 'tool.jar').touch()
+            (root / 'payload.dex').touch()
+            (root / 'alias').mkdir()
+            (root / 'linked.jar').symlink_to(root / 'input.jar')
+            os.link(root / 'input.jar', root / 'hardlinked.jar')
+            for name in scripts:
+                for output in (root / 'alias/../input.jar', root / 'linked.jar', root / 'hardlinked.jar'):
+                    with self.subTest(script=name, output=output.name):
+                        arguments = ['bash', str(Path(__file__).with_name(name)), '--input', str(root / 'input.jar'),
+                                     '--output', str(output), '--baksmali', str(root / 'tool.jar'),
+                                     '--smali', str(root / 'tool.jar')]
+                        if name.startswith('patch-framework'):
+                            arguments.extend(['--kaorios-dex', str(root / 'payload.dex')])
+                        result = subprocess.run(arguments, capture_output=True, text=True, timeout=5)
+                        self.assertNotEqual(0, result.returncode)
+                        self.assertIn('Input and output', result.stderr)
+                        self.assertEqual(b'stock copy', (root / 'input.jar').read_bytes())
 
 
 class FrameworkArtifactPlanTest(unittest.TestCase):

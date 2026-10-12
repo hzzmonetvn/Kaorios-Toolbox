@@ -418,7 +418,7 @@ def patch_build(content: str) -> tuple[str, bool]:
 
     patched = content
     for f in fields_null:
-        patched = re.sub(rf'(\.field public static[^\n]*?)final([^\n]*? {f}:Ljava/lang/String;)', r'\1\2 = null', patched)
+        patched = re.sub(rf'(\.field public static[^\n]*?)final([^\n]*? {f}:Ljava/lang/String;)(?:[ \t]*=[^\r\n]*)?', r'\1\2 = null', patched)
 
     patched = re.sub(r'(\.field public static[^\n]*?)final([^\n]*? TIME:J)', r'\1\2', patched)
     return patched, (patched != content)

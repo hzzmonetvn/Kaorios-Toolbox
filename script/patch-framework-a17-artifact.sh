@@ -45,7 +45,10 @@ test -f "$TASK_INPUT"
 test -f "$TASK_KAORIOS_DEX"
 test -f "$TASK_BAKSMALI"
 test -f "$TASK_SMALI"
-test "$TASK_INPUT" != "$TASK_OUTPUT"
+if [[ $(realpath -m -- "$TASK_INPUT") == $(realpath -m -- "$TASK_OUTPUT") ]] || [[ -e "$TASK_OUTPUT" && "$TASK_INPUT" -ef "$TASK_OUTPUT" ]]; then
+    echo "Input and output must be different files." >&2
+    exit 2
+fi
 
 TASK_WORK=$(mktemp -d /tmp/kaorios-framework-a17.XXXXXX)
 trap 'rm -rf -- "$TASK_WORK"' EXIT

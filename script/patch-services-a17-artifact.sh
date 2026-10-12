@@ -43,7 +43,10 @@ done
 test -f "$TASK_INPUT"
 test -f "$TASK_BAKSMALI"
 test -f "$TASK_SMALI"
-test "$TASK_INPUT" != "$TASK_OUTPUT"
+if [[ $(realpath -m -- "$TASK_INPUT") == $(realpath -m -- "$TASK_OUTPUT") ]] || [[ -e "$TASK_OUTPUT" && "$TASK_INPUT" -ef "$TASK_OUTPUT" ]]; then
+    echo "Input and output must be different files." >&2
+    exit 2
+fi
 
 run_baksmali() {
     local dex=$1 out_dir=$2

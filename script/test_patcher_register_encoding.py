@@ -103,7 +103,31 @@ def computer_engine(body, directive='.locals 8', full=True):
             '    const/4 v0, 0x0\n    return v0\n.end method\n')
 
 
+class BuildFieldTest(unittest.TestCase):
+    def test_initialized_brand_has_one_null_initializer(self):
+        original = ('.class public Landroid/os/Build;\n'
+                    '.field public static final BRAND:Ljava/lang/String; = "OEM"\n'
+                    '.field public static final TIME:J = 0x1L\n')
+        result, changed = patcher.patch_build(original)
+        self.assertTrue(changed)
+        self.assertIn('.field public static  BRAND:Ljava/lang/String; = null\n', result)
+        self.assertNotIn('= null =', result)
+        self.assertEqual((result, False), patcher.patch_build(result))
+        status, _, error = patcher.apply_target_patch('Build.smali', result.replace('= null', '= null = "OEM"'),
+                                                       {'Build.smali': patcher.patch_build})
+        self.assertNotEqual(patcher.PatchStatus.ALREADY_PATCHED, status)
+        self.assertIsNotNone(error)
+
+
 class ServicesParameterEncodingTest(unittest.TestCase):
+    def test_prepatched_hook_after_unconditional_return_is_rejected(self):
+        original = computer_engine('', full=False)
+        patched, _ = services.patch(original)
+        unreachable = patched.replace('    if-eqz p1, :cond_kaorios_ps_null',
+                                      '    const/4 v0, 0x0\n    return v0\n    if-eqz p1, :cond_kaorios_ps_null', 1)
+        with self.assertRaisesRegex(ValueError, 'hook must precede a terminating instruction'):
+            services.verify(unreachable)
+
     def test_last_parameter_uses_high_path_and_preserves_physical_stock_operand(self):
         original = computer_engine('    invoke-static {p7}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;\n')
         result, changed = services.patch(original)
