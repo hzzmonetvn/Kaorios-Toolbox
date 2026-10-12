@@ -45,7 +45,7 @@ For **version 2.0.4.0 and below**, see:
 
 ## 📦 Framework and patcher release: v2.0.6.1
 
-See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1_VI.md). Agents working on authorized ROM copies should also follow the [patching agent procedure](Toolbox-docs/agent-guide.md).
+See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1_VI.md). Agents manually patching authorized ROM copies should also follow the [manual-patching agent procedure](Toolbox-docs/agent.md).
 
 The signed manager APK remains on [release 2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Version 2.0.6.1 publishes the framework DEX and patcher; compatibility checks cover the released manager's direct framework calls.
 
