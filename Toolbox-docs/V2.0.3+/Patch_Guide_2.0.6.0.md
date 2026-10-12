@@ -2,6 +2,9 @@
 
 **English** | [Tiếng Việt](Patch_Guide_2.0.6.0_VI.md)
 
+> [!WARNING]
+> Archived 2.0.6.0 instructions only. The SettingsProvider patch, APK signing and deployment steps below are retired for 2.0.6.1; keep the stock `SettingsProvider.apk`. For current ROM work use the [2.0.6.1 manual guide](Patch_Guide_2.0.6.1.md) or [2.0.6.1 patcher guide](Patcher_Guide_2.0.6.1.md). Do not mix release payloads and instructions.
+
 This guide explains how to edit the target ROM's smali by hand. Commands and modes for the automatic tool are in the separate [patcher guide](Patcher_Guide_2.0.6.0.md).
 
 ## 1. Prepare the stock files and payload

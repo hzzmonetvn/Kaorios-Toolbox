@@ -51,11 +51,9 @@ if grep -qiE 'Developer Preview|tooltip>.*preview program' version.html; then
 fi
 
 CURRENT_DEVICE=""
-CURRENT_MODEL=""
 CURRENT_DEVICE_INITIAL_SDK=""
 if [ -f "$TARGET_FILE" ]; then
   CURRENT_DEVICE="$(jq -r '.DEVICE // empty' "$TARGET_FILE" 2>/dev/null || true)"
-  CURRENT_MODEL="$(jq -r '.MODEL // empty' "$TARGET_FILE" 2>/dev/null || true)"
   CURRENT_DEVICE_INITIAL_SDK="$(jq -r '.DEVICE_INITIAL_SDK_INT // empty' "$TARGET_FILE" 2>/dev/null || true)"
 fi
 
@@ -200,10 +198,6 @@ for RANGE_END in 65535 262143 1048575 4194303; do
   SECURITY_PATCH="$(
     grep -aom1 'security-patch-level=[^[:space:]]*' metadata.bin       | sed 's/^security-patch-level=//'       | tr -d '\r'       || true
   )"
-  SDK_INT="$(
-    grep -aom1 'post-sdk-level=[^[:space:]]*' metadata.bin       | sed 's/^post-sdk-level=//'       | tr -d '\r'       || true
-  )"
-
   if [ -n "$FINGERPRINT" ] && [ -n "$SECURITY_PATCH" ]; then
     break
   fi

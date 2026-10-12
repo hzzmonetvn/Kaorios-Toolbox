@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generic DEX discovery and hash integrity verification for services.jar and SettingsProvider.apk."""
+"""Generic DEX discovery and hash integrity verification for services.jar."""
 from __future__ import annotations
 
 import argparse

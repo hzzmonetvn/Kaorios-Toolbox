@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Hướng dẫn patcher tự động
 
-[English](Patcher_Guide_2.0.6.1.md) | **Tiếng Việt**
+[English](Patcher_Guide_2.0.6.1.md) | **Tiếng Việt** | [Quy trình cho agent](../agent-guide.md)
 
 File này dành cho lệnh patcher, mode, kết quả và helper build artifact. Cách tự sửa smali, import payload, cấp register và triển khai nằm trong [guide patch tay riêng](Patch_Guide_2.0.6.1_VI.md).
 
@@ -13,14 +13,9 @@ Lấy từ ROM đích và giữ bản sạch của:
 - `framework.jar`
 - `services.jar`
 
-Nên backup:
+Chỉ làm trên bản sao ROM đúng build được phép sửa. Cất file gốc sạch ngoài workspace, ghi `sha256sum` của chúng và chuẩn bị cách khôi phục trước khi tác động lên thiết bị. ROM cập nhật cần bộ stock mới. Không chạy patcher trên bản sao duy nhất.
 
-```text
-framework.jar.orig
-services.jar.orig
-```
-
-Cần có smali/baksmali hoạt động bình thường.
+Cần smali/baksmali hoạt động bình thường và công cụ chỉnh archive (`unzip`/`zip` hoặc tương đương).
 
 Patcher chính đang được duy trì là:
 
@@ -109,7 +104,7 @@ smali_classes2/
 smali_classes3/
 ```
 
-Phải tìm target trên tất cả các cây đó.
+Phải tìm target trên tất cả các cây đó. Trước khi patch, ghi descriptor từng class đích, archive nguồn, `classes*.dex` chứa class và đường dẫn smali. Ví dụ `rg -n '^\.class .*Landroid/app/ActivityThread;' work/framework`; tìm các target còn lại trong từng workspace. Không gộp các cây DEX không liên quan để tạo class trùng owner.
 
 ---
 
@@ -186,11 +181,13 @@ Patcher chạy fail-closed: layout register/control-flow lạ sẽ bị từ ch�
 > [!WARNING]
 > Nếu patch cả thư mục có nhiều target, file xử lý trước có thể đã được ghi ra trước khi file sau báo lỗi. Vì vậy luôn làm trên bản copy.
 
+CLI trả mã lỗi khác 0 nếu target hoặc verifier cả cây thất bại, nhưng **không** hoàn tác file đã ghi trước đó. Xem kết quả từng target; nếu có lỗi, bỏ toàn bộ cây smali đang làm và tạo lại từ stock sạch trước khi thử tiếp. Mã thoát 0 không có nghĩa mọi class dự kiến đều đã xuất hiện: patcher chỉ xử lý target tìm được, nên đối chiếu danh sách báo cáo với bảng owner.
+
 ---
 
 ## 6. Decompile lại và verify
 
-Verifier chạy trước lúc lưu chưa đủ; DEX sau khi assemble cũng phải kiểm tra lại.
+Verifier chạy trước lúc lưu chưa đủ; DEX sau khi assemble cũng phải kiểm tra lại. Assemble mỗi cây smali đã sửa với API phù hợp DEX đầu vào và toolchain; chỉ thay entry DEX gốc của nó trong **bản sao** JAR stock. Giữ entry không phải DEX, so hash các DEX chưa sửa. Trích DEX từ JAR cuối, so với output đã assemble rồi decompile lại trong thư mục recheck rỗng. Import/merge đủ payload 2.0.6.1 vào framework theo guide patch tay; patcher smali không import payload.
 
 Decompile artifact vừa build rồi chạy:
 
@@ -206,7 +203,7 @@ Nếu framework cuối đã có Kaorios framework DEX + đầy đủ AdvancedPol
 python3 script/verify-framework-a17-hooks.py work/framework/recheck
 ```
 
-Verifier PASS chỉ chứng minh cấu trúc hook đúng. Nó chưa chứng minh ROM boot được trên máy thật.
+Verifier PASS chỉ chứng minh cấu trúc mà verifier đó kiểm tra. Ghi lại verifier đã chạy, các hook khác đã xem tay và hash archive/DEX cuối. Kết quả patch trên host, kiểm tra artifact đã đóng gói và boot/chức năng trên thiết bị thật là ba mức chứng cứ riêng; không suy từ mức này sang mức khác. Nó chưa chứng minh ROM boot được trên máy thật.
 
 Full framework verifier (không có `--caller-only`) kiểm tra hook `ActivityThread`, overload callee `initActivityThread(Object)` và sự có mặt của tám class AdvancedPolicy; nó không kiểm tra toàn bộ hook Instrumentation, feature và Keystore. Với `--caller-only`, chỉ kiểm tra caller ActivityThread. Kiểm tra các hook còn lại theo [guide patch tay](Patch_Guide_2.0.6.1_VI.md), rồi làm mục [Lưu file và kiểm tra](Patch_Guide_2.0.6.1_VI.md#lưu-file-và-kiểm-tra). Import toàn bộ class payload như hướng dẫn ở mục framework.jar.
 

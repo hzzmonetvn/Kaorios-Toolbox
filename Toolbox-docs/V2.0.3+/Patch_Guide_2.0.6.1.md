@@ -1,6 +1,6 @@
 # Kaorios Toolbox — Manual patch guide 2.0.6.1 (Android 13–17)
 
-[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md)
+[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Agent procedure](../agent-guide.md)
 
 ## Preparation
 
@@ -9,7 +9,7 @@ Use a DEX/smali editor and these two stock files from **the exact ROM build you 
 - `framework.jar`
 - `services.jar`
 
-Keep backups to restore if the device fails to boot.
+Work only on an authorized copy of the exact ROM build. Store untouched originals separately, record `sha256sum framework.jar services.jar`, and prepare a tested recovery path before editing or deployment. A ROM update needs fresh stock files; never treat templates as replacement classes.
 
 Download [classes.dex 2.0.6.1](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex). Use the manager APK from [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0).
 
@@ -351,8 +351,9 @@ For `TIME:J`, remove only `final`. In `Landroid/os/Build$VERSION;`, remove only 
 
 ## Save and check
 
-1. Assemble/export edited DEX entries under their original names in the JAR. Keep untouched DEX entries and other archive entries.
-2. Reopen the **saved file**. Check payload classes are present without duplicates and hooks are in the stated locations. Each `move-result*` must follow its matching call.
+1. Assemble/export each edited smali tree under its **original DEX entry name** in a copy of the stock JAR. Choose the assembler API from the input DEX/toolchain, not just the Android release number. Keep untouched DEX entries and other archive entries.
+2. Reopen the **saved file** and extract/re-disassemble the packaged DEX. Confirm all payload classes are present exactly once across every split; every original non-replaced class and untouched DEX hash remains. Check the hooks against their exact descriptors, registers and stock fallback paths. Each `move-result*` must follow its matching call.
+3. Record archive hashes, changed DEX names, class owners and verifier results. Assembly and host verification are not evidence of a bootable ROM; stop if any check fails and restore from the clean copies.
 
 Keep the **stock SettingsProvider**. Fake Settings has been removed; do not patch or re-sign this APK. Prepare a way to disable the module/restore stock files before rebooting. Successful assembly does not confirm device boot.
 

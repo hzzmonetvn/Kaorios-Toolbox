@@ -21,6 +21,7 @@ def load(filename, name):
 
 patcher = load('kaorios_patcher.py', 'patcher')
 provider = load('patch-settingsprovider-a17.py', 'provider')
+provider_verifier = load('verify-settingsprovider-a17-hooks.py', 'provider_verifier')
 
 GENERATOR = '''.class public Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;
 .super Ljava/security/KeyPairGeneratorSpi;
@@ -60,6 +61,17 @@ class RetiredProviderTest(unittest.TestCase):
             provider.patch('stock')
         with self.assertRaisesRegex(ValueError, 'Fake Settings has been removed'):
             provider.verify('stock')
+
+    def test_retired_verifier_rejects_without_scanning(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, 'Fake Settings has been removed'):
+                provider_verifier.verify_caller(Path(directory))
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT_DIR / 'verify-settingsprovider-a17-hooks.py'), directory],
+                capture_output=True, text=True,
+            )
+            self.assertNotEqual(0, result.returncode)
+            self.assertIn('Fake Settings has been removed', result.stdout + result.stderr)
 
     def test_old_commands_do_not_write_input_or_output(self):
         with tempfile.TemporaryDirectory() as directory:

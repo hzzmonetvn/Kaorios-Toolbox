@@ -2,6 +2,9 @@
 
 [English](Patch_Guide_2.0.6.0.md) | **Tiếng Việt**
 
+> [!WARNING]
+> Chỉ lưu trữ hướng dẫn 2.0.6.0. Các bước patch, ký và triển khai `SettingsProvider.apk` bên dưới đã ngừng dùng cho 2.0.6.1; giữ APK gốc. Để làm việc với ROM hiện tại, xem [guide patch tay 2.0.6.1](Patch_Guide_2.0.6.1_VI.md) hoặc [guide patcher 2.0.6.1](Patcher_Guide_2.0.6.1_VI.md). Không trộn payload và hướng dẫn giữa các release.
+
 Guide này hướng dẫn tự sửa smali của ROM đích. Lệnh và mode của công cụ tự động nằm trong [guide patcher riêng](Patcher_Guide_2.0.6.0_VI.md).
 
 ## 1. Chuẩn bị file stock và payload

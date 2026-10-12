@@ -2,6 +2,9 @@
 
 [English](Patcher_Guide_2.0.6.0.md) | **Tiếng Việt**
 
+> [!WARNING]
+> Chỉ lưu trữ hướng dẫn 2.0.6.0. Các lệnh patch, verifier và helper cho `SettingsProvider.apk` bên dưới đã ngừng dùng cho 2.0.6.1; giữ APK gốc. Hãy dùng [guide patcher hiện tại](Patcher_Guide_2.0.6.1_VI.md) và [guide patch tay](Patch_Guide_2.0.6.1_VI.md). Không chạy lệnh provider cũ với release hiện tại.
+
 File này dành cho lệnh patcher, mode, kết quả và helper build artifact. Cách tự sửa smali, import payload, cấp register và triển khai nằm trong [guide patch tay riêng](Patch_Guide_2.0.6.0_VI.md).
 
 ## 1. Cần chuẩn bị gì

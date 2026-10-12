@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Automatic patcher
 
-**English** | [Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md)
+**English** | [Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Agent procedure](../agent-guide.md)
 
 This file covers patcher commands, modes, output and artifact helpers. For editing smali yourself, payload imports, register allocation and deployment, use the separate [manual patch guide](Patch_Guide_2.0.6.1.md).
 
@@ -13,14 +13,9 @@ From the target ROM, keep clean copies of:
 - `framework.jar`
 - `services.jar`
 
-Recommended backups:
+Work only on an authorized copy of the exact ROM build. Keep the clean originals outside the working directory, record their `sha256sum` values and plan recovery before touching a device. A ROM update needs a new stock set. Never run the patcher on your only copies.
 
-```text
-framework.jar.orig
-services.jar.orig
-```
-
-You also need a working smali/baksmali toolchain.
+You also need a working smali/baksmali toolchain and an archive editor (`unzip`/`zip` or equivalent).
 
 The maintained patcher entry point is:
 
@@ -93,7 +88,7 @@ smali_classes2/
 smali_classes3/
 ```
 
-Search all of them.
+Search all of them. Before patching, record each target class descriptor, source archive, owner `classes*.dex` and smali path. `rg -n '^\.class .*Landroid/app/ActivityThread;' work/framework` is one example; search the other targets across their own workspaces. Do not combine unrelated DEX trees in a way that creates duplicate class owners.
 
 ---
 
@@ -172,11 +167,13 @@ The patcher is fail-closed: unknown register/control-flow layouts are rejected i
 > [!WARNING]
 > If you patch a directory containing several target files, an earlier file may already have been written before a later file fails. Work on copies, not your only stock files.
 
+The CLI exit code is nonzero if any target or tree-level check fails, but it does **not** roll back earlier writes. Inspect each target result; if one fails, discard the entire affected working tree and recreate it from clean stock before retrying. A zero exit code does not mean every expected class was present: the patcher processes targets it finds, so compare its reported set with your owner inventory.
+
 ---
 
 ## 6. Re-disassemble and verify
 
-Verification before saving is useful, but the rebuilt DEX must also be checked.
+Verification before saving is useful, but the rebuilt DEX must also be checked. Assemble each changed tree using the API supported by that input DEX and toolchain; replace only its original DEX entry in a **copy** of the stock JAR. Preserve non-DEX entries and verify hashes of untouched DEX splits. Extract DEX from the final JAR and compare it with the assembled output before re-disassembling into an empty recheck directory. Import/merge the full 2.0.6.1 payload into framework as described in the manual guide; the smali patcher does not import it.
 
 Re-disassemble the rebuilt artifact and run the matching verifier.
 
@@ -194,7 +191,7 @@ For a final framework artifact that already contains the Kaorios framework DEX a
 python3 script/verify-framework-a17-hooks.py work/framework/recheck
 ```
 
-A verifier PASS proves the expected structure is present. It does not prove the ROM will boot on a real device.
+A verifier PASS proves only the structure that verifier checks. Log which verifier ran, which other hooks were inspected manually and the final archive/DEX hashes. Host patch results, packaged-artifact checks and real-device boot/function checks are separate evidence tiers; none can be inferred from another. It does not prove the ROM will boot on a real device.
 
 The full framework verifier (without `--caller-only`) checks the `ActivityThread` hook, the `initActivityThread(Object)` callee and presence of eight AdvancedPolicy classes; it does not check every Instrumentation, feature or Keystore hook. With `--caller-only`, it checks only the ActivityThread caller. Inspect the remaining hooks using the [manual guide](Patch_Guide_2.0.6.1.md), then follow [Save and check](Patch_Guide_2.0.6.1.md#save-and-check). Import all payload classes as described under framework.jar.
 

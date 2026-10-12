@@ -1,6 +1,6 @@
 # Kaorios Toolbox — Hướng dẫn patch tay 2.0.6.1 (Android 13–17)
 
-[English](Patch_Guide_2.0.6.1.md)
+[English](Patch_Guide_2.0.6.1.md) | [Quy trình cho agent](../agent-guide.md)
 
 ## Chuẩn bị
 
@@ -9,7 +9,7 @@ Cần trình chỉnh DEX/smali và hai file gốc từ **đúng ROM đang dùng*
 - `framework.jar`
 - `services.jar`
 
-Giữ bản sao để khôi phục nếu máy không boot.
+Chỉ làm trên bản sao ROM đúng build mà bạn được phép sửa. Cất riêng file gốc chưa chỉnh, ghi `sha256sum framework.jar services.jar` và chuẩn bị cách khôi phục đã kiểm tra trước khi chỉnh sửa hoặc triển khai. ROM cập nhật cần bộ file gốc mới; không dùng nguyên class mẫu thay class ROM.
 
 Tải [classes.dex 2.0.6.1](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex). APK quản lý dùng bản [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0).
 
@@ -351,8 +351,9 @@ Với `TIME:J`, chỉ xóa `final`. Trong `Landroid/os/Build$VERSION;`, chỉ x�
 
 ## Lưu file và kiểm tra
 
-1. Assemble/export DEX đã sửa, lưu lại đúng tên entry trong JAR. Giữ các DEX chưa sửa và entry khác.
-2. Mở lại **file đã lưu**, kiểm tra đủ class payload, không trùng class và các hook nằm đúng vị trí. Kiểm tra `move-result*` đi ngay sau lời gọi tương ứng.
+1. Assemble/export mỗi cây smali đã sửa về **đúng tên entry DEX gốc** trong bản sao JAR stock. Chọn API assembler dựa trên DEX đầu vào/toolchain, không chỉ theo Android version. Giữ các DEX chưa sửa và entry khác.
+2. Mở lại **file đã lưu**, trích và decompile lại DEX đã đóng gói. Xác nhận class payload đủ và mỗi class xuất hiện đúng một lần trên các split; mọi class ROM không bị thay và hash DEX chưa sửa vẫn nguyên. Kiểm tra hook theo descriptor, register và nhánh fallback stock. Mỗi `move-result*` phải theo ngay lời gọi tương ứng.
+3. Ghi hash archive, tên DEX đã sửa, DEX chứa từng class và kết quả verifier. Assemble và kiểm tra trên host chưa chứng minh ROM boot được; dừng khi check lỗi và khôi phục từ bản sạch.
 
 Giữ nguyên **SettingsProvider gốc**. Fake Settings đã được bỏ, không cần patch hoặc ký lại APK này. Chuẩn bị cách disable module/khôi phục file gốc trước khi reboot. Assemble thành công chưa xác nhận máy boot được.
 

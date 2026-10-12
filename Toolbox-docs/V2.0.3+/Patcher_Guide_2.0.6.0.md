@@ -2,6 +2,9 @@
 
 **English** | [Tiếng Việt](Patcher_Guide_2.0.6.0_VI.md)
 
+> [!WARNING]
+> Archived 2.0.6.0 instructions only. The SettingsProvider commands, verifier and APK helper below are retired for 2.0.6.1; keep the stock `SettingsProvider.apk`. Use the [current patcher guide](Patcher_Guide_2.0.6.1.md) and [manual guide](Patch_Guide_2.0.6.1.md) instead. Do not run the archived provider commands against the current release.
+
 This file covers patcher commands, modes, output and artifact helpers. For editing smali yourself, payload imports, register allocation and deployment, use the separate [manual patch guide](Patch_Guide_2.0.6.0.md).
 
 ## 1. What you need
