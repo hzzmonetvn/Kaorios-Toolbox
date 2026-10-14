@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-14 — Google Flags documentation boundary
+
+- Added paired English/Vietnamese status guides and README links rather than a smali insertion recipe: the published 2.0.6.1 payload predates Google Flags, and importing it or running the patcher cannot supply the missing behavior. The existing system-feature query hook remains distinct.
+- Rejected treating A13–A17 template labels as proof of a ROM callsite. A future recipe needs a published compatible payload and a traced, verified callsite on the exact authorized ROM before patching and device validation. Kept historical guides unchanged.
+
 ## 2026-10-12 — Functional audit and guide clarity
 
 - Replaced the Build spoof field initializer rather than appending a second one; an initialized stock field otherwise produced invalid smali. Added a regression for patching and rejecting the previously malformed output.

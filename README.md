@@ -49,6 +49,8 @@ See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guid
 
 The signed manager APK remains on [release 2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Version 2.0.6.1 publishes the framework DEX and patcher; compatibility checks cover the released manager's direct framework calls.
 
+**Google Flags is not supported by the 2.0.6.1 payload or patcher.** Importing the DEX alone cannot enable it; A13–A17 template labels do not establish a verified ROM callsite. Read the [Google Flags status and verification guide](Toolbox-docs/V2.0.3+/Google_Flags.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/Google_Flags_VI.md)) before making claims about this feature.
+
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
 
 **Usage:**
