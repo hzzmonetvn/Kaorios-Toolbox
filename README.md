@@ -49,7 +49,7 @@ See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guid
 
 The signed manager APK remains on [release 2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Version 2.0.6.1 publishes the framework DEX and patcher; compatibility checks cover the released manager's direct framework calls.
 
-**Google Flags is not supported by the 2.0.6.1 payload or patcher.** A newer Framework DEX passed CI at source commit `c014c00` ([build artifact](https://github.com/hzzmonetvn/KaoriosToolbox-Frameowrk/actions/runs/38688195711)), but has no verified ROM Phenotype query-result callsite; importing it alone cannot enable Google Flags. A13–A17 template labels do not establish a verified ROM callsite. Read the [Google Flags / newer DEX status and verification guide](Toolbox-docs/V2.0.3+/Google_Flags.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/Google_Flags_VI.md)) before making claims about this feature.
+**Google Flags is not supported by the published 2.0.6.1 payload or patcher.** Importing a DEX alone cannot enable it: no verified ROM Phenotype query-result callsite or Google Flags patch recipe is available for A13–A17. Read the [Google Flags patch status and verification guide](Toolbox-docs/V2.0.3+/Google_Flags.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/Google_Flags_VI.md)) before making claims about this feature.
 
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
 
