@@ -7,8 +7,8 @@
 
 ## 2026-10-15 — Verified 2.0.6.1 pre-release refresh
 
-- Replaced the DEX and patcher ZIP in the existing pre-release after exact-source CI and saved-asset checks; downloaded both again with `SHA256SUMS` passing. Current SHA-256: DEX `fe2765c683b85614baf51f624857d5627a31f95bab7190d453da9457d8735e19`, ZIP `0d8e754d88349219221d36e322b95180aad04854b18ae458a1f6b904e4442f71`. The older values below record earlier release states, not current downloads. The stable/latest 2.0.6.0 release was not changed; previous 2.0.6.1 downloaders must fetch the new bytes.
-- Rejected reusing the older ZIP after source tests alone and claiming Google Flags ROM support from a compiled bridge. Checked 20 direct manager method references, five field references and nine manual hook descriptors against defined DEX members; no general ABI, saved-ROM or real-device result follows from those checks.
+- Replaced the DEX and patcher ZIP in the existing pre-release after exact-source CI and saved-asset checks; downloaded both again with `SHA256SUMS` passing. Current SHA-256: DEX `f2d9f754bf87a96f4202d332f68c8f155e6e1beb947b719eef6378131a0af4c6`, ZIP `58ed595bf1789502e387e87b806dd418297bdb78a71bbc87adcb04fad1f17597`. The older values below record earlier release states, not current downloads. The stable/latest 2.0.6.0 release was not changed; previous 2.0.6.1 downloaders must fetch the new bytes.
+- Rejected reusing the older ZIP after source tests alone and claiming Google Flags ROM support from a compiled bridge. Checked 21 direct manager method references, eight field references and 10 manual hook descriptors against defined DEX members; verified that the seven removed SettingsProvider hook bridges are completely absent. No general ABI, saved-ROM or real-device result follows from those checks.
 
 ## 2026-10-15 — Patcher and guide audit for 2.0.6.1
 
