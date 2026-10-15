@@ -1,10 +1,10 @@
 # Kaorios Toolbox 2.0.6.1 — Patcher smali tự động (Android 13–17)
 
-[English](Patcher_Guide_2.0.6.1.md) | [Các hook patch tay](Patch_Guide_2.0.6.1_VI.md) | [Ví dụ Secure Flag](Disable_Secure_Flag_VI.md) | [Google Flags / trạng thái Framework DEX mới](Google_Flags_VI.md)
+[English](Patcher_Guide_2.0.6.1.md) | [Các hook patch tay](Patch_Guide_2.0.6.1_VI.md) | [Ví dụ Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
 
 **Patcher làm gì:** patch **file smali** được hỗ trợ, không tự sửa JAR nguyên chiếc. Nó **không** import payload hoặc thêm mọi hook tùy chọn. Chỉ sửa **bản sao** `framework.jar` và `services.jar` stock của cùng build ROM được phép sửa; giữ stock sạch, SHA-256 và cách khôi phục. Giữ nguyên `SettingsProvider.apk`. Chạy từ gốc repo `public/`; đường dẫn output phải khác stock.
 
-**Ranh giới payload:** Guide patcher này chỉ bao phủ các hook **2.0.6.1 đã phát hành**. Patcher không chèn caller query-result Phenotype. Framework DEX mới tồn tại dưới dạng artifact CI tạm thời; xem [guide Google Flags](Google_Flags_VI.md) để biết build, checksum và điểm dừng. Không tự thay payload phát hành trong workflow này hoặc coi patcher PASS là hỗ trợ Google Flags.
+**Ranh giới payload:** Guide patcher này chỉ bao phủ các hook **2.0.6.1 đã phát hành**. Patcher không chèn caller query-result Phenotype. [Guide Google Flags](Google_Flags_VI.md) nêu bằng chứng còn thiếu và điểm dừng. Không tự thay payload chưa phát hành hoặc coi patcher PASS là hỗ trợ Google Flags.
 
 ## 1. Tìm class và DEX owner
 
