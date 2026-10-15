@@ -2,7 +2,7 @@
 
 ## 2026-10-15 — Newer Framework DEX and patch guidance
 
-- Document the exact-source `c014c00` Framework DEX CI result as build evidence in the paired Google Flags guides, without publishing its binary or internal artifact checksums in the public repository. Keep the published 2.0.6.1 payload and its manual/automatic hook recipes intact and add explicit cross-links and warnings, rather than silently substituting a CI artifact for the release DEX.
+- Keep the published 2.0.6.1 payload and its manual/automatic hook recipes intact, with explicit cross-links and warnings against substituting an unpublished Framework DEX. Do not put private Framework CI artifact details or internal source status in public guidance; an artifact build is not a released Google Flags payload.
 - Reject a Phenotype smali recipe or patcher mode for A13–A17: no attributable stock ROM query-result method, owner DEX, register layout or saved-artifact verifier has been established for any version. A compiled bridge plus passing tests cannot install or verify the missing caller. Do not publish a new release or claim ROM/device behavior from the CI artifact.
 
 ## 2026-10-14 — Google Flags documentation boundary
