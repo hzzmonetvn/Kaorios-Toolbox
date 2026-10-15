@@ -47,9 +47,9 @@ For **version 2.0.4.0 and below**, see:
 
 See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1_VI.md). Agents manually patching authorized ROM copies should also follow the [manual-patching agent procedure](Toolbox-docs/agent.md).
 
-The signed manager APK remains on [release 2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Version 2.0.6.1 publishes the framework DEX and patcher; compatibility checks cover the released manager's direct framework calls.
+[Release 2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0) remains stable/latest and supplies the signed manager APK. [2.0.6.1](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.1) is a pre-release with a replaced Framework `classes.dex` (SHA-256 `786decf137ad0d662ee7e82a0ee3575fc9883144388c7268e0e665088377cb95`) and unchanged patcher ZIP. The released manager's direct framework method and field references were checked against the replacement DEX; this does not guarantee ABI compatibility for other consumers of an earlier DEX.
 
-**Google Flags is not supported by the published 2.0.6.1 payload or patcher.** Importing a DEX alone cannot enable it: no verified ROM Phenotype query-result callsite or Google Flags patch recipe is available for A13–A17. Read the [Google Flags patch status and verification guide](Toolbox-docs/V2.0.3+/Google_Flags.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/Google_Flags_VI.md)) before making claims about this feature.
+**The 2.0.6.1 ROM patch workflow does not support Google Flags interception.** The replacement DEX contains a callable query-result helper, but importing it or running the patcher does not add a verified ROM Phenotype caller. No Google Flags patch recipe is available for A13–A17. Read the [Google Flags patch status and verification guide](Toolbox-docs/V2.0.3+/Google_Flags.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/Google_Flags_VI.md)) before making claims about this feature.
 
 ### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
 

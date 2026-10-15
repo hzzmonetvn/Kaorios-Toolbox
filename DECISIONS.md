@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-15 — 2.0.6.1 pre-release payload replacement
+
+- Supersedes the earlier 2026-10-14/15 statements about the published 2.0.6.1 DEX being older than Google Flags or keeping that asset unchanged: replaced `classes.dex` in the existing 2.0.6.1 release with the verified compiled payload (SHA-256 `786decf137ad0d662ee7e82a0ee3575fc9883144388c7268e0e665088377cb95`) and updated `SHA256SUMS`; retained the patcher ZIP. Marked 2.0.6.1 pre-release while 2.0.6.0 remains stable/latest. The released 2.0.6.0 manager's direct framework references and existing manual hook descriptors remain available in the replacement DEX; compatibility with other callers of the old DEX is not guaranteed.
+- Chose to document the callable Google Flags query-result helper without claiming supported ROM interception: the patcher and manual guides have no verified Phenotype caller, ROM-specific insertion recipe or saved-ROM verifier for A13–A17. Rejected treating compiled source, a same-tag replacement or host tests as device validation. Keep private source/build details out of public docs and do not replace stock ROM classes or guess a query hook.
+
 ## 2026-10-15 — Google Flags patch guidance
 
 - Keep the published 2.0.6.1 payload and its manual/automatic hook recipes intact, with explicit cross-links and warnings against substituting an unpublished Framework DEX. Do not put private Framework CI artifact details or internal source status in public guidance; an artifact build is not a released Google Flags payload.

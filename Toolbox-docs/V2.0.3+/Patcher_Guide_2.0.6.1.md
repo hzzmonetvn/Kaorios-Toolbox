@@ -4,7 +4,7 @@
 
 **What this does:** patch supported **smali files**, not whole JARs. It does **not** import payload or patch all optional hooks. Work only on authorized **copies** of stock `framework.jar` and `services.jar` from the same ROM build, with clean originals, SHA-256 hashes and a recovery plan. Keep `SettingsProvider.apk` stock. Run from the `public/` repo root; output must differ from stock.
 
-**Payload boundary:** This patcher guide covers the published **2.0.6.1** hooks only. It does not insert a Phenotype query-result caller. The [Google Flags guide](Google_Flags.md) explains the missing evidence and stop condition. Do not substitute an unpublished payload or claim Google Flags support from a patcher PASS.
+**Payload boundary:** This patcher covers only the listed ROM hooks; it does not insert a Phenotype query-result caller, even with the current 2.0.6.1 pre-release DEX. The [Google Flags guide](Google_Flags.md) explains the missing evidence and stop condition. Verify the current release asset checksum before import; a patcher PASS does not establish Google Flags support.
 
 ## 1. Find the class and owner DEX
 

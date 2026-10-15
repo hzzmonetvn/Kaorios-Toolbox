@@ -4,7 +4,7 @@
 
 **Patcher làm gì:** patch **file smali** được hỗ trợ, không tự sửa JAR nguyên chiếc. Nó **không** import payload hoặc thêm mọi hook tùy chọn. Chỉ sửa **bản sao** `framework.jar` và `services.jar` stock của cùng build ROM được phép sửa; giữ stock sạch, SHA-256 và cách khôi phục. Giữ nguyên `SettingsProvider.apk`. Chạy từ gốc repo `public/`; đường dẫn output phải khác stock.
 
-**Ranh giới payload:** Guide patcher này chỉ bao phủ các hook **2.0.6.1 đã phát hành**. Patcher không chèn caller query-result Phenotype. [Guide Google Flags](Google_Flags_VI.md) nêu bằng chứng còn thiếu và điểm dừng. Không tự thay payload chưa phát hành hoặc coi patcher PASS là hỗ trợ Google Flags.
+**Ranh giới payload:** Patcher này chỉ bao phủ các hook ROM được liệt kê; nó không chèn caller query-result Phenotype, kể cả với DEX pre-release 2.0.6.1 hiện tại. [Guide Google Flags](Google_Flags_VI.md) nêu bằng chứng còn thiếu và điểm dừng. Kiểm tra checksum asset release hiện tại trước khi import; patcher PASS không chứng minh hỗ trợ Google Flags.
 
 ## 1. Tìm class và DEX owner
 
