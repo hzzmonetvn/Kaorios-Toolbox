@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-15 — Verified 2.0.6.1 pre-release refresh
+
+- Replaced the DEX and patcher ZIP in the existing pre-release after exact-source CI and saved-asset checks; downloaded both again with `SHA256SUMS` passing. Current SHA-256: DEX `fe2765c683b85614baf51f624857d5627a31f95bab7190d453da9457d8735e19`, ZIP `0d8e754d88349219221d36e322b95180aad04854b18ae458a1f6b904e4442f71`. The older values below record earlier release states, not current downloads. The stable/latest 2.0.6.0 release was not changed; previous 2.0.6.1 downloaders must fetch the new bytes.
+- Rejected reusing the older ZIP after source tests alone and claiming Google Flags ROM support from a compiled bridge. Checked 20 direct manager method references, five field references and nine manual hook descriptors against defined DEX members; no general ABI, saved-ROM or real-device result follows from those checks.
+
 ## 2026-10-15 — Patcher and guide audit for 2.0.6.1
 
 - Reproduced and corrected false `ALREADY_PATCHED`/`PATCHED` results for Build String initializers, misplaced Keystore generator hooks, mismatched `.class` owners, crossing parameter `/range` operands, and shifted literal instruction encoding. Keystore entry hooks now follow parameter metadata; ambiguous leading labels and unverifiable stock fallbacks fail closed. Rejected treating hook-name presence, matching filenames, or register bounds alone as proof that stock behavior survives.
