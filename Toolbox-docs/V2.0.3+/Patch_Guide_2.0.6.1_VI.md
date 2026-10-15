@@ -1,12 +1,14 @@
 # Kaorios Toolbox 2.0.6.1 — Patch ROM bằng tay (Android 13–17)
 
-[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Ví dụ Secure Flag](Disable_Secure_Flag_VI.md)
+[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Ví dụ Secure Flag](Disable_Secure_Flag_VI.md) | [Google Flags / trạng thái Framework DEX mới](Google_Flags_VI.md)
 
 **Sửa gì:** bản sao `framework.jar` và `services.jar` **cùng build ROM được phép sửa**. Giữ stock nguyên bản và SHA-256 riêng ngoài workspace; chuẩn bị cách khôi phục trước khi thay đổi trên thiết bị. Dùng editor multidex và công cụ smali tương thích DEX đầu vào. Giữ nguyên `SettingsProvider.apk`. Không dùng đường dẫn stock làm output.
 
 **Tìm class trước:** liệt kê mọi `classes*.dex` trong hai JAR, disassemble từng split riêng, tìm **đúng một DEX** chứa class và method theo chữ ký dưới đây. Chỉ sửa split owner đó. [Template theo Android](../Template/Template_V2060/README.md) là mẫu logic, **không phải class để chép đè ROM**. Dừng nếu owner trùng, thiếu method cần thiết hoặc luồng ROM khác ví dụ.
 
 **Trước khi chèn:** kiểm tra `.locals`/`.registers`, alias `pN`/`vN` và cấp đủ local trống. Nếu thêm locals khiến parameter dịch vị trí, chuyển alias `vN` cũ của parameter sang `pN` *trước* khi tăng số rồi kiểm tra mọi lệnh stock còn mã hóa được. `invoke {…}` thường chỉ dùng register vật lý ≤15; `/range` cần operand liên tiếp. `move-result` phải ngay sau `invoke`. Hook đầu method đặt sau metadata `.param`/`.annotation` và **trước label/lệnh stock đầu tiên**. Dùng nhãn fallback chưa có trong method. Dòng stock trong ví dụ chỉ là **mốc vị trí**, không chèn lặp. Nếu không chứng minh được các điều kiện này, dừng thay vì chép snippet nguyên xi.
+
+**Ranh giới payload:** Guide này chỉ dành cho **payload 2.0.6.1 đã phát hành**. Framework DEX build từ source mới có dưới dạng artifact CI tạm thời, nhưng DEX đó và guide này đều không cài hook query-result Phenotype. Xem [guide Google Flags / Framework DEX mới](Google_Flags_VI.md) để biết build source chính xác, checksum và điểm dừng. Không tự thay artifact CI vào các bước dưới đây hoặc coi kết quả là bản patch ROM Google Flags đã hỗ trợ.
 
 ## 1. Import payload — `framework.jar`
 

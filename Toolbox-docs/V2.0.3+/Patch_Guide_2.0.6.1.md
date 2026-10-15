@@ -1,12 +1,14 @@
 # Kaorios Toolbox 2.0.6.1 — Manual ROM patch (Android 13–17)
 
-[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md)
+[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md) | [Google Flags / newer Framework DEX status](Google_Flags.md)
 
 **What you edit:** copies of `framework.jar` and `services.jar` from the **same authorized ROM build**. Keep stock originals and their SHA-256 hashes outside the workspace; have a recovery plan before changing a device. Use a multidex-aware editor and smali toolchain compatible with the input DEX. Leave `SettingsProvider.apk` stock. Never write output over stock.
 
 **First, locate each class:** list every `classes*.dex` in both JARs, disassemble each split separately, then find the *one* DEX containing the exact class and method signature below. Edit that owner split, not an entire template class. [Templates by Android version](../Template/Template_V2060/README.md) show the intended logic, **not replacement ROM classes**. Stop if an owner is duplicated, a required method is missing, or the ROM's control flow differs from the example.
 
 **Before inserting any snippet:** find the method's `.locals` or `.registers` and existing `pN`/`vN` aliases. Reserve any needed fresh locals; if increasing locals shifts parameter registers, change old `vN` parameter aliases to `pN` *before* increasing the count and check that all stock instructions remain encodable. Ordinary `invoke {…}` operands must have physical register indices ≤15; `/range` operands must be consecutive. Keep `invoke` next to its `move-result`. Insert entry hooks after `.param`/`.annotation` metadata and **before the first stock label/instruction**. Choose fallback labels not already in the method. The stock lines shown below are **position markers**, not extra lines to duplicate. If these checks cannot be met, stop; do not paste the example unchanged.
+
+**Payload boundary:** This guide is for the **published 2.0.6.1 payload only**. A newer source-built Framework DEX is available as a temporary CI artifact, but neither that DEX nor this guide installs a Phenotype query-result hook. For its exact-source build, checksums, and the stop condition for Google Flags, read the [Google Flags / newer Framework DEX guide](Google_Flags.md). Do not silently substitute the CI artifact in the steps below or call the result a supported Google Flags ROM patch.
 
 ## 1. Import payload — `framework.jar`
 

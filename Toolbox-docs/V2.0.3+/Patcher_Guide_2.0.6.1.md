@@ -1,8 +1,10 @@
 # Kaorios Toolbox 2.0.6.1 — Automatic smali patcher (Android 13–17)
 
-[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md)
+[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md) | [Google Flags / newer Framework DEX status](Google_Flags.md)
 
 **What this does:** patch supported **smali files**, not whole JARs. It does **not** import payload or patch all optional hooks. Work only on authorized **copies** of stock `framework.jar` and `services.jar` from the same ROM build, with clean originals, SHA-256 hashes and a recovery plan. Keep `SettingsProvider.apk` stock. Run from the `public/` repo root; output must differ from stock.
+
+**Payload boundary:** This patcher guide covers the published **2.0.6.1** hooks only. It does not insert a Phenotype query-result caller. A newer Framework DEX exists as a temporary CI artifact; its build, checksums and Google Flags stop condition are in the [Google Flags guide](Google_Flags.md). Do not silently replace the released payload in this workflow or claim Google Flags support from a patcher PASS.
 
 ## 1. Find the class and owner DEX
 
