@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Manual ROM patch (Android 13–17)
 
-[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
+[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
 
 **What you edit:** copies of `framework.jar` and `services.jar` from the **same authorized ROM build**. Keep stock originals and their SHA-256 hashes outside the workspace; have a recovery plan before changing a device. Use a multidex-aware editor and smali toolchain compatible with the input DEX. Leave `SettingsProvider.apk` stock. Never write output over stock.
 
@@ -223,7 +223,7 @@ That constructor line is stock, **not another line to add**. This example only a
 `p2` is the Settings key; null/false uses stock code. This is **not** a `SettingsProvider.apk` edit or a mode-1 target.
 
 - **Android 17 Build spoof:** in `framework.jar`, `Landroid/os/Build;`: remove `final` and set String initializers to `null` for `BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`; remove `final` only from `TIME:J`. In `Landroid/os/Build$VERSION;` remove `final` only from `RELEASE`, `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`. Leave `SDK_INT` and `<clinit>` alone. Example: `.field public static final BRAND:Ljava/lang/String; = "OEM"` → `.field public static BRAND:Ljava/lang/String; = null`. Mode 2 automates these fields, not other hooks.
-- [Secure Flag](Disable_Secure_Flag.md) and [CorePatch](CorePatch.md) have separate guides; neither is added by mode 1.
+- [Secure Flag](Disable_Secure_Flag.md) has limited guidance and no general `captureDisplay` recipe; [CorePatch](CorePatch.md) has a separate guide. Neither is added by mode 1.
 - **Kaorios Helper** is a separately installed [Zygisk module](../../Kaorios-Helper/README.md), **not** a framework/services hook or an artifact-patching script. It keeps ROM files stock; **do not enable HMA Helper alongside an HMA hook patched into the ROM**. Its own install/runtime checks are in that README.
 
 ## 5. Rebuild and check the *saved* JARs

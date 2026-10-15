@@ -233,9 +233,13 @@ case "${1:-status}" in
     enable-copg)
         lifecycle_lock || exit 1
         copg_ready || exit 1
+        [ -f "$CONFIG/copg.enabled" ] && helper_was_enabled=1 || helper_was_enabled=0
         touch "$CONFIG/copg.enabled"
         chmod 600 "$CONFIG/copg.enabled"
-        start_copg || { rm -f "$CONFIG/copg.enabled"; exit 1; }
+        start_copg || {
+            [ "$helper_was_enabled" = 1 ] || rm -f "$CONFIG/copg.enabled"
+            exit 1
+        }
         ;;
     disable-copg)
         lifecycle_lock || exit 1

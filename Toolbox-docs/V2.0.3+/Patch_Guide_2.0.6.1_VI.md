@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Patch ROM bằng tay (Android 13–17)
 
-[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Ví dụ Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
+[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
 
 **Sửa gì:** bản sao `framework.jar` và `services.jar` **cùng build ROM được phép sửa**. Giữ stock nguyên bản và SHA-256 riêng ngoài workspace; chuẩn bị cách khôi phục trước khi thay đổi trên thiết bị. Dùng editor multidex và công cụ smali tương thích DEX đầu vào. Giữ nguyên `SettingsProvider.apk`. Không dùng đường dẫn stock làm output.
 
@@ -223,7 +223,7 @@ Dòng constructor là **stock**, không thêm lại. Ví dụ chỉ đúng nếu
 `p2` là key; key null/hook false thì theo stock. Đây **không phải** sửa `SettingsProvider.apk` hay target mode 1.
 
 - **Build spoof Android 17:** Trong `framework.jar`, `Landroid/os/Build;`: bỏ `final` và đặt String initializer `null` cho `BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`; chỉ bỏ `final` của `TIME:J`. Với `Landroid/os/Build$VERSION;`, chỉ bỏ `final` của `RELEASE`, `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`. Giữ nguyên `SDK_INT` và `<clinit>`. Ví dụ `.field public static final BRAND:Ljava/lang/String; = "OEM"` → `.field public static BRAND:Ljava/lang/String; = null`. Mode 2 tự sửa những field này, không thêm các hook khác.
-- [Secure Flag](Disable_Secure_Flag_VI.md) và [CorePatch](CorePatch_VI.md) có guide riêng; mode 1 không tự thêm.
+- [Secure Flag](Disable_Secure_Flag_VI.md) chỉ có hướng dẫn giới hạn, chưa có recipe `captureDisplay` chung; [CorePatch](CorePatch_VI.md) có guide riêng. Mode 1 không tự thêm hai phần này.
 - **Kaorios Helper** là [module Zygisk cài riêng](../../Kaorios-Helper/README.md), **không phải** hook trong framework/services hay script dựng artifact. Module giữ ROM stock; **không bật HMA Helper cùng hook HMA đã patch ROM**. Cách cài/kiểm tra runtime nằm trong README đó.
 
 ## 5. Dựng và kiểm tra *JAR đã lưu*

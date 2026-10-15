@@ -1,6 +1,6 @@
 # Kaorios Helper — Giấy phép source
 
-Rà soát upstream ngày 06/10/2026; bổ sung source Helper ngày 07/10/2026. Đây là kết quả kiểm tra upstream để chuẩn bị làm module; chưa có bản Helper gồm đủ ba thành phần được build hoặc phát hành.
+Rà soát upstream ngày 06/10/2026; bổ sung source Helper ngày 07/10/2026. Các nhận định theo mốc thời gian bên dưới ghi lại lịch sử rà soát, không mô tả bản build hiện tại. Workflow Helper hiện đóng gói bản **Full thử nghiệm** gồm HMA, TEE và COPG từ source được ghim; build host không xác nhận boot/hook trên thiết bị hoặc đủ điều kiện phát hành production. Xem [README Helper](../Kaorios-Helper/README.md).
 
 ## Giấy phép chính
 
@@ -39,11 +39,11 @@ Danh sách trên chưa phải kiểm kê toàn bộ dependency của bản build
 
 Không đưa source riêng tư của Toolbox vào Helper. Tách app và module qua IPC không đủ để tự kết luận phạm vi AGPL; cần xét cách kết hợp thực tế. Không copy source AGPL vào app đóng source rồi coi đó là hai chương trình độc lập. [GNU: quan hệ giữa các thành phần](https://www.gnu.org/licenses/gpl-faq.html#MereAggregation).
 
-## Phần COPG còn thiếu
+## Lịch sử rà soát COPG — 06/10/2026
 
-Đã kiểm tra cây file của nhánh JSON, rewrite, bkp và tag v7.3.0. Các bản này không có thư mục `src/` hay file C++ mà script build yêu cầu, như `src/spoof_module.cpp` và `src/unified_controller.cpp`.
+Ở thời điểm đó, cây file của nhánh JSON, rewrite, bkp và tag v7.3.0 được kiểm tra không có thư mục `src/` hay file C++ mà script build yêu cầu, như `src/spoof_module.cpp` và `src/unified_controller.cpp`. Kết luận thiếu source native này **chỉ áp dụng cho các phiên bản đã kiểm tra khi đó**; không còn mô tả trạng thái tích hợp Helper hiện tại.
 
-Cần lấy source native và xác minh giấy phép áp dụng cho phần đó trước khi tích hợp. File Apache-2.0 trong repo không đủ để kết luận về code native không được cung cấp. Không dùng binary release để tuyên bố Helper đã build hoàn toàn từ source.
+Hiện `Kaorios-Helper/upstreams.json` ghim snapshot COPG lịch sử 5.1.1 có source native; `tools/prepare_copg.py` chuẩn bị thay đổi và workflow `build-helper.yml` build bản Full thử nghiệm từ source. Giữ giấy phép và notice tương ứng; không dùng binary release để tuyên bố đã build từ source. Việc đóng gói source/license không thay thế rà soát nghĩa vụ từng dependency hay kiểm chứng thiết bị.
 
 ## Bản thử nghiệm HMA + TEE — 07/10/2026
 

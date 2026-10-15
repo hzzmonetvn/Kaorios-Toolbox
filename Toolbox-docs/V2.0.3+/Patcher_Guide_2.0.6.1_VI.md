@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Patcher smali tự động (Android 13–17)
 
-[English](Patcher_Guide_2.0.6.1.md) | [Các hook patch tay](Patch_Guide_2.0.6.1_VI.md) | [Ví dụ Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
+[English](Patcher_Guide_2.0.6.1.md) | [Các hook patch tay](Patch_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
 
 **Patcher làm gì:** patch **file smali** được hỗ trợ, không tự sửa JAR nguyên chiếc. Nó **không** import payload hoặc thêm mọi hook tùy chọn. Chỉ sửa **bản sao** `framework.jar` và `services.jar` stock của cùng build ROM được phép sửa; giữ stock sạch, SHA-256 và cách khôi phục. Giữ nguyên `SettingsProvider.apk`. Chạy từ gốc repo `public/`; đường dẫn output phải khác stock.
 
@@ -43,7 +43,7 @@ Ghi `descriptor class → JAR → classes*.dex → method chính xác`. Tìm ở
 
 - Android 13–16: **mode 1** cho hook hỗ trợ.
 - Android 17: **mode 1** cho hook hỗ trợ; **mode 2** tùy chọn sửa field `Build.smali` và `Build$VERSION.smali`; **mode 3** kết hợp 1+2 trong cùng cây input, không qua các DEX/JAR khác nhau. Mode 2/3 không dành cho Android 13–16.
-- **Không tự động:** import payload; hook `Settings$NameValueCache` tùy chọn ẩn developer/ADB, [Secure Flag](Disable_Secure_Flag_VI.md), [CorePatch](CorePatch_VI.md), hoặc mọi overload OEM. Xem [guide patch tay](Patch_Guide_2.0.6.1_VI.md) cho trình tự JAR → class → method → snippet và kiểm tra register.
+- **Không tự động:** import payload; hook `Settings$NameValueCache` tùy chọn ẩn developer/ADB, [Secure Flag](Disable_Secure_Flag_VI.md) (chưa có recipe `captureDisplay` chung), [CorePatch](CorePatch_VI.md), hoặc mọi overload OEM. Xem [guide patch tay](Patch_Guide_2.0.6.1_VI.md) cho trình tự JAR → class → method → snippet và kiểm tra register.
 - **Kaorios Helper** là [module Zygisk cài riêng](../../Kaorios-Helper/README.md), không phải hook ROM hay các script dựng JAR này. Nó để framework/services stock. **Không bật HMA Helper cùng hook HMA patch trong ROM.**
 
 ## 3. Patch đúng cây owner

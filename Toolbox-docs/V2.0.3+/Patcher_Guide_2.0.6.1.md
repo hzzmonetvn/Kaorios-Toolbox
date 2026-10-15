@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Automatic smali patcher (Android 13–17)
 
-[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
+[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
 
 **What this does:** patch supported **smali files**, not whole JARs. It does **not** import payload or patch all optional hooks. Work only on authorized **copies** of stock `framework.jar` and `services.jar` from the same ROM build, with clean originals, SHA-256 hashes and a recovery plan. Keep `SettingsProvider.apk` stock. Run from the `public/` repo root; output must differ from stock.
 
@@ -43,7 +43,7 @@ Record `class descriptor → JAR → classes*.dex → matching method`. Search *
 
 - Android 13–16: **mode 1** for supported hooks.
 - Android 17: **mode 1** for supported hooks; optional **mode 2** edits `Build.smali` and `Build$VERSION.smali` fields only; **mode 3** combines 1 and 2 on the same input tree, not across different DEXes/JARs. Modes 2/3 are rejected for Android 13–16.
-- **Not automatic:** importing any payload class; optional `Settings$NameValueCache` developer/ADB-status hook, [Secure Flag](Disable_Secure_Flag.md), [CorePatch](CorePatch.md), or every OEM overload. See the [manual guide](Patch_Guide_2.0.6.1.md) for the JAR → class → method → exact smali insertion and register checks.
+- **Not automatic:** importing any payload class; optional `Settings$NameValueCache` developer/ADB-status hook, [Secure Flag](Disable_Secure_Flag.md) (no general `captureDisplay` recipe), [CorePatch](CorePatch.md), or every OEM overload. See the [manual guide](Patch_Guide_2.0.6.1.md) for the JAR → class → method → exact smali insertion and register checks.
 - **Kaorios Helper** is a [separately installed Zygisk module](../../Kaorios-Helper/README.md), not a ROM hook or these artifact scripts. It leaves framework/services stock. **Do not enable HMA Helper at the same time as a ROM-patched HMA hook.**
 
 ## 3. Patch the smali owner trees

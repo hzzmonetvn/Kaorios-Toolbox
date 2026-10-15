@@ -83,42 +83,9 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
     :cond_kaorios
 ```
 
-### 3 
-**Method:**
-```smali
-captureDisplay(ILandroid/window/ScreenCapture$CaptureArgs;Landroid/window/ScreenCapture$ScreenCaptureListener;)V
-```
+### 3. Optional display capture path — no general patch recipe
 
-**Reference smali:** [`WindowManagerService.smali`](../Template/Template_V2060/service/WindowManagerService.smali)
+Do not apply the previous `captureDisplay` insertion example. Its method signature did not match the linked template, and it cleared `v0` while the example's blocking branch tested `v5`. The template is not evidence that the same callsite or registers exist in your ROM.
 
-in method find:
-```smali
-->notAllowCaptureDisplay(Lcom/android/server/wm/RootWindowContainer;I)Z
-```
-
-Below the line:
-```smali
-->notAllowCaptureDisplay(Lcom/android/server/wm/RootWindowContainer;I)Z
-
-    move-result vY
-```
-
-Add:
-```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
-
-    move-result vX
-
-    if-eqz vX, :cond_kaorios
-
-    const/4 v0, 0x0
-
-    :cond_kaorios
-```
-
-**Add +1 to the Registers number, and replace vX with the new register.**
-
-For example: registers 7 -> registers 8 and vX = v3
-
-**In some ROMs, this method may not find the blocking code, so it can be skipped.**
+Before proposing a patch for this optional path, inspect an authorized copy of the specific ROM build and record the owning JAR and DEX split, exact method descriptor, capture-blocking callsite, result register, control flow and stock fallback. If these cannot be established, skip this path; do not guess a replacement insertion. Any ROM-specific patch must then be rebuilt into a saved output JAR and checked by re-disassembling the DEX from that saved artifact. A template or host-only check does not verify the final ROM artifact or device behavior.
 
