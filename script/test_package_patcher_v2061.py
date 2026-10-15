@@ -26,6 +26,7 @@ class PatcherPackageTest(unittest.TestCase):
             with zipfile.ZipFile(first) as archive:
                 self.assertEqual(sorted(packager.MEMBERS), archive.namelist())
                 self.assertEqual(len(packager.MEMBERS), len(archive.namelist()))
+                self.assertFalse(any('settingsprovider' in name.lower() for name in archive.namelist()))
                 for info in archive.infolist():
                     self.assertEqual((1980, 1, 1, 0, 0, 0), info.date_time)
                     self.assertEqual(zipfile.ZIP_STORED, info.compress_type)
@@ -54,7 +55,7 @@ class PatcherPackageTest(unittest.TestCase):
                 packager.package(root, output, ('script/safe.py',))
             self.assertEqual(b'original', output.read_bytes())
 
-    def test_extracted_entrypoints_reject_provider_only_input(self):
+    def test_extracted_patcher_ignores_provider_only_and_mixed_directories(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             archive_path = root / 'package.zip'
@@ -63,23 +64,37 @@ class PatcherPackageTest(unittest.TestCase):
             extracted.mkdir()
             with zipfile.ZipFile(archive_path) as archive:
                 archive.extractall(extracted)
+            stock = b'stock provider bytes\r\n'
             provider = root / 'SettingsProvider.smali'
-            provider.write_bytes(b'stock provider bytes\r\n')
-            commands = (
-                [sys.executable, '-I', str(extracted / 'script/kaorios_patcher.py'), str(provider),
-                 '--android-version', '17', '--mode', '1', '--no-delay'],
-                [sys.executable, '-I', str(extracted / 'script/patch-settingsprovider-a17.py'), str(provider)],
-                ['bash', str(extracted / 'script/patch-settingsprovider-a17-artifact.sh'),
-                 '--input', str(provider), '--output', str(root / 'patched.apk')],
-            )
-            for index, command in enumerate(commands):
-                with self.subTest(command=command):
+            provider.write_bytes(stock)
+            patcher = extracted / 'script/kaorios_patcher.py'
+            for mode in ('1', '3'):
+                with self.subTest(mode=mode):
+                    command = [sys.executable, '-I', str(patcher), str(provider),
+                               '--android-version', '17', '--mode', mode, '--no-delay']
                     result = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=10)
                     self.assertNotEqual(0, result.returncode)
-                    self.assertIn('SettingsProvider.smali' if index == 0 else 'Fake Settings has been removed',
-                                  result.stdout + result.stderr)
-                    self.assertEqual(b'stock provider bytes\r\n', provider.read_bytes())
-                    self.assertFalse((root / 'patched.apk').exists())
+                    self.assertIn('SettingsProvider.smali', result.stdout + result.stderr)
+                    self.assertEqual(stock, provider.read_bytes())
+
+                    mixed = root / f'mixed-{mode}'
+                    mixed.mkdir()
+                    mixed_provider = mixed / 'SettingsProvider.smali'
+                    mixed_provider.write_bytes(stock)
+                    generator = mixed / 'AndroidKeyStoreKeyPairGeneratorSpi.smali'
+                    generator.write_text(
+                        '.class public Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;\n'
+                        '.super Ljava/security/KeyPairGeneratorSpi;\n'
+                        '.method public generateKeyPair()Ljava/security/KeyPair;\n'
+                        '    .locals 1\n'
+                        '    const/4 v0, 0x0\n'
+                        '    return-object v0\n'
+                        '.end method\n')
+                    command[3] = str(mixed)
+                    result = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=10)
+                    self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                    self.assertEqual(stock, mixed_provider.read_bytes())
+                    self.assertIn('initGenerateSoftwareKeyPair', generator.read_text())
 
 
 if __name__ == '__main__':

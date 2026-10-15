@@ -21,7 +21,6 @@ For **version 2.0.4.0 and below**, see:
 - 🧰 Payload dumper integration.
 - 🎮 Unlock high-FPS modes in games.
 - 📊 Overlay display for FPS and CPU.
-- ⚙️ Spoof setting value per app
 
 ---
 ## 🖼️ Screenshots

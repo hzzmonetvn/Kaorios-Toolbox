@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-15 — Remove the retired SettingsProvider patch route
+
+- Removed the three retired provider patch/verifier entry points, their dedicated test, five A13–A17 provider smali samples and four historical 2.0.6.0 guides. The public 2.0.6.1 ZIP source inventory no longer includes those four script/test members. Removed the obsolete "Spoof setting value per app" feature bullet from README.md. This changes the source and future packaged ZIPs, not an already published release asset; release replacement requires separate verification.
+- Rejected keeping fail-closed wrappers and provider-era recipes as historical entry points: they imply a supported patch path that is no longer offered. Retained explicit stock `SettingsProvider.apk` guidance and regression checks that provider-only input fails and mixed-directory runs never alter provider bytes. Kept the stock-provider SELinux diagnostic and the distinct `framework.jar` `Settings$NameValueCache` hook; neither patches the provider APK. Earlier decisions below remain historical, not current instructions.
+
 ## 2026-10-15 — Verified 2.0.6.1 pre-release refresh
 
 - Replaced the DEX and patcher ZIP in the existing pre-release after exact-source CI and saved-asset checks; downloaded both again with `SHA256SUMS` passing. Current SHA-256: DEX `fe2765c683b85614baf51f624857d5627a31f95bab7190d453da9457d8735e19`, ZIP `0d8e754d88349219221d36e322b95180aad04854b18ae458a1f6b904e4442f71`. The older values below record earlier release states, not current downloads. The stable/latest 2.0.6.0 release was not changed; previous 2.0.6.1 downloaders must fetch the new bytes.

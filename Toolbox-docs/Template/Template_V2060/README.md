@@ -22,10 +22,9 @@ Each version contains:
 - `framework/Settings$NameValueCache.smali`
 - `service/ComputerEngine.smali`
 - `service/SystemServer.smali`
-- `settingsprovider/SettingsProvider.smali` — archived 2.0.6.0 sample only; do not use it to patch 2.0.6.1. Keep the stock provider APK.
 
 The A13-A16 Build files are stock references; the Android 17 Build files are patched by mode 2.
 
 Other files still stored directly under `framework/` and `service/` are optional CorePatch/FLAG_SECURE references and are not part of the automatic core patcher.
 
-Never replace a target ROM class with a whole template class. Match the method descriptor, register aliases and control flow. For current work, follow the [2.0.6.1 manual guide](../../V2.0.3+/Patch_Guide_2.0.6.1.md) ([Tiếng Việt](../../V2.0.3+/Patch_Guide_2.0.6.1_VI.md)) or [2.0.6.1 patcher guide](../../V2.0.3+/Patcher_Guide_2.0.6.1.md) ([Tiếng Việt](../../V2.0.3+/Patcher_Guide_2.0.6.1_VI.md)). The [2.0.6.0 manual](../../V2.0.3+/Patch_Guide_2.0.6.0.md) and [patcher](../../V2.0.3+/Patcher_Guide_2.0.6.0.md) guides are historical; their provider steps are retired.
+Never replace a target ROM class with a whole template class. Match the method descriptor, register aliases and control flow. For current work, follow the [2.0.6.1 manual guide](../../V2.0.3+/Patch_Guide_2.0.6.1.md) ([Tiếng Việt](../../V2.0.3+/Patch_Guide_2.0.6.1_VI.md)) or [2.0.6.1 patcher guide](../../V2.0.3+/Patcher_Guide_2.0.6.1.md) ([Tiếng Việt](../../V2.0.3+/Patcher_Guide_2.0.6.1_VI.md)). Keep `SettingsProvider.apk` stock.

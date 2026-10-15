@@ -75,7 +75,7 @@ Tên cây chỉ là ví dụ. Mode 3 có thể thay mode 1+2 trên **một** câ
 
 ## 4. Import payload và dựng bản sao JAR
 
-Patcher **không import payload**. Theo [guide tay §1](Patch_Guide_2.0.6.1_VI.md#1-import-payload--frameworkjar), import từng class payload vào bản sao **framework** JAR; descriptor đã có thì thay *class trong DEX owner cũ*, không chép cả DEX stock. Class mới có thể cần split mới. Không import payload vào services/provider, giữ class ROM khác. Assemble đúng những cây owner đã sửa với API tương thích, giữ tên entry gốc:
+Patcher **không import payload**. Theo [guide tay §1](Patch_Guide_2.0.6.1_VI.md#1-import-payload--frameworkjar), import từng class payload vào bản sao **framework** JAR; descriptor đã có thì thay *class trong DEX owner cũ*, không chép cả DEX stock. Class mới có thể cần split mới. Chỉ import payload vào `framework.jar`, giữ class ROM khác. Assemble đúng những cây owner đã sửa với API tương thích, giữ tên entry gốc:
 
 ```bash
 jar=framework; name=classes2  # ví dụ: lặp cho từng split owner đã sửa

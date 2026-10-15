@@ -75,7 +75,7 @@ These tree names are examples. Mode 3 can replace mode 1 + 2 for **one** tree on
 
 ## 4. Import payload and rebuild copies
 
-The patcher **does not import payload**. Follow [manual guide §1](Patch_Guide_2.0.6.1.md#1-import-payload--frameworkjar): import all payload classes individually into the copied **framework** JAR, replacing duplicates as *classes inside their existing owner DEX*, not overwriting an entire stock DEX. New classes may need a new split. Do **not** import payload into services/provider. Keep all other stock classes. Assemble only changed owner trees with the input-compatible API, retaining each original DEX entry name:
+The patcher **does not import payload**. Follow [manual guide §1](Patch_Guide_2.0.6.1.md#1-import-payload--frameworkjar): import all payload classes individually into the copied **framework** JAR, replacing duplicates as *classes inside their existing owner DEX*, not overwriting an entire stock DEX. New classes may need a new split. Import payload only into `framework.jar`. Keep all other stock classes. Assemble only changed owner trees with the input-compatible API, retaining each original DEX entry name:
 
 ```bash
 jar=framework; name=classes2  # example: repeat for each changed owner split

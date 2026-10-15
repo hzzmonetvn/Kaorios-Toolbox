@@ -7,7 +7,7 @@ import zipfile
 
 README_SOURCE = 'script/patcher_v2061_README.txt'
 
-# Legacy archive members, plus the current framework and register regression tests.
+# Public patcher members and framework/register regression tests.
 MEMBERS = (
     'README.txt',
     'script/check-advanced-policy-sepolicy.py',
@@ -22,18 +22,14 @@ MEMBERS = (
     'script/patch-installer-source.py',
     'script/patch-services-a17-artifact.sh',
     'script/patch-services-a17.py',
-    'script/patch-settingsprovider-a17-artifact.sh',
-    'script/patch-settingsprovider-a17.py',
     'script/patch-systemserver-a17.py',
     'script/publish-verified-artifact.py',
     'script/test_framework_artifact_plan.py',
     'script/test_keystore_consistency.py',
     'script/test_patcher_register_encoding.py',
-    'script/test_settingsprovider_anchor.py',
     'script/validate_keybox.py',
     'script/verify-framework-a17-hooks.py',
     'script/verify-services-a17-hooks.py',
-    'script/verify-settingsprovider-a17-hooks.py',
     'script/verify-systemserver-a17-hooks.py',
 )
 
