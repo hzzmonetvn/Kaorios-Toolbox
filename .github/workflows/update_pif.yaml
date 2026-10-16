@@ -15,10 +15,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
+      - name: Test PIF updater offline
+        run: bash Toolbox-Update/scripts/test_update_pif.sh
+
       - name: Update PIF
-        run: |
-          chmod +x Toolbox-Update/scripts/update_pif.sh
-          ./Toolbox-Update/scripts/update_pif.sh
+        run: bash Toolbox-Update/scripts/update_pif.sh
 
       - name: Commit and Push changes
         run: |

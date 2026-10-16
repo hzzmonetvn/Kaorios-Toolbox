@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-10-16 — Kow bot PIF daily source
+
+- Supersede the earlier stable-OTA updater policy below: daily default is Pixel 7 Pro (`cheetah`), and only Pixel 7 Pro, Pixel 7, Pixel 7a and Pixel 6a are eligible catalog entries. Resolve the bot HEAD once and fetch its manifest and four property files at that SHA; reject malformed or mismatched records before updating either JSON. Rejected OTA HTML scraping and publishing other upstream models.
+- Normalize five factual fields into our existing JSON schema without copying upstream scripts. The upstream [KOWX712/PlayIntegrityFix](https://github.com/KOWX712/PlayIntegrityFix) repository advertises [GPL-3.0](https://github.com/KOWX712/PlayIntegrityFix/blob/inject_s/LICENSE); the `bot` branch does not contain a separate license file. Source snapshot: [`08592e9d4488813a182e51470220811e643e59c1`](https://github.com/KOWX712/PlayIntegrityFix/tree/08592e9d4488813a182e51470220811e643e59c1). Its eligible records are `_beta`/CANARY, not verified stable builds or guaranteed Play Integrity verdicts.
+- Stage both JSON files and roll back the default if replacing the catalog fails; if rollback also fails, retain the original default backup on disk and report its path. This is not a cross-file atomic transaction under process termination or power loss. Offline mocks exercise HEAD pinning, rejection and rollback before any live data update.
+
 ## 2026-10-16 — Pixel ≤ 7 PIF data and stable-only updater
 
 - Supersede the earlier Pixel ≤ 9 catalog and priority below: restrict the default PIF and selectable public catalog to numbered Pixel 7-family and older devices. The current Pixel 7 Pro record uses the existing historical catalog fingerprint; this is not a claim of current Play Integrity success.
