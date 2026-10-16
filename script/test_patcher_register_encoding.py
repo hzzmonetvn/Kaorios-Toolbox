@@ -72,6 +72,87 @@ class PatcherRegisterEncodingTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'encoding limit v15'):
             patcher.verify_target_content('AndroidKeyStoreKeyPairGeneratorSpi.smali', bad)
 
+    def test_crossing_local_parameter_range_fails_without_mutation(self):
+        for end in ('v3', 'p0'):
+            with self.subTest(end=end):
+                original = generator(f'    invoke-static/range {{v2 .. {end}}}, Ljava/lang/Object;->wait(J)V\n', registers=4)
+                status, result, error = patcher.apply_target_patch(
+                    'AndroidKeyStoreKeyPairGeneratorSpi.smali', original,
+                    {'AndroidKeyStoreKeyPairGeneratorSpi.smali': patcher.patch_keystore_generator})
+                self.assertEqual(patcher.PatchStatus.UNSUPPORTED_LAYOUT, status)
+                self.assertEqual(original, result)
+                self.assertIn('crosses', error)
+
+    def test_shifted_lit16_source_fails_without_mutation(self):
+        original = generator('    add-int/lit16 v0, p0, 0x1\n')
+        status, result, error = patcher.apply_target_patch(
+            'AndroidKeyStoreKeyPairGeneratorSpi.smali', original,
+            {'AndroidKeyStoreKeyPairGeneratorSpi.smali': patcher.patch_keystore_generator})
+        self.assertEqual(patcher.PatchStatus.UNSUPPORTED_LAYOUT, status)
+        self.assertEqual(original, result)
+        self.assertIn('encoding limit v15', error)
+
+    def test_branch_label_named_like_register_is_not_an_operand(self):
+        original = generator('    if-eq v0, v1, :v255\n    :v255\n')
+        result, changed = patcher.patch_keystore_generator(original)
+        self.assertTrue(changed)
+        patcher.verify_target_content('AndroidKeyStoreKeyPairGeneratorSpi.smali', result)
+
+    def test_preexisting_generator_hook_must_be_at_entry_with_stock_fallback(self):
+        original = generator('    invoke-virtual/range {p0 .. p0}, Ljava/lang/Object;->toString()Ljava/lang/String;\n')
+        patched, _ = patcher.patch_keystore_generator(original)
+        invoke = ('invoke-static/range {p0 .. p0}' if 'invoke-static/range {p0 .. p0}' in patched
+                  else 'invoke-static {p0}')
+        cases = (
+            patched.replace('    ' + invoke,
+                            '    return-object v0\n    ' + invoke, 1),
+            patched.replace('    if-eqz v15, :cond_kaorios_gen_stock',
+                            '    if-nez v15, :cond_kaorios_gen_stock', 1),
+            patched.replace('    :cond_kaorios_gen_stock', '    :missing_stock', 1),
+        )
+        for bad in cases:
+            self.assertNotEqual(patched, bad)
+            with self.subTest(bad=bad):
+                status, result, error = patcher.apply_target_patch(
+                    'AndroidKeyStoreKeyPairGeneratorSpi.smali', bad,
+                    {'AndroidKeyStoreKeyPairGeneratorSpi.smali': patcher.patch_keystore_generator})
+                self.assertNotIn(status, (patcher.PatchStatus.PATCHED, patcher.PatchStatus.ALREADY_PATCHED))
+                self.assertEqual(bad, result)
+                self.assertIsNotNone(error)
+
+    def test_generator_entry_label_fails_closed(self):
+        original = generator('    :stock_entry\n    goto :stock_entry\n')
+        status, result, error = patcher.apply_target_patch(
+            'AndroidKeyStoreKeyPairGeneratorSpi.smali', original,
+            {'AndroidKeyStoreKeyPairGeneratorSpi.smali': patcher.patch_keystore_generator})
+        self.assertEqual(patcher.PatchStatus.UNSUPPORTED_LAYOUT, status)
+        self.assertEqual(original, result)
+        self.assertIn('entry label', error)
+
+    def test_generator_comment_is_not_a_stock_fallback_exit(self):
+        original = generator('')
+        patched, _ = patcher.patch_keystore_generator(original)
+        bad = patched.replace('    return-object v0\n.end method',
+                              '    # return-object v0\n.end method')
+        status, result, error = patcher.apply_target_patch(
+            'AndroidKeyStoreKeyPairGeneratorSpi.smali', bad,
+            {'AndroidKeyStoreKeyPairGeneratorSpi.smali': patcher.patch_keystore_generator})
+        self.assertEqual(patcher.PatchStatus.UNSUPPORTED_LAYOUT, status)
+        self.assertEqual(bad, result)
+        self.assertIn('fallback', error)
+
+    def test_generator_injection_follows_parameter_metadata(self):
+        original = generator('    .param p0, "this"    # Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;\n'
+                             '        .annotation runtime Ljava/lang/Deprecated;\n'
+                             '        .end annotation\n'
+                             '    .end param\n'
+                             '    .line 42\n')
+        result, changed = patcher.patch_keystore_generator(original)
+        self.assertTrue(changed)
+        self.assertLess(result.index('    .end param'), result.index('KaoriosHook;->initGenerateSoftwareKeyPair'))
+        self.assertEqual((result, False), patcher.patch_keystore_generator(result))
+        patcher.verify_target_content('AndroidKeyStoreKeyPairGeneratorSpi.smali', result)
+
     @unittest.skipUnless(os.environ.get('KAORIOS_SMALI_CLASSPATH'), 'Real smali classpath not supplied')
     def test_real_smali_accepts_stock_and_safe_patch(self):
         classpath = os.environ['KAORIOS_SMALI_CLASSPATH']
@@ -117,6 +198,33 @@ class BuildFieldTest(unittest.TestCase):
                                                        {'Build.smali': patcher.patch_build})
         self.assertNotEqual(patcher.PatchStatus.ALREADY_PATCHED, status)
         self.assertIsNotNone(error)
+
+    def test_matching_filename_with_wrong_class_is_rejected(self):
+        fields = ('BRAND', 'DEVICE', 'FINGERPRINT', 'HARDWARE', 'ID', 'MANUFACTURER',
+                  'MODEL', 'PRODUCT', 'TAGS', 'TYPE', 'USER')
+        original = ('.class public Lexample/NotBuild;\n'
+                    + ''.join(f'.field public static {field}:Ljava/lang/String; = null\n'
+                              for field in fields)
+                    + '.field public static TIME:J\n')
+        status, result, error = patcher.apply_target_patch(
+            'Build.smali', original, {'Build.smali': patcher.patch_build})
+        self.assertEqual(patcher.PatchStatus.UNSUPPORTED_LAYOUT, status)
+        self.assertEqual(original, result)
+        self.assertIn('class descriptor', error)
+
+    def test_nonfinal_initialized_brand_is_not_already_patched(self):
+        fields = ('BRAND', 'DEVICE', 'FINGERPRINT', 'HARDWARE', 'ID', 'MANUFACTURER',
+                  'MODEL', 'PRODUCT', 'TAGS', 'TYPE', 'USER')
+        original = ('.class public Landroid/os/Build;\n'
+                    + ''.join(f'.field public static {field}:Ljava/lang/String; = "OEM"\n'
+                              for field in fields)
+                    + '.field public static TIME:J\n')
+        status, result, error = patcher.apply_target_patch(
+            'Build.smali', original, {'Build.smali': patcher.patch_build})
+        self.assertEqual(patcher.PatchStatus.PATCHED, status, error)
+        self.assertIn('.field public static BRAND:Ljava/lang/String; = null\n', result)
+        self.assertEqual((result, False), patcher.patch_build(result))
+        patcher.verify_target_content('Build.smali', result)
 
 
 class ServicesParameterEncodingTest(unittest.TestCase):

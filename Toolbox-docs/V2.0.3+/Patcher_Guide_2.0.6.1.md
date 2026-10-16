@@ -1,8 +1,12 @@
 # Kaorios Toolbox 2.0.6.1 — Automatic smali patcher (Android 13–17)
 
-[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md)
+[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
+
+**Bootloop warning:** older Kaorios recipes (2.0.6.0 guides and the original 2.0.6.1 assets) patched `SettingsProvider.apk` to call `KaoriosHook` methods (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) that the current 2.0.6.1 `classes.dex` no longer defines. The system process then throws `NoSuchMethodError`, likely causing a bootloop. If this ROM's `SettingsProvider.apk` was ever patched by an older Kaorios recipe, restore the stock `SettingsProvider.apk` from the same ROM build **before** importing the current 2.0.6.1 `classes.dex`. Do not reuse old patched provider files.
 
 **What this does:** patch supported **smali files**, not whole JARs. It does **not** import payload or patch all optional hooks. Work only on authorized **copies** of stock `framework.jar` and `services.jar` from the same ROM build, with clean originals, SHA-256 hashes and a recovery plan. Keep `SettingsProvider.apk` stock. Run from the `public/` repo root; output must differ from stock.
+
+**Payload boundary:** This patcher covers only the listed ROM hooks; it does not insert a Phenotype query-result caller, even with the current 2.0.6.1 pre-release DEX. The [Google Flags guide](Google_Flags.md) explains the missing evidence and stop condition. Verify the current release asset checksum before import; a patcher PASS does not establish Google Flags support.
 
 ## 1. Find the class and owner DEX
 
@@ -41,7 +45,7 @@ Record `class descriptor → JAR → classes*.dex → matching method`. Search *
 
 - Android 13–16: **mode 1** for supported hooks.
 - Android 17: **mode 1** for supported hooks; optional **mode 2** edits `Build.smali` and `Build$VERSION.smali` fields only; **mode 3** combines 1 and 2 on the same input tree, not across different DEXes/JARs. Modes 2/3 are rejected for Android 13–16.
-- **Not automatic:** importing any payload class; optional `Settings$NameValueCache` developer/ADB-status hook, [Secure Flag](Disable_Secure_Flag.md), [CorePatch](CorePatch.md), or every OEM overload. See the [manual guide](Patch_Guide_2.0.6.1.md) for the JAR → class → method → exact smali insertion and register checks.
+- **Not automatic:** importing any payload class; optional `Settings$NameValueCache` developer/ADB-status hook, [Secure Flag](Disable_Secure_Flag.md) (no general `captureDisplay` recipe), [CorePatch](CorePatch.md), or every OEM overload. See the [manual guide](Patch_Guide_2.0.6.1.md) for the JAR → class → method → exact smali insertion and register checks.
 - **Kaorios Helper** is a [separately installed Zygisk module](../../Kaorios-Helper/README.md), not a ROM hook or these artifact scripts. It leaves framework/services stock. **Do not enable HMA Helper at the same time as a ROM-patched HMA hook.**
 
 ## 3. Patch the smali owner trees
@@ -73,7 +77,7 @@ These tree names are examples. Mode 3 can replace mode 1 + 2 for **one** tree on
 
 ## 4. Import payload and rebuild copies
 
-The patcher **does not import payload**. Follow [manual guide §1](Patch_Guide_2.0.6.1.md#1-import-payload--frameworkjar): import all payload classes individually into the copied **framework** JAR, replacing duplicates as *classes inside their existing owner DEX*, not overwriting an entire stock DEX. New classes may need a new split. Do **not** import payload into services/provider. Keep all other stock classes. Assemble only changed owner trees with the input-compatible API, retaining each original DEX entry name:
+The patcher **does not import payload**. Follow [manual guide §1](Patch_Guide_2.0.6.1.md#1-import-payload--frameworkjar): import all payload classes individually into the copied **framework** JAR, replacing duplicates as *classes inside their existing owner DEX*, not overwriting an entire stock DEX. New classes may need a new split. Import payload only into `framework.jar`. Keep all other stock classes. Assemble only changed owner trees with the input-compatible API, retaining each original DEX entry name:
 
 ```bash
 jar=framework; name=classes2  # example: repeat for each changed owner split

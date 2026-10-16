@@ -1,6 +1,8 @@
 # Kaorios Toolbox 2.0.6.1 — Manual ROM patch (Android 13–17)
 
-[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag example](Disable_Secure_Flag.md)
+[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
+
+**Bootloop warning:** older Kaorios recipes (2.0.6.0 guides and the original 2.0.6.1 assets) patched `SettingsProvider.apk` to call `KaoriosHook` methods (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) that the current 2.0.6.1 `classes.dex` no longer defines. The system process then throws `NoSuchMethodError`, likely causing a bootloop. If this ROM's `SettingsProvider.apk` was ever patched by an older Kaorios recipe, restore the stock `SettingsProvider.apk` from the same ROM build **before** importing the current 2.0.6.1 `classes.dex`. Do not reuse old patched provider files.
 
 **What you edit:** copies of `framework.jar` and `services.jar` from the **same authorized ROM build**. Keep stock originals and their SHA-256 hashes outside the workspace; have a recovery plan before changing a device. Use a multidex-aware editor and smali toolchain compatible with the input DEX. Leave `SettingsProvider.apk` stock. Never write output over stock.
 
@@ -8,9 +10,11 @@
 
 **Before inserting any snippet:** find the method's `.locals` or `.registers` and existing `pN`/`vN` aliases. Reserve any needed fresh locals; if increasing locals shifts parameter registers, change old `vN` parameter aliases to `pN` *before* increasing the count and check that all stock instructions remain encodable. Ordinary `invoke {…}` operands must have physical register indices ≤15; `/range` operands must be consecutive. Keep `invoke` next to its `move-result`. Insert entry hooks after `.param`/`.annotation` metadata and **before the first stock label/instruction**. Choose fallback labels not already in the method. The stock lines shown below are **position markers**, not extra lines to duplicate. If these checks cannot be met, stop; do not paste the example unchanged.
 
+**Payload boundary:** This guide covers the listed hooks with the **current 2.0.6.1 pre-release payload** and does not install a Phenotype query-result ROM caller, even though the replacement DEX contains a callable helper. Read the [Google Flags patch status](Google_Flags.md) for the evidence required before that feature can be patched. Check the current release checksum; do not substitute an unverified DEX or call the result a supported Google Flags ROM patch.
+
 ## 1. Import payload — `framework.jar`
 
-Get the [2.0.6.1 payload DEX](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex); the manager APK is from [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Inventory **every payload class**. In the copied framework JAR, replace an existing descriptor as a **class in its current owner DEX**; add a new descriptor to a suitable split. Do not replace a whole ROM DEX with payload `classes.dex` when that DEX also contains other ROM classes. Confirm each payload class exists exactly once and all other stock classes remain. Do not import payload into services or the provider. Import alone does not insert ROM hooks.
+Get the [current 2.0.6.1 pre-release payload DEX](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex) and verify its SHA-256 (`fe2765c683b85614baf51f624857d5627a31f95bab7190d453da9457d8735e19`); the manager APK is from stable [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). An earlier DEX downloaded from the same URL has different bytes. Inventory **every payload class**. In the copied framework JAR, replace an existing descriptor as a **class in its current owner DEX**; add a new descriptor to a suitable split. Do not replace a whole ROM DEX with payload `classes.dex` when that DEX also contains other ROM classes. Confirm each payload class exists exactly once and all other stock classes remain. Import payload into `framework.jar` only; `services.jar` retains its ROM classes. Import alone does not insert ROM hooks.
 
 ## 2. `framework.jar` hooks
 
@@ -221,7 +225,7 @@ That constructor line is stock, **not another line to add**. This example only a
 `p2` is the Settings key; null/false uses stock code. This is **not** a `SettingsProvider.apk` edit or a mode-1 target.
 
 - **Android 17 Build spoof:** in `framework.jar`, `Landroid/os/Build;`: remove `final` and set String initializers to `null` for `BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`; remove `final` only from `TIME:J`. In `Landroid/os/Build$VERSION;` remove `final` only from `RELEASE`, `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`. Leave `SDK_INT` and `<clinit>` alone. Example: `.field public static final BRAND:Ljava/lang/String; = "OEM"` → `.field public static BRAND:Ljava/lang/String; = null`. Mode 2 automates these fields, not other hooks.
-- [Secure Flag](Disable_Secure_Flag.md) and [CorePatch](CorePatch.md) have separate guides; neither is added by mode 1.
+- [Secure Flag](Disable_Secure_Flag.md) has limited guidance and no general `captureDisplay` recipe; [CorePatch](CorePatch.md) has a separate guide. Neither is added by mode 1.
 - **Kaorios Helper** is a separately installed [Zygisk module](../../Kaorios-Helper/README.md), **not** a framework/services hook or an artifact-patching script. It keeps ROM files stock; **do not enable HMA Helper alongside an HMA hook patched into the ROM**. Its own install/runtime checks are in that README.
 
 ## 5. Rebuild and check the *saved* JARs

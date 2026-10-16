@@ -6,7 +6,7 @@ Tài liệu này dành cho agent **tự thực hiện patch smali bằng tay tr�
 
 Xác nhận Android 13–17, mã build ROM, các hook được yêu cầu, vị trí `framework.jar`/`services.jar` stock, bản sao đầu vào/đầu ra và phạm vi được phép **ghi lên bản sao**. Nếu thiếu version, không rõ artifact hoặc quyền sửa, hỏi trước. Permission sửa bản sao không cho phép ghi đè bản gốc, ký release, upload/publish artifact hay flash/triển khai lên thiết bị. Các việc đó cần ủy quyền riêng.
 
-Không đưa private source, key/keystore, Keybox thô, password, serial/IMEI hoặc ROM artifact chưa được phép lên repo công khai, vào log hoặc báo cáo. Giữ `SettingsProvider.apk` stock; bước Fake Settings/provider trong tài liệu 2.0.6.0 đã nghỉ.
+Không đưa private source, key/keystore, Keybox thô, password, serial/IMEI hoặc ROM artifact chưa được phép lên repo công khai, vào log hoặc báo cáo. Giữ `SettingsProvider.apk` stock; chỉ patch các hook framework/services được mô tả trong guide 2.0.6.1.
 
 ## 2. Khóa baseline và lập bảng owner
 
@@ -23,7 +23,7 @@ Làm theo từng hook trong [guide patch tay](V2.0.3+/Patch_Guide_2.0.6.1_VI.md)
 
 - Tính `.locals`/`.registers` và vị trí vật lý của `pN`; nếu phải tăng frame, chuyển alias `vN` đang trỏ parameter sang `pN` trước. Chọn local không còn sống tại điểm chèn; không ghi đè giá trị code gốc vẫn dùng.
 - Kiểm tra **mọi** operand của cả lệnh stock và hook sau chỉnh sửa: giới hạn register của `invoke-*`/`if-*`, các lệnh wide và tính liên tiếp của `/range`. Giữ `invoke-*` và `move-result*` cạnh nhau, label duy nhất và các nhánh fallback stock. Nếu không chứng minh được opcode encode hoặc đường return còn đúng, dừng.
-- Import **toàn bộ class payload 2.0.6.1 vào framework**, replace class trùng ngay trong DEX owner cũ và add class mới ở split phù hợp; giữ mọi class ROM còn lại và xác nhận mỗi descriptor chỉ có một owner. Không import payload sang services hoặc provider, không thay nguyên DEX ROM chứa class khác bằng payload.
+- Import **toàn bộ class payload 2.0.6.1 vào framework**, replace class trùng ngay trong DEX owner cũ và add class mới ở split phù hợp; giữ mọi class ROM còn lại và xác nhận mỗi descriptor chỉ có một owner. Chỉ import payload vào `framework.jar`; không thay nguyên DEX ROM chứa class khác bằng payload.
 - Tạo diff nhỏ sau mỗi hook và tự kiểm tra lại method gốc. Có thể thích nghi register, overload và vị trí chèn nếu chứng minh được chúng tương đương về control flow, fallback và encoding trên ROM cụ thể. Nếu layout khác mà không có bằng chứng, **dừng và hỏi**, không ép template chạy.
 
 Guide tay còn có hook ngoài phạm vi mode 1, như developer/ADB-status tùy chọn. Với `ComputerEngine`, mode 1 **có thể** patch và verify installer-name khi tìm thấy method phù hợp và layout được hỗ trợ; kiểm tra kết quả từng method, không suy từ một dòng `PATCHED` rằng mọi hook tùy chọn hoặc mọi overload đã có.

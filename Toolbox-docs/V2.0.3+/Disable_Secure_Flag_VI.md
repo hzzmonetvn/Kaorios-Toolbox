@@ -96,47 +96,9 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
     :cond_kaorios
 ```
 
-### 3. Cho phép chụp display
+### 3. Đường chụp display tùy chọn — chưa có công thức patch chung
 
-Trong method:
+Không áp dụng ví dụ chèn vào `captureDisplay` trước đây. Descriptor của method không khớp với template được dẫn, và ví dụ ghi `v0` trong khi nhánh chặn của template kiểm tra `v5`. Template không chứng minh ROM của bạn có cùng callsite hay register.
 
-```smali
-captureDisplay(ILandroid/window/ScreenCapture$CaptureArgs;Landroid/window/ScreenCapture$ScreenCaptureListener;)V
-```
-
-**Smali mẫu:** [`WindowManagerService.smali`](../Template/Template_V2060/service/WindowManagerService.smali)
-
-tìm:
-
-```smali
-->notAllowCaptureDisplay(Lcom/android/server/wm/RootWindowContainer;I)Z
-```
-
-Ngay sau:
-
-```smali
-->notAllowCaptureDisplay(Lcom/android/server/wm/RootWindowContainer;I)Z
-
-    move-result vY
-```
-
-thêm:
-
-```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
-
-    move-result vX
-
-    if-eqz vX, :cond_kaorios
-
-    const/4 v0, 0x0
-
-    :cond_kaorios
-```
-
-Tăng `.registers` thêm `1`, rồi thay `vX` bằng register mới.
-
-Ví dụ: `.registers 7` -> `.registers 8`, sau đó dùng `v3` cho `vX`.
-
-> Một số ROM không có đúng đoạn chặn trong method này; khi đó có thể bỏ qua bước 3.
+Trước khi đề xuất patch cho đường tùy chọn này, kiểm tra bản sao được phép sửa của đúng build ROM và ghi lại JAR sở hữu, DEX split, descriptor method chính xác, callsite chặn chụp màn hình, register chứa kết quả, luồng điều khiển và fallback stock. Nếu không xác định được các yếu tố đó, bỏ qua đường này; không đoán điểm chèn thay thế. Mọi bản patch riêng cho ROM phải được build vào JAR đầu ra đã lưu và kiểm tra bằng cách disassemble lại DEX trích từ artifact đó. Template hoặc kiểm tra trên host không xác minh artifact ROM cuối hay hành vi trên thiết bị.
 

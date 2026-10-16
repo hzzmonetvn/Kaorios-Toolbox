@@ -30,3 +30,10 @@ AGENT.md
 AGENTS.md
 agent.md
 agents.md
+
+# Signing material and local build config
+KeySign/
+*.jks
+*.keystore
+keystore.properties
+local.properties

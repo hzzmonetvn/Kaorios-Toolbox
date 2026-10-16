@@ -246,6 +246,14 @@ int main(int argc, char **argv) {
         self.assertFalse((self.config / 'copg.enabled').exists())
         self.assertNotIn('COPG controller: running', self.run_ctl('status').stdout)
 
+    def test_controller_exiting_during_retry_preserves_copg_opt_in(self):
+        (self.config / 'copg.enabled').touch()
+        self.env['TEST_EXIT_ON_START'] = '1'
+        result = self.run_ctl('enable-copg')
+        self.assertNotEqual(0, result.returncode)
+        self.assertTrue((self.config / 'copg.enabled').exists())
+        self.assertIn('COPG desired state: enabled', self.run_ctl('status').stdout)
+
     def test_supervisor_exiting_during_enable_restores_tee_opt_in(self):
         self.env['TEST_EXIT_ON_START'] = '1'
         result = self.run_ctl('enable-tee')

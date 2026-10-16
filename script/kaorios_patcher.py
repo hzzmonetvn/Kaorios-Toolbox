@@ -101,6 +101,14 @@ def _canonicalize_param_aliases(method_body: str, registers: int, param_count: i
     first_param_v = registers - param_count
     if first_param_v < 0 or registers + 1 > 65535:
         raise ValueError("unsupported register allocation")
+    # A range spanning the local/parameter boundary would gain a register after the bump.
+    for line in method_body.splitlines():
+        instruction = re.sub(r'"(?:\\.|[^"\\])*"|#.*', '', line)
+        if '/range' not in instruction:
+            continue
+        for start, end in re.findall(r'\{\s*v(\d+)\s*\.\.\s*([vp]\d+)\s*\}', instruction):
+            if int(start) < first_param_v and (end.startswith('p') or int(end[1:]) >= first_param_v):
+                raise ValueError('unsupported register shift: /range crosses local/parameter boundary')
     # Register names inside strings/comments are data and must retain their bytes.
     parts = re.split(r'("(?:\\.|[^"\\])*"|#[^\n]*)', method_body)
     for index in range(0, len(parts), 2):
@@ -119,8 +127,11 @@ def _verify_register_encoding(method_body: str, registers: int, param_count: int
             continue
         opcode = instruction.split()[0]
         operands = re.split(r',\s*(?:L|\[)', instruction, maxsplit=1)[0]
+        operands = re.sub(r'(?<![\w]):[\w$]+', '', operands)
         names = re.findall(r'\b([vp]\d+)\b', operands)
         narrow = (opcode in ('move', 'move-wide', 'move-object', 'const/4', 'array-length',
+                             'rsub-int', 'add-int/lit16', 'and-int/lit16', 'or-int/lit16',
+                             'xor-int/lit16',
                              'new-array', 'instance-of', 'if-eq', 'if-ne', 'if-lt',
                              'if-ge', 'if-gt', 'if-le')
                   or opcode.startswith(('iget', 'iput', 'neg-', 'not-'))
@@ -137,6 +148,26 @@ def _verify_register_encoding(method_body: str, registers: int, param_count: int
                 raise ValueError(f"unsupported register shift: {opcode} operand {name} becomes v{physical}, encoding limit v{limit}")
 
 
+def _generator_entry_offset(method_body: str, directive_end: int) -> int:
+    """Locate the first instruction after parameter and annotation metadata."""
+    offset = directive_end
+    annotation_depth = 0
+    for line in method_body[directive_end:].splitlines(keepends=True):
+        stripped = line.strip()
+        if stripped.startswith(('.annotation ', '.subannotation ')):
+            annotation_depth += 1
+        elif stripped.startswith(('.end annotation', '.end subannotation')):
+            annotation_depth -= 1
+        elif annotation_depth == 0 and stripped and not stripped.startswith(('#', '.param ', '.end param', '.line ', '.local ', '.end local', '.restart local', '.prologue', '.epilogue')):
+            if stripped.startswith('.'):
+                raise ValueError(f'unsupported generateKeyPair metadata: {stripped}')
+            if stripped.startswith(':'):
+                raise ValueError('unsupported generateKeyPair entry label: hook could be bypassed')
+            return offset
+        offset += len(line)
+    raise ValueError('generateKeyPair stock instructions not found')
+
+
 def patch_keystore_generator(content: str) -> tuple[str, bool]:
     start = content.find("generateKeyPair()Ljava/security/KeyPair;")
     if start == -1:
@@ -147,6 +178,7 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
 
     method_body = content[start:end]
     if "KaoriosHook;->initGenerateSoftwareKeyPair" in method_body:
+        verify_target_content('AndroidKeyStoreKeyPairGeneratorSpi.smali', content)
         return content, False
 
     match = re.search(r'\.(registers|locals)\s+(\d+)', method_body)
@@ -182,7 +214,9 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
 
     {lbl}
 """
-    new_body = method_body[:match.start()] + f".{directive} {new_reg}" + inject + method_body[match.end():]
+    entry = _generator_entry_offset(method_body, match.end())
+    new_body = (method_body[:match.start()] + f".{directive} {new_reg}"
+                + method_body[match.end():entry] + inject + method_body[entry:])
     return content[:start] + new_body + content[end:], True
 
 
@@ -419,6 +453,7 @@ def patch_build(content: str) -> tuple[str, bool]:
     patched = content
     for f in fields_null:
         patched = re.sub(rf'(\.field public static[^\n]*?)final([^\n]*? {f}:Ljava/lang/String;)(?:[ \t]*=[^\r\n]*)?', r'\1\2 = null', patched)
+        patched = re.sub(rf'(\.field public static[^\n]*? {f}:Ljava/lang/String;)[ \t]*=[^\r\n]*', r'\1 = null', patched)
 
     patched = re.sub(r'(\.field public static[^\n]*?)final([^\n]*? TIME:J)', r'\1\2', patched)
     return patched, (patched != content)
@@ -500,6 +535,23 @@ def verify_target_content(filename: str, content: str) -> None:
             raise ValueError("generateKeyPair register directive not found")
         registers = int(directive[2]) + (1 if directive[1] == 'locals' else 0)
         _verify_register_encoding(body, registers, 1)
+        entry = _generator_entry_offset(body, directive.end())
+        sequence = re.match(
+            r'\s*invoke-static(?P<range>/range)?\s*\{p0(?:(?(range)\s*\.\.\s*p0))?\},\s*'
+            r'Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair\(Ljava/lang/Object;\)Ljava/security/KeyPair;\s+'
+            r'move-result-object\s+(?P<scratch>v\d+)\s+'
+            r'if-eqz\s+(?P=scratch),\s*(?P<label>:[\w$]+)\s+'
+            r'return-object\s+(?P=scratch)\s+'
+            r'(?P=label)\s*', body[entry:]
+        )
+        if sequence is None or int(sequence['scratch'][1:]) != registers - 2:
+            raise ValueError('generateKeyPair hook must be at entry with a dedicated local and stock fallback')
+        label = sequence['label']
+        if len(re.findall(rf'(?m)^\s*{re.escape(label)}\s*$', body)) != 1:
+            raise ValueError('generateKeyPair stock fallback label is not unique')
+        stock_lines = body[entry + sequence.end():].splitlines()
+        if not any(re.match(r'^\s*(?:return-object|throw)\b', line) for line in stock_lines):
+            raise ValueError('unsupported generateKeyPair stock fallback: no exit')
     elif filename == "AndroidKeyStoreSpi.smali":
         body = _extract_method_body(
             content,
@@ -629,6 +681,9 @@ def verify_target_content(filename: str, content: str) -> None:
                 raise ValueError(f"Build.smali post-patch: field {f} not found")
             if "final" in m.group(0):
                 raise ValueError(f"Build.smali post-patch: field {f} still has 'final' modifier — patch did not apply")
+            initializer = content[m.end():content.find('\n', m.end()) if '\n' in content[m.end():] else len(content)]
+            if initializer.strip() not in ('', '= null'):
+                raise ValueError(f"Build.smali post-patch: field {f} must have a null initializer")
         m_time = re.search(r'\.field public static[^\n]* TIME:J', content)
         if not m_time:
             raise ValueError("Build.smali post-patch: field TIME:J not found")
@@ -652,6 +707,22 @@ def apply_target_patch(filename: str, content: str, targets: dict) -> tuple[str,
     patch_fn = targets.get(filename)
     if patch_fn is None:
         return PatchStatus.NOT_TARGET, content, None
+
+    owners = {
+        'ActivityThread.smali': 'Landroid/app/ActivityThread;',
+        'ComputerEngine.smali': 'Lcom/android/server/pm/ComputerEngine;',
+        'SystemServer.smali': 'Lcom/android/server/SystemServer;',
+        'AndroidKeyStoreKeyPairGeneratorSpi.smali': 'Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;',
+        'AndroidKeyStoreSpi.smali': 'Landroid/security/keystore2/AndroidKeyStoreSpi;',
+        'Instrumentation.smali': 'Landroid/app/Instrumentation;',
+        'ApplicationPackageManager.smali': 'Landroid/app/ApplicationPackageManager;',
+        'Build.smali': 'Landroid/os/Build;',
+        'Build$VERSION.smali': 'Landroid/os/Build$VERSION;',
+    }
+    owner = owners.get(filename)
+    declarations = re.findall(r'(?m)^\.class\s+[^\n]*?\s+(L[^\s;]+;)[ \t]*$', content)
+    if owner is None or declarations != [owner]:
+        return PatchStatus.UNSUPPORTED_LAYOUT, content, f'{filename}: expected class descriptor {owner}'
 
     try:
         patched_content, changed = patch_fn(content)

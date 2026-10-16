@@ -1,6 +1,8 @@
 # Kaorios Toolbox 2.0.6.1 — Patch ROM bằng tay (Android 13–17)
 
-[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Ví dụ Secure Flag](Disable_Secure_Flag_VI.md)
+[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
+
+**Cảnh báo bootloop:** recipe Kaorios cũ (guide 2.0.6.0 và asset 2.0.6.1 ban đầu) patch `SettingsProvider.apk` để gọi các method `KaoriosHook` (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) mà `classes.dex` 2.0.6.1 hiện tại không còn định nghĩa. System process sẽ ném `NoSuchMethodError`, nhiều khả năng gây bootloop. Nếu `SettingsProvider.apk` của ROM này từng được patch bằng recipe Kaorios cũ, khôi phục `SettingsProvider.apk` stock của cùng build ROM **trước khi** import `classes.dex` 2.0.6.1 hiện tại. Không dùng lại file provider đã patch trước đây.
 
 **Sửa gì:** bản sao `framework.jar` và `services.jar` **cùng build ROM được phép sửa**. Giữ stock nguyên bản và SHA-256 riêng ngoài workspace; chuẩn bị cách khôi phục trước khi thay đổi trên thiết bị. Dùng editor multidex và công cụ smali tương thích DEX đầu vào. Giữ nguyên `SettingsProvider.apk`. Không dùng đường dẫn stock làm output.
 
@@ -8,9 +10,11 @@
 
 **Trước khi chèn:** kiểm tra `.locals`/`.registers`, alias `pN`/`vN` và cấp đủ local trống. Nếu thêm locals khiến parameter dịch vị trí, chuyển alias `vN` cũ của parameter sang `pN` *trước* khi tăng số rồi kiểm tra mọi lệnh stock còn mã hóa được. `invoke {…}` thường chỉ dùng register vật lý ≤15; `/range` cần operand liên tiếp. `move-result` phải ngay sau `invoke`. Hook đầu method đặt sau metadata `.param`/`.annotation` và **trước label/lệnh stock đầu tiên**. Dùng nhãn fallback chưa có trong method. Dòng stock trong ví dụ chỉ là **mốc vị trí**, không chèn lặp. Nếu không chứng minh được các điều kiện này, dừng thay vì chép snippet nguyên xi.
 
+**Ranh giới payload:** Guide này bao phủ các hook được liệt kê với **payload pre-release 2.0.6.1 hiện tại** và không cài caller query-result Phenotype vào ROM, dù DEX thay thế có helper gọi được. Xem [trạng thái patch Google Flags](Google_Flags_VI.md) để biết bằng chứng cần có trước khi patch tính năng đó. Kiểm tra checksum release hiện tại; không dùng DEX chưa xác minh hoặc coi kết quả là bản patch ROM Google Flags đã hỗ trợ.
+
 ## 1. Import payload — `framework.jar`
 
-Lấy [payload DEX 2.0.6.1](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex); APK quản lý dùng bản [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Kiểm kê **mọi class payload**. Trong bản sao framework JAR, nếu descriptor đã có thì thay **class trong owner DEX cũ**; class mới thì thêm vào split phù hợp. Không chép payload `classes.dex` đè lên cả DEX stock còn chứa class ROM khác. Xác nhận mỗi class payload xuất hiện đúng một lần và class stock còn lại nguyên vẹn. Không import vào services hay provider. Import không tự chèn ROM hook.
+Lấy [payload DEX pre-release 2.0.6.1 hiện tại](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex) và kiểm tra SHA-256 (`fe2765c683b85614baf51f624857d5627a31f95bab7190d453da9457d8735e19`); APK quản lý dùng bản stable [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). DEX tải trước đó từ cùng URL có byte khác. Kiểm kê **mọi class payload**. Trong bản sao framework JAR, nếu descriptor đã có thì thay **class trong owner DEX cũ**; class mới thì thêm vào split phù hợp. Không chép payload `classes.dex` đè lên cả DEX stock còn chứa class ROM khác. Xác nhận mỗi class payload xuất hiện đúng một lần và class stock còn lại nguyên vẹn. Chỉ import payload vào `framework.jar`; `services.jar` giữ nguyên các class ROM của nó. Import không tự chèn ROM hook.
 
 ## 2. Hook trong `framework.jar`
 
@@ -221,7 +225,7 @@ Dòng constructor là **stock**, không thêm lại. Ví dụ chỉ đúng nếu
 `p2` là key; key null/hook false thì theo stock. Đây **không phải** sửa `SettingsProvider.apk` hay target mode 1.
 
 - **Build spoof Android 17:** Trong `framework.jar`, `Landroid/os/Build;`: bỏ `final` và đặt String initializer `null` cho `BRAND`, `BRAND_FOR_ATTESTATION`, `DEVICE`, `DEVICE_FOR_ATTESTATION`, `FINGERPRINT`, `HARDWARE`, `ID`, `MANUFACTURER`, `MANUFACTURER_FOR_ATTESTATION`, `MODEL`, `MODEL_FOR_ATTESTATION`, `PRODUCT`, `PRODUCT_FOR_ATTESTATION`, `TAGS`, `TYPE`, `USER`; chỉ bỏ `final` của `TIME:J`. Với `Landroid/os/Build$VERSION;`, chỉ bỏ `final` của `RELEASE`, `RELEASE_OR_CODENAME`, `RELEASE_OR_PREVIEW_DISPLAY`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`. Giữ nguyên `SDK_INT` và `<clinit>`. Ví dụ `.field public static final BRAND:Ljava/lang/String; = "OEM"` → `.field public static BRAND:Ljava/lang/String; = null`. Mode 2 tự sửa những field này, không thêm các hook khác.
-- [Secure Flag](Disable_Secure_Flag_VI.md) và [CorePatch](CorePatch_VI.md) có guide riêng; mode 1 không tự thêm.
+- [Secure Flag](Disable_Secure_Flag_VI.md) chỉ có hướng dẫn giới hạn, chưa có recipe `captureDisplay` chung; [CorePatch](CorePatch_VI.md) có guide riêng. Mode 1 không tự thêm hai phần này.
 - **Kaorios Helper** là [module Zygisk cài riêng](../../Kaorios-Helper/README.md), **không phải** hook trong framework/services hay script dựng artifact. Module giữ ROM stock; **không bật HMA Helper cùng hook HMA đã patch ROM**. Cách cài/kiểm tra runtime nằm trong README đó.
 
 ## 5. Dựng và kiểm tra *JAR đã lưu*

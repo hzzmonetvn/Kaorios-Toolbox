@@ -1,11 +1,8 @@
 # Kaorios Helper — 0.3.0 experimental
 
-Module hỗ trợ ba profile: **Zygisk/HMA** (chỉ HMA-OSS chạy qua Zygisk), **Combined** (ghép HMA và TEE Simulator RS), và **Full** (ghép HMA, TEE Simulator RS cùng COPG).
+Công cụ đóng gói hỗ trợ ba profile: **Zygisk/HMA** (chỉ HMA-OSS chạy qua Zygisk), **Combined** (ghép HMA và TEE Simulator RS), và **Full** (ghép HMA, TEE Simulator RS cùng COPG).
 
-Source và ZIP được cung cấp qua [workflow Build Kaorios Helper](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml):
-- `Kaorios-Helper-Zygisk`: Profile Zygisk (HMA-OSS).
-- `Kaorios-Helper-experimental`: Profile Combined (HMA + TEE).
-- `Kaorios-Helper-Full`: Profile Full (HMA + COPG + TEE), kèm controller hợp nhất; không đóng gói WebUI COPG.
+[Workflow Build Kaorios Helper hiện tại](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml) chỉ đóng gói **Full**: một ZIP `Kaorios-Helper-0.3.0-experimental.zip` (HMA + COPG + TEE, không có WebUI COPG) cùng source snapshot và checksum trong artifact `Kaorios-Helper-experimental-<số lần chạy>`. Các profile Zygisk/HMA và Combined vẫn được công cụ đóng gói và test hỗ trợ, nhưng workflow này không xuất ZIP riêng cho chúng.
 
 Đây chưa phải bản release production. Module nhắm tới **arm64, Android 12 trở lên**. Build/kiểm tra host không xác nhận boot hoặc hook trên máy thật. Module giữ nguyên SettingsProvider và framework/services của ROM; không patch APK hệ thống.
 
@@ -14,7 +11,7 @@ Source và ZIP được cung cấp qua [workflow Build Kaorios Helper](https://g
 1. Nếu đang dùng HMA/Helper cũ, **export cấu hình trong manager trước khi cập nhật**. Bản mới dùng thư mục HMA riêng; cấu hình cũ vẫn được giữ nhưng không tự chuyển. Gỡ module HMA-OSS rồi khởi động lại.
 2. Magisk: bật Zygisk tích hợp hoặc dùng một runtime Zygisk ngoài. KernelSU/APatch: cài runtime Zygisk tương thích. Chỉ bật **một** runtime; installer chặn runtime trùng, kể cả hai module cùng tên hiển thị. Runtime đang chờ cài cần reboot để áp dụng.
 3. Cài ZIP bằng Magisk, KernelSU hoặc APatch rồi khởi động lại.
-4. Trong Toolbox, mở **Tools → Plugins → Kiểm tra module → Mở manager HMA**. App có package `io.github.hzzmonetvn.kaorioshelper.hma`, tách khỏi manager HMA-OSS chính thức.
+4. Mở manager HMA đi kèm module từ launcher. Bản giao diện Toolbox hiện tại không có mục **Tools → Plugins**; các lệnh TEE/COPG bên dưới dùng terminal root. Manager có package `io.github.hzzmonetvn.kaorioshelper.hma`, tách khỏi manager HMA-OSS chính thức.
 5. Import cấu hình đã export nếu có, rồi chọn app cần áp dụng trong manager. Không bật đồng thời HMA Helper và hook HMA Kaorios đã patch trong ROM.
 
 ## TEE Simulator RS (Bản Combined và Full)
@@ -65,7 +62,7 @@ su -c 'sh /data/adb/modules/kaorios_helper/helperctl.sh status'
 
 ## Build từ source
 
-Source ghim trong `upstreams.json`. Script `tools/prepare_sources.py` chuẩn bị HMA, `tools/prepare_copg.py` chuẩn bị snapshot COPG và kiểm tra commit sạch. Workflow `.github/workflows/build-helper.yml` điều phối các job build độc lập: `hma`, `tee`, `copg`, và job `package` để tạo các artifact tương ứng.
+Source ghim trong `upstreams.json`. Script `tools/prepare_sources.py` chuẩn bị HMA, `tools/prepare_copg.py` chuẩn bị snapshot COPG và kiểm tra commit sạch. Workflow `.github/workflows/build-helper.yml` điều phối các job build độc lập `hma`, `tee`, `copg`; job `package` tạo một artifact bản Full cùng source snapshot và checksum.
 
 ## Kiểm tra
 
@@ -73,4 +70,4 @@ Chạy test suite host:
 ```sh
 HELPER_COPG_SOURCE=<path-to-copg> python3 -m unittest discover -s Kaorios-Helper/tests -v
 ```
-Gồm 68 test case bao quát routing native, vòng đời controller, SELinux/permissions, bảo vệ dữ liệu nhạy cảm, packaging và tương thích Zygisk.
+Suite bao quát routing native, vòng đời controller, SELinux/permissions, bảo vệ dữ liệu nhạy cảm, packaging và tương thích Zygisk; các kiểm tra native COPG bổ sung cần checkout ghim qua `HELPER_COPG_SOURCE`.
