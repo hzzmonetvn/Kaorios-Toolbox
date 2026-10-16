@@ -4,6 +4,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TARGET_FILE="$REPO_ROOT/Toolbox-data/Pif-props.json"
+CATALOG_FILE="$REPO_ROOT/Toolbox-data/pif-devices.json"
 WORKDIR="$REPO_ROOT/work/pif_update"
 
 cleanup() {
@@ -57,22 +58,28 @@ if [ -f "$TARGET_FILE" ]; then
   CURRENT_DEVICE_INITIAL_SDK="$(jq -r '.DEVICE_INITIAL_SDK_INT // empty' "$TARGET_FILE" 2>/dev/null || true)"
 fi
 
-# Prefer newest high-end Pixel with a published OTA. Format: codename|model|launch SDK
+# Prefer newest Pixel (Pixel 9 and older) with a published OTA. Format: codename|model|launch SDK
 PIXEL_PRIORITY=(
-  "kodiak|Pixel 11 Pro XL|37"
-  "grizzly|Pixel 11 Pro|37"
-  "cubs|Pixel 11|37"
-  "yogi|Pixel 11 Pro Fold|37"
-  "mustang|Pixel 10 Pro XL|36"
-  "blazer|Pixel 10 Pro|36"
-  "frankel|Pixel 10|36"
-  "rango|Pixel 10 Pro Fold|36"
   "komodo|Pixel 9 Pro XL|34"
   "caiman|Pixel 9 Pro|34"
   "tokay|Pixel 9|34"
   "comet|Pixel 9 Pro Fold|34"
   "husky|Pixel 8 Pro|34"
   "shiba|Pixel 8|34"
+  "akita|Pixel 8a|34"
+  "felix|Pixel Fold|33"
+  "tangorpro|Pixel Tablet|33"
+  "cheetah|Pixel 7 Pro|33"
+  "panther|Pixel 7|33"
+  "lynx|Pixel 7a|33"
+  "raven|Pixel 6 Pro|31"
+  "oriole|Pixel 6|31"
+  "bluejay|Pixel 6a|32"
+  "redfin|Pixel 5|30"
+  "bramble|Pixel 4a (5G)|30"
+  "sunfish|Pixel 4a|29"
+  "coral|Pixel 4 XL|29"
+  "flame|Pixel 4|29"
 )
 
 normalize_ota_link() {
@@ -226,6 +233,10 @@ fi
 device_initial_sdk() {
   local dev="$1"
   case "$dev" in
+    # Pixel 4 family — Android 10 launch
+    coral|flame|sunfish)         echo 29 ;;
+    # Pixel 4a (5G) / Pixel 5 — Android 11 launch
+    bramble|redfin)              echo 30 ;;
     # Pixel 6 family — Android 12 launch
     oriole|raven)                echo 31 ;;
     # Pixel 6a — Android 12L launch
@@ -244,12 +255,6 @@ device_initial_sdk() {
     akita)                       echo 34 ;;
     # Pixel 9 family — Android 14 launch
     tokay|caiman|komodo|comet)   echo 34 ;;
-    # Pixel 9 Pro Fold — Android 14 launch
-    gts9|eos)                    echo 34 ;;
-    # Pixel 10 family — Android 16 launch
-    frankel|blazer|mustang|rango|stallion) echo 36 ;;
-    # Pixel 11 family — Android 17 launch
-    cubs|grizzly|kodiak|yogi)    echo 37 ;;
     # Unknown device: caller falls back to preserving existing value or fails.
     *)                           echo "" ;;
   esac
@@ -312,6 +317,23 @@ jq -n \
     SECURITY_PATCH: $security_patch,
     DEVICE_INITIAL_SDK_INT: $sdk_int
   }' > "$TARGET_FILE"
+
+# Keep CATALOG_FILE synchronized if it exists
+if [ -f "$CATALOG_FILE" ]; then
+  echo "Updating entry in catalog $CATALOG_FILE..."
+  UPDATED_CATALOG="$(jq \
+    --arg model "$TARGET_MODEL" \
+    --arg fingerprint "$FINGERPRINT" \
+    --arg product "$PRODUCT" \
+    --arg device "$DEVICE" \
+    --arg security_patch "$SECURITY_PATCH" \
+    --arg sdk_int "$DEVICE_INITIAL_SDK" \
+    'if .devices then .devices = [.devices[] | if .DEVICE == $device then .MODEL = $model | .FINGERPRINT = $fingerprint | .PRODUCT = $product | .SECURITY_PATCH = $security_patch | .DEVICE_INITIAL_SDK_INT = $sdk_int else . end] else . end' \
+    "$CATALOG_FILE" 2>/dev/null || true)"
+  if [ -n "$UPDATED_CATALOG" ]; then
+    printf '%s\n' "$UPDATED_CATALOG" > "$CATALOG_FILE"
+  fi
+fi
 
 echo "Done. Output written to: $TARGET_FILE"
 cat "$TARGET_FILE"

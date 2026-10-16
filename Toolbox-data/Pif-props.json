@@ -1,9 +1,9 @@
 {
   "MANUFACTURER": "Google",
-  "MODEL": "Pixel 11 Pro XL",
-  "FINGERPRINT": "google/kodiak_beta/kodiak:17/DP11.260918.005/16443917:user/release-keys",
-  "PRODUCT": "kodiak_beta",
-  "DEVICE": "kodiak",
-  "SECURITY_PATCH": "2026-09-01",
-  "DEVICE_INITIAL_SDK_INT": "37"
+  "MODEL": "Pixel 9 Pro XL",
+  "FINGERPRINT": "google/komodo/komodo:14/AD1A.240530.047/11942150:user/release-keys",
+  "PRODUCT": "komodo",
+  "DEVICE": "komodo",
+  "SECURITY_PATCH": "2024-08-05",
+  "DEVICE_INITIAL_SDK_INT": "34"
 }

@@ -1,0 +1,158 @@
+{
+  "devices": [
+    {
+      "name": "Pixel 9 Pro XL (komodo)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 9 Pro XL",
+      "DEVICE": "komodo",
+      "PRODUCT": "komodo",
+      "FINGERPRINT": "google/komodo/komodo:14/AD1A.240530.047/11942150:user/release-keys",
+      "SECURITY_PATCH": "2024-08-05",
+      "DEVICE_INITIAL_SDK_INT": "34"
+    },
+    {
+      "name": "Pixel 9 Pro (caiman)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 9 Pro",
+      "DEVICE": "caiman",
+      "PRODUCT": "caiman",
+      "FINGERPRINT": "google/caiman/caiman:14/AD1A.240530.047/11942150:user/release-keys",
+      "SECURITY_PATCH": "2024-08-05",
+      "DEVICE_INITIAL_SDK_INT": "34"
+    },
+    {
+      "name": "Pixel 9 (tokay)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 9",
+      "DEVICE": "tokay",
+      "PRODUCT": "tokay",
+      "FINGERPRINT": "google/tokay/tokay:14/AD1A.240530.047/11942150:user/release-keys",
+      "SECURITY_PATCH": "2024-08-05",
+      "DEVICE_INITIAL_SDK_INT": "34"
+    },
+    {
+      "name": "Pixel 9 Pro Fold (comet)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 9 Pro Fold",
+      "DEVICE": "comet",
+      "PRODUCT": "comet",
+      "FINGERPRINT": "google/comet/comet:14/AD1A.240530.047/11942150:user/release-keys",
+      "SECURITY_PATCH": "2024-08-05",
+      "DEVICE_INITIAL_SDK_INT": "34"
+    },
+    {
+      "name": "Pixel 8 Pro (husky)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 8 Pro",
+      "DEVICE": "husky",
+      "PRODUCT": "husky",
+      "FINGERPRINT": "google/husky/husky:14/UD1A.230803.022/10347833:user/release-keys",
+      "SECURITY_PATCH": "2023-09-05",
+      "DEVICE_INITIAL_SDK_INT": "34"
+    },
+    {
+      "name": "Pixel 8 (shiba)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 8",
+      "DEVICE": "shiba",
+      "PRODUCT": "shiba",
+      "FINGERPRINT": "google/shiba/shiba:14/UD1A.230803.022/10347833:user/release-keys",
+      "SECURITY_PATCH": "2023-09-05",
+      "DEVICE_INITIAL_SDK_INT": "34"
+    },
+    {
+      "name": "Pixel 8a (akita)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 8a",
+      "DEVICE": "akita",
+      "PRODUCT": "akita",
+      "FINGERPRINT": "google/akita/akita:14/UD2A.240305.019/11516024:user/release-keys",
+      "SECURITY_PATCH": "2024-04-05",
+      "DEVICE_INITIAL_SDK_INT": "34"
+    },
+    {
+      "name": "Pixel 7 Pro (cheetah)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 7 Pro",
+      "DEVICE": "cheetah",
+      "PRODUCT": "cheetah",
+      "FINGERPRINT": "google/cheetah/cheetah:13/TD1A.220804.031/9074292:user/release-keys",
+      "SECURITY_PATCH": "2022-10-05",
+      "DEVICE_INITIAL_SDK_INT": "33"
+    },
+    {
+      "name": "Pixel 7 (panther)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 7",
+      "DEVICE": "panther",
+      "PRODUCT": "panther",
+      "FINGERPRINT": "google/panther/panther:13/TD1A.220804.031/9074292:user/release-keys",
+      "SECURITY_PATCH": "2022-10-05",
+      "DEVICE_INITIAL_SDK_INT": "33"
+    },
+    {
+      "name": "Pixel 7a (lynx)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 7a",
+      "DEVICE": "lynx",
+      "PRODUCT": "lynx",
+      "FINGERPRINT": "google/lynx/lynx:13/TQ2B.230505.005.A1/9963841:user/release-keys",
+      "SECURITY_PATCH": "2023-05-05",
+      "DEVICE_INITIAL_SDK_INT": "33"
+    },
+    {
+      "name": "Pixel 6 Pro (raven)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 6 Pro",
+      "DEVICE": "raven",
+      "PRODUCT": "raven",
+      "FINGERPRINT": "google/raven/raven:12/SD1A.210817.036/7805805:user/release-keys",
+      "SECURITY_PATCH": "2021-11-05",
+      "DEVICE_INITIAL_SDK_INT": "31"
+    },
+    {
+      "name": "Pixel 6 (oriole)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 6",
+      "DEVICE": "oriole",
+      "PRODUCT": "oriole",
+      "FINGERPRINT": "google/oriole/oriole:12/SD1A.210817.036/7805805:user/release-keys",
+      "SECURITY_PATCH": "2021-11-05",
+      "DEVICE_INITIAL_SDK_INT": "31"
+    },
+    {
+      "name": "Pixel 6a (bluejay)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 6a",
+      "DEVICE": "bluejay",
+      "PRODUCT": "bluejay",
+      "FINGERPRINT": "google/bluejay/bluejay:12/SD2A.220601.003/8505508:user/release-keys",
+      "SECURITY_PATCH": "2022-06-05",
+      "DEVICE_INITIAL_SDK_INT": "32"
+    },
+    {
+      "name": "Pixel 5 (redfin)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 5",
+      "DEVICE": "redfin",
+      "PRODUCT": "redfin",
+      "FINGERPRINT": "google/redfin/redfin:11/RD1A.200810.020/6716075:user/release-keys",
+      "SECURITY_PATCH": "2020-09-05",
+      "DEVICE_INITIAL_SDK_INT": "30"
+    }
+  ]
+}

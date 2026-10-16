@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-10-16 — Pixel ≤ 9 PIF Priority & In-App Presets Catalog
+
+- Restricted PIF automated updater (`Toolbox-Update/scripts/update_pif.sh`) and priority list to Google Pixel 9 and older devices (Pixel 9 Pro XL down to Pixel 4/5), dropping speculative Pixel 10 and 11 targets. Updated `Toolbox-data/Pif-props.json` to Pixel 9 Pro XL (`komodo`).
+- Generated and maintained `Toolbox-data/pif-devices.json` providing a catalog of valid Pixel ≤ 9 PIF presets. Updated `.github/workflows/update_pif.yaml` to commit both `Pif-props.json` and `pif-devices.json`.
+- Synced `classes.dex` SHA-256 in public documentation to verified release pre-release v2.0.6.1 asset hash `d145963fc369c8d0fe683b850adece96b449c57f151bdd4572ca18e9a910d5b7`.
+
 ## 2026-10-16 — Old provider patch warning, hide-Toolbox removal, ignore hardening
 
 - Chose warning-only (user decision): the four 2.0.6.1 guides and README.md now say to restore the stock `SettingsProvider.apk` from the same ROM build before importing the current 2.0.6.1 `classes.dex` if any older Kaorios recipe patched it, because those recipes call `KaoriosHook` methods the current DEX no longer defines (`NoSuchMethodError` in the system process, likely bootloop). Rejected restoring pass-through provider bridges in the DEX: that keeps a retired route alive. The packaged ZIP README is unchanged; the published ZIP asset is not being replaced.
