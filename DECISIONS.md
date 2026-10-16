@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-16 — Pixel ≤ 7 PIF data and stable-only updater
+
+- Supersede the earlier Pixel ≤ 9 catalog and priority below: restrict the default PIF and selectable public catalog to numbered Pixel 7-family and older devices. The current Pixel 7 Pro record uses the existing historical catalog fingerprint; this is not a claim of current Play Integrity success.
+- The scheduled updater accepts stable OTA links and stable-shaped matching metadata only. Reject the previous automatic QPR/beta fallback: Google's stable page may present terms without ZIP links, and automatically publishing a beta fingerprint in that case mislabels its channel. If no eligible stable link is accessible, fail without changing either JSON. No stable Pixel 7 OTA metadata was independently verified in this task; do not invent a newer fingerprint.
+
 ## 2026-10-16 — Pixel ≤ 9 PIF Priority & In-App Presets Catalog
 
 - Restricted PIF automated updater (`Toolbox-Update/scripts/update_pif.sh`) and priority list to Google Pixel 9 and older devices (Pixel 9 Pro XL down to Pixel 4/5), dropping speculative Pixel 10 and 11 targets. Updated `Toolbox-data/Pif-props.json` to Pixel 9 Pro XL (`komodo`).

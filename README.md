@@ -12,7 +12,7 @@ For **version 2.0.4.0 and below**, see:
 ## ✨ Features
 
 - ✅ Play Integrity fix.
-- 🧩 Pixel & properties spoofing.
+- 🧩 Pixel & properties spoofing. [PIF preset and OTA channel policy](Toolbox-docs/PIF_PRESETS.md).
 - ⚙️ Per-app spoofing manager.
 - 🙈 Hide installed app list (Caller-aware isolation).
 - 🛠️ Hide Developer Options & ADB status.

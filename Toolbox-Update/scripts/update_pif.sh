@@ -58,17 +58,8 @@ if [ -f "$TARGET_FILE" ]; then
   CURRENT_DEVICE_INITIAL_SDK="$(jq -r '.DEVICE_INITIAL_SDK_INT // empty' "$TARGET_FILE" 2>/dev/null || true)"
 fi
 
-# Prefer newest Pixel (Pixel 9 and older) with a published OTA. Format: codename|model|launch SDK
+# Prefer newest Pixel (Pixel 7 and older) with a published OTA. Format: codename|model|launch SDK
 PIXEL_PRIORITY=(
-  "komodo|Pixel 9 Pro XL|34"
-  "caiman|Pixel 9 Pro|34"
-  "tokay|Pixel 9|34"
-  "comet|Pixel 9 Pro Fold|34"
-  "husky|Pixel 8 Pro|34"
-  "shiba|Pixel 8|34"
-  "akita|Pixel 8a|34"
-  "felix|Pixel Fold|33"
-  "tangorpro|Pixel Tablet|33"
   "cheetah|Pixel 7 Pro|33"
   "panther|Pixel 7|33"
   "lynx|Pixel 7a|33"
@@ -128,7 +119,7 @@ OTA_LINK=""
 OTA_PAGE=""
 OTA_CHANNEL=""
 
-# Prefer released public OTAs. Beta/QPR images are fallback only.
+# Publish stable OTAs only; an inaccessible or terms-gated stable index must not select a beta.
 stable_url="https://developers.google.com/android/ota"
 if wget -q -O ota-stable.html "$stable_url" && select_from_page ota-stable.html no; then
   OTA_PAGE="$stable_url"
@@ -136,28 +127,7 @@ if wget -q -O ota-stable.html "$stable_url" && select_from_page ota-stable.html 
 fi
 
 if [ -z "$OTA_LINK" ]; then
-  for qpr in 4 3 2 1; do
-    candidate_url="https://developer.android.com/about/versions/$ANDROID_VERSION/qpr$qpr/download-ota"
-    candidate_file="ota-qpr$qpr.html"
-    if wget -q -O "$candidate_file" "$candidate_url" && select_from_page "$candidate_file" yes; then
-      OTA_PAGE="$candidate_url"
-      OTA_CHANNEL="beta"
-      break
-    fi
-  done
-fi
-
-if [ -z "$OTA_LINK" ]; then
-  candidate_url="https://developer.android.com/about/versions/$ANDROID_VERSION/download-ota"
-  candidate_file="ota-base.html"
-  if wget -q -O "$candidate_file" "$candidate_url" && select_from_page "$candidate_file" yes; then
-    OTA_PAGE="$candidate_url"
-    OTA_CHANNEL="beta"
-  fi
-fi
-
-if [ -z "$OTA_LINK" ]; then
-  echo "Failed to find an OTA for any preferred flagship Pixel."
+  echo "No eligible stable Pixel OTA link found; leaving PIF data unchanged."
   exit 1
 fi
 
@@ -224,6 +194,11 @@ if [ -z "$PRODUCT" ] || [ -z "$DEVICE" ]; then
 fi
 if [ "$DEVICE" != "$TARGET_DEVICE" ]; then
   echo "OTA metadata device mismatch: selected '$TARGET_DEVICE' but fingerprint reports '$DEVICE'."
+  exit 1
+fi
+if [ "$PRODUCT" != "$TARGET_DEVICE" ] || [[ "$FINGERPRINT" == *"_beta"* ]] ||
+   [[ "$FINGERPRINT" != google/"$TARGET_DEVICE"/"$TARGET_DEVICE":*":user/release-keys" ]]; then
+  echo "OTA metadata is not a stable fingerprint for '$TARGET_DEVICE'."
   exit 1
 fi
 
