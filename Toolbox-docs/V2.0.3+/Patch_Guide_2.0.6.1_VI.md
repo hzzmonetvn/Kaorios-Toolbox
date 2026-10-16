@@ -2,6 +2,8 @@
 
 [English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
 
+**Cảnh báo bootloop:** recipe Kaorios cũ (guide 2.0.6.0 và asset 2.0.6.1 ban đầu) patch `SettingsProvider.apk` để gọi các method `KaoriosHook` (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) mà `classes.dex` 2.0.6.1 hiện tại không còn định nghĩa. System process sẽ ném `NoSuchMethodError`, nhiều khả năng gây bootloop. Nếu `SettingsProvider.apk` của ROM này từng được patch bằng recipe Kaorios cũ, khôi phục `SettingsProvider.apk` stock của cùng build ROM **trước khi** import `classes.dex` 2.0.6.1 hiện tại. Không dùng lại file provider đã patch trước đây.
+
 **Sửa gì:** bản sao `framework.jar` và `services.jar` **cùng build ROM được phép sửa**. Giữ stock nguyên bản và SHA-256 riêng ngoài workspace; chuẩn bị cách khôi phục trước khi thay đổi trên thiết bị. Dùng editor multidex và công cụ smali tương thích DEX đầu vào. Giữ nguyên `SettingsProvider.apk`. Không dùng đường dẫn stock làm output.
 
 **Tìm class trước:** liệt kê mọi `classes*.dex` trong hai JAR, disassemble từng split riêng, tìm **đúng một DEX** chứa class và method theo chữ ký dưới đây. Chỉ sửa split owner đó. [Template theo Android](../Template/Template_V2060/README.md) là mẫu logic, **không phải class để chép đè ROM**. Dừng nếu owner trùng, thiếu method cần thiết hoặc luồng ROM khác ví dụ.

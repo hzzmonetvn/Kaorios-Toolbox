@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-10-16 — Old provider patch warning, hide-Toolbox removal, ignore hardening
+
+- Chose warning-only (user decision): the four 2.0.6.1 guides and README.md now say to restore the stock `SettingsProvider.apk` from the same ROM build before importing the current 2.0.6.1 `classes.dex` if any older Kaorios recipe patched it, because those recipes call `KaoriosHook` methods the current DEX no longer defines (`NoSuchMethodError` in the system process, likely bootloop). Rejected restoring pass-through provider bridges in the DEX: that keeps a retired route alive. The packaged ZIP README is unchanged; the published ZIP asset is not being replaced.
+- Removed the "Hide Toolbox package from apps" feature; users hide Toolbox themselves. A tracked-file search found no public README, guide, Toolbox-data or language-string mention to remove, so no public doc changed for it.
+- Added `KeySign/`, `*.jks`, `*.keystore`, `keystore.properties` and `local.properties` to `.gitignore` so signing material and local build config cannot be committed by accident.
+
 ## 2026-10-15 — Remove the retired SettingsProvider patch route
 
 - Removed the three retired provider patch/verifier entry points, their dedicated test, five A13–A17 provider smali samples and four historical 2.0.6.0 guides. The public 2.0.6.1 ZIP source inventory no longer includes those four script/test members. Removed the obsolete "Spoof setting value per app" feature bullet from README.md. This changes the source and future packaged ZIPs, not an already published release asset; release replacement requires separate verification.
