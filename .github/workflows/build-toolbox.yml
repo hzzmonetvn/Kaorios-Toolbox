@@ -383,6 +383,7 @@ jobs:
             dist/classes.dex \
             dist/lib/arm64-v8a/libkaorios_toolbox.so \
             > dist/SHA256SUMS
+          cp dist/SHA256SUMS dist/SHA256SUMS.txt
 
           {
             echo "## Kaorios release artifacts"
