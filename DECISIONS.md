@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-18 — Update pre-release v2.0.6.1 classes.dex
+
+- Replaced `classes.dex` in pre-release `v2.0.6.1` with the verified build from `kow-pif-picker` commit `9ccd3bb` via Framework CI run `39135321906`. Verified SHA-256: `f489c3286e1283428ae583f5d467dabc7a27c08f7336d178dc5af36edbf9943a`. Updated `SHA256SUMS` and synced documentation references across `README.md`, `Patch_Guide_2.0.6.1_VI.md`, `Patch_Guide_2.0.6.1.md`, `Google_Flags_VI.md`, and `Google_Flags.md`.
+- Includes RKP Keybox resilient algorithm routing (avoids crashing keystore when ECDSA-only keybox is provisioned and RSA key generation is requested) and Android 17 spoofing alignment.
+
 ## 2026-10-16 — Kow bot PIF daily source
 
 - Supersede the earlier stable-OTA updater policy below: daily default is Pixel 7 Pro (`cheetah`), and only Pixel 7 Pro, Pixel 7, Pixel 7a and Pixel 6a are eligible catalog entries. Resolve the bot HEAD once and fetch its manifest and four property files at that SHA; reject malformed or mismatched records before updating either JSON. Rejected OTA HTML scraping and publishing other upstream models.
