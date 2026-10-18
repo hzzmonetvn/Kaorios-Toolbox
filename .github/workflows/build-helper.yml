@@ -52,10 +52,11 @@ jobs:
           cp "$RUNNER_TEMP/helper-hma/hma"/zygote/build/outputs/magisk/release/*.zip "$RUNNER_TEMP/helper-inputs/hma/runtime.zip"
           python3 Kaorios-Helper/tools/source_bundle.py "$RUNNER_TEMP/helper-hma" "$RUNNER_TEMP/helper-inputs/hma"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        continue-on-error: true
         with:
           name: helper-hma-inputs
           path: ${{ runner.temp }}/helper-inputs/hma
-          retention-days: 14
+          retention-days: 1
 
   copg:
     runs-on: ubuntu-latest
@@ -85,11 +86,12 @@ jobs:
           cp "$RUNNER_TEMP/helper-native/native-build.json" "$RUNNER_TEMP/helper-copg/copg/helper-dependencies/native/"
           python3 Kaorios-Helper/tools/source_bundle.py "$RUNNER_TEMP/helper-copg" "$RUNNER_TEMP/helper-inputs/copg"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        continue-on-error: true
         with:
           name: helper-copg-inputs
           path: ${{ runner.temp }}/helper-inputs/copg
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
   tee:
     runs-on: ubuntu-latest
@@ -125,10 +127,11 @@ jobs:
           cp "$RUNNER_TEMP/helper-tee/tee"/out/*Release.zip "$RUNNER_TEMP/helper-inputs/tee/runtime.zip"
           python3 Kaorios-Helper/tools/source_bundle.py "$RUNNER_TEMP/helper-tee" "$RUNNER_TEMP/helper-inputs/tee"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        continue-on-error: true
         with:
           name: helper-tee-inputs
           path: ${{ runner.temp }}/helper-inputs/tee
-          retention-days: 14
+          retention-days: 1
 
   package:
     needs: [hma, tee, copg]
@@ -164,7 +167,8 @@ jobs:
           cd dist
           sha256sum *.zip *.tar.gz > SHA256SUMS
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        continue-on-error: true
         with:
           name: Kaorios-Helper-experimental-${{ github.run_number }}
           path: dist/
-          retention-days: 30
+          retention-days: 2
