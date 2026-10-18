@@ -383,6 +383,7 @@ jobs:
             dist/classes.dex \
             dist/lib/arm64-v8a/libkaorios_toolbox.so \
             > dist/SHA256SUMS
+          cp dist/SHA256SUMS dist/SHA256SUMS.txt
 
           {
             echo "## Kaorios release artifacts"
@@ -400,10 +401,26 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: KaoriosToolbox-release-${{ github.run_number }}
-          path: private-src/dist/
-          if-no-files-found: error
-          retention-days: 14
+      - name: Upload build artifacts to tempfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "### Download Artifacts (tempfile)" >> "$GITHUB_STEP_SUMMARY"
+          echo "| File | Download URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          for file in private-src/dist/*; do
+            if [[ -f "$file" ]]; then
+              fname=$(basename "$file")
+              echo "Uploading $fname to tempfile..."
+              resp=$(curl -s -F "file=@$file" https://tmpfiles.org/api/v1/upload || echo "")
+              url=$(echo "$resp" | jq -r '.data.url // empty')
+              if [[ -n "$url" ]]; then
+                dl_url=$(echo "$url" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')
+                echo "Artifact $fname: $dl_url"
+                echo "| \`$fname\` | [Download $fname]($dl_url) |" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "Failed to upload $fname: $resp"
+                echo "| \`$fname\` | Upload failed |" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          done

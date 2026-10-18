@@ -14,7 +14,7 @@
 
 ## 1. Import payload — `framework.jar`
 
-Lấy [payload DEX pre-release 2.0.6.1 hiện tại](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex) và kiểm tra SHA-256 (`d145963fc369c8d0fe683b850adece96b449c57f151bdd4572ca18e9a910d5b7`); APK quản lý dùng bản stable [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). DEX tải trước đó từ cùng URL có byte khác. Kiểm kê **mọi class payload**. Trong bản sao framework JAR, nếu descriptor đã có thì thay **class trong owner DEX cũ**; class mới thì thêm vào split phù hợp. Không chép payload `classes.dex` đè lên cả DEX stock còn chứa class ROM khác. Xác nhận mỗi class payload xuất hiện đúng một lần và class stock còn lại nguyên vẹn. Chỉ import payload vào `framework.jar`; `services.jar` giữ nguyên các class ROM của nó. Import không tự chèn ROM hook.
+Lấy [payload DEX pre-release 2.0.6.1 hiện tại](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex) và kiểm tra SHA-256 (`f489c3286e1283428ae583f5d467dabc7a27c08f7336d178dc5af36edbf9943a`); APK quản lý dùng bản stable [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). DEX tải trước đó từ cùng URL có byte khác. Kiểm kê **mọi class payload**. Trong bản sao framework JAR, nếu descriptor đã có thì thay **class trong owner DEX cũ**; class mới thì thêm vào split phù hợp. Không chép payload `classes.dex` đè lên cả DEX stock còn chứa class ROM khác. Xác nhận mỗi class payload xuất hiện đúng một lần và class stock còn lại nguyên vẹn. Chỉ import payload vào `framework.jar`; `services.jar` giữ nguyên các class ROM của nó. Import không tự chèn ROM hook.
 
 ## 2. Hook trong `framework.jar`
 

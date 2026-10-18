@@ -1,0 +1,131 @@
+name: Cleanup Storage
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      delete_all_caches:
+        description: 'Delete all GitHub Actions cache keys'
+        type: boolean
+        default: true
+      delete_all_artifacts:
+        description: 'Delete all build artifacts'
+        type: boolean
+        default: true
+      days_to_keep_runs:
+        description: 'Delete workflow runs older than N days'
+        type: number
+        default: 3
+      min_runs_to_keep:
+        description: 'Minimum number of recent runs to keep per workflow'
+        type: number
+        default: 2
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cleanup-storage
+  cancel-in-progress: true
+
+jobs:
+  cleanup:
+    name: Purge old caches, artifacts, and workflow runs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Clean Actions Caches
+        if: ${{ github.event.inputs.delete_all_caches != 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "=== Cleaning Actions Caches for $REPO ==="
+          while true; do
+            cache_ids=$(gh api "repos/$REPO/actions/caches?per_page=100" --jq '.actions_caches[].id' 2>/dev/null || echo "")
+            if [ -z "$cache_ids" ]; then
+              echo "No active caches found."
+              break
+            fi
+            for id in $cache_ids; do
+              echo "Deleting cache ID: $id"
+              gh api -X DELETE "repos/$REPO/actions/caches/$id" || true
+            done
+          done
+
+      - name: Clean Artifacts
+        if: ${{ github.event.inputs.delete_all_artifacts != 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "=== Cleaning Artifacts for $REPO ==="
+          while true; do
+            art_ids=$(gh api "repos/$REPO/actions/artifacts?per_page=100" --jq '.artifacts[].id' 2>/dev/null || echo "")
+            if [ -z "$art_ids" ]; then
+              echo "No artifacts found."
+              break
+            fi
+            for id in $art_ids; do
+              echo "Deleting artifact ID: $id"
+              gh api -X DELETE "repos/$REPO/actions/artifacts/$id" || true
+            done
+          done
+
+      - name: Clean Workflow Runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+          DAYS_TO_KEEP: ${{ github.event.inputs.days_to_keep_runs || 3 }}
+          MIN_KEEP: ${{ github.event.inputs.min_runs_to_keep || 2 }}
+        run: |
+          echo "=== Cleaning Workflow Runs for $REPO ==="
+          python3 - << 'EOF'
+          import os
+          import sys
+          import json
+          import subprocess
+          from datetime import datetime, timezone, timedelta
+
+          repo = os.environ["REPO"]
+          current_run_id = int(os.environ.get("CURRENT_RUN_ID", 0))
+          days = int(os.environ.get("DAYS_TO_KEEP", 3))
+          min_keep = int(os.environ.get("MIN_KEEP", 2))
+          cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+          cmd = ["gh", "api", f"repos/{repo}/actions/runs?per_page=100"]
+          res = subprocess.run(cmd, capture_output=True, text=True)
+          if res.returncode != 0:
+              print(f"Failed to fetch runs: {res.stderr}")
+              sys.exit(0)
+
+          data = json.loads(res.stdout)
+          runs = data.get("workflow_runs", [])
+
+          workflows = {}
+          for r in runs:
+              wid = r.get("workflow_id")
+              workflows.setdefault(wid, []).append(r)
+
+          deleted = 0
+          for wid, w_runs in workflows.items():
+              w_runs.sort(key=lambda x: x["created_at"], reverse=True)
+              for idx, r in enumerate(w_runs):
+                  rid = r["id"]
+                  if rid == current_run_id:
+                      continue
+                  created_at = datetime.fromisoformat(r["created_at"].replace("Z", "+00:00"))
+                  is_older = created_at < cutoff
+                  is_beyond_min = idx >= min_keep
+                  is_failed_or_cancelled = r.get("conclusion") in ["failure", "cancelled", "timed_out"]
+
+                  if (is_beyond_min and is_older) or (is_failed_or_cancelled and is_beyond_min):
+                      print(f"Deleting run {rid} ({r.get('name')}, conclusion: {r.get('conclusion')}, date: {r.get('created_at')})")
+                      subprocess.run(["gh", "api", "-X", "DELETE", f"repos/{repo}/actions/runs/{rid}"], capture_output=True)
+                      deleted += 1
+
+          print(f"Cleanup finished. Total runs deleted: {deleted}")
+          EOF
