@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-10-19 — Replace pre-release v2.0.6.1 classes.dex for PIF fix
+
+- Replaced `classes.dex` in pre-release `v2.0.6.1` with the verified build from `kow-pif-picker` commit `ff26c48` via Framework CI run `39221660189`. Verified SHA-256: `46b0f76f41c387ba05b62e740a93b0dc58927aa4a19fbc71434ea4f19af6c029`. Published `SHA256SUMS.txt` with all release asset hashes and synced documentation references across `README.md`, `Patch_Guide_2.0.6.1.md`, `Patch_Guide_2.0.6.1_VI.md`, `Google_Flags.md`, and `Google_Flags_VI.md`.
+- DroidGuard Keystore certificate chain blocking is now opt-in and off by default (`kaorios_spoof_provider` default `0`), so DroidGuard reaches keybox-backed attestation instead of a forced basic evaluation. Keybox routing is enabled when `kaorios_keybox_enabled` is unset and remains disabled by an explicit `0`.
+- Rejected: keeping the old defaults and relying on users to set the hidden globals; the manager app does not write `kaorios_spoof_provider`, and the previous release shipped both blocking paths active.
+
 ## 2026-10-18 — Update pre-release v2.0.6.1 classes.dex
 
 - Replaced `classes.dex` in pre-release `v2.0.6.1` with the verified build from `kow-pif-picker` commit `9ccd3bb` via Framework CI run `39135321906`. Verified SHA-256: `f489c3286e1283428ae583f5d467dabc7a27c08f7336d178dc5af36edbf9943a`. Updated `SHA256SUMS` and synced documentation references across `README.md`, `Patch_Guide_2.0.6.1_VI.md`, `Patch_Guide_2.0.6.1.md`, `Google_Flags_VI.md`, and `Google_Flags.md`.
