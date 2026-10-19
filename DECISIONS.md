@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-10-19 — Rebuild pre-release v2.0.6.1 classes.dex for the TEE warm-up chain-hook fix
+
+- Replaced `classes.dex` in pre-release `v2.0.6.1` with the build from `kow-pif-picker` commit `2ee25ef` via Framework CI run `39257592439` (6m49s, all steps pass). Verified SHA-256: `d35d5f747936c6196b2edf22e3f97821af7160a37106fb4d2a0ed09bc658d087` (578,492 bytes). Refreshed `SHA256SUMS.txt` and synchronized hashes across `README.md`, `Patch_Guide_2.0.6.1.md`, `Patch_Guide_2.0.6.1_VI.md`, `Google_Flags.md`, and `Google_Flags_VI.md`; release notes updated.
+- The fix is framework-side: the asynchronous TEE warm-up no longer re-enters the patched `engineGetCertificateChain` hook through its own `OmkRootOfTrust` probe. Previously the warm-up worker could block inside `needHack()`/`awaitTeeState()` while the state was still `CHECKING`, so the first chain read in a fresh app process timed out and received the stock chain. The one-argument hook position shared with NTFramework and the EVOX reference is unchanged; replacing the payload DEX is sufficient with the existing ROM hook set.
+- Rejected changing the ROM patch shape (alias-aware hook or method-entry block check): the populated-array return has no alias in scope, and the framework-internal probe flag is the narrower fix.
+
 ## 2026-10-19 — Rebuild pre-release v2.0.6.1 classes.dex with PIF runtime hardening
 
 - Replaced `classes.dex` in pre-release `v2.0.6.1` with the build from `kow-pif-picker` commit `ed25edf` via Framework CI run `39228293789` (7m10s, all steps pass). Verified SHA-256: `168b6da5706f32a35513818bce7f68cf3454c41478e23ed4706dc8e1e87e9330` (578,352 bytes). Refreshed `SHA256SUMS.txt` and synchronized hashes across `README.md`, `Patch_Guide_2.0.6.1.md`, `Patch_Guide_2.0.6.1_VI.md`, `Google_Flags.md`, and `Google_Flags_VI.md`; release notes updated.
