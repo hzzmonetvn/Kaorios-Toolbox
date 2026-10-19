@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-10-19 — Rebuild pre-release v2.0.6.1 classes.dex with PIF runtime hardening
+
+- Replaced `classes.dex` in pre-release `v2.0.6.1` with the build from `kow-pif-picker` commit `ed25edf` via Framework CI run `39228293789` (7m10s, all steps pass). Verified SHA-256: `168b6da5706f32a35513818bce7f68cf3454c41478e23ed4706dc8e1e87e9330` (578,352 bytes). Refreshed `SHA256SUMS.txt` and synchronized hashes across `README.md`, `Patch_Guide_2.0.6.1.md`, `Patch_Guide_2.0.6.1_VI.md`, `Google_Flags.md`, and `Google_Flags_VI.md`; release notes updated.
+- Runtime changes: configuration loads when `kaorios_time` is unset; an absent `kaorios_target_txt` uses the NTFramework default target list, while an explicitly empty value still means no targets; the TEE health wait increased from 250 ms to 2,000 ms so a cold KeyMint probe cannot force the conservative generate path before the keybox chain hack.
+- Users whose Features screen previously persisted `kaorios_keybox_enabled=0` must re-enable “Spoof Keybox” or delete that global; an explicit `0` still disables keybox routing. Release notes state this.
+- Rejected treating an explicitly empty target list as “unset”: that would override a deliberate user choice and differs from NTFramework.
+
 ## 2026-10-19 — Replace pre-release v2.0.6.1 classes.dex for PIF fix
 
 - Replaced `classes.dex` in pre-release `v2.0.6.1` with the verified build from `kow-pif-picker` commit `ff26c48` via Framework CI run `39221660189`. Verified SHA-256: `46b0f76f41c387ba05b62e740a93b0dc58927aa4a19fbc71434ea4f19af6c029`. Published `SHA256SUMS.txt` with all release asset hashes and synced documentation references across `README.md`, `Patch_Guide_2.0.6.1.md`, `Patch_Guide_2.0.6.1_VI.md`, `Google_Flags.md`, and `Google_Flags_VI.md`.
