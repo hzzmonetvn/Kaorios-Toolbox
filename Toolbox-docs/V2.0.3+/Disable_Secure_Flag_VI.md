@@ -22,7 +22,7 @@ Lcom/android/server/devicepolicy/DevicePolicyCacheImpl;
 isScreenCaptureAllowed(I)Z
 ```
 
-Thêm ngay sau `.registers X`:
+Thêm đoạn mã sau ngay sau `.registers X`/`.locals` và phần metadata `.param`/`.annotation` (nếu có), trước label hoặc instruction gốc đầu tiên:
 
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
@@ -52,7 +52,9 @@ Lcom/android/server/wm/WindowState;
 Lcom/android/server/wm/WindowStateAnimator;
 ```
 
-**Smali mẫu:** [`WindowState.smali`](../Template/Template_V2060/service/WindowState.smali) | [`WindowStateAnimator.smali`](../Template/Template_V2060/service/WindowStateAnimator.smali)
+Một số ROM giữ `isSecureLocked`/`setSecureLocked` trong `WindowStateAnimator`; template đã lưu không chứa hai method này ở class đó, nên hãy kiểm tra bản build của bạn trước khi patch.
+
+**Smali mẫu:** [`WindowState.smali`](../Template/Template_V2060/service/WindowState.smali)
 
 **Method:**
 
@@ -60,7 +62,7 @@ Lcom/android/server/wm/WindowStateAnimator;
 isSecureLocked()Z
 ```
 
-Thêm ngay sau `.registers X`:
+Thêm đoạn mã sau ngay sau `.registers X`/`.locals` và phần metadata `.param`/`.annotation` (nếu có), trước label hoặc instruction gốc đầu tiên:
 
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
@@ -82,7 +84,7 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
 setSecureLocked(Z)V
 ```
 
-Thêm ngay sau `.registers X`:
+Thêm đoạn mã sau ngay sau `.registers X`/`.locals` và phần metadata `.param`/`.annotation` (nếu có), trước label hoặc instruction gốc đầu tiên:
 
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z

@@ -2,7 +2,7 @@
 
 Công cụ đóng gói hỗ trợ ba profile: **Zygisk/HMA** (chỉ HMA-OSS chạy qua Zygisk), **Combined** (ghép HMA và TEE Simulator RS), và **Full** (ghép HMA, TEE Simulator RS cùng COPG).
 
-[Workflow Build Kaorios Helper hiện tại](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml) chỉ đóng gói **Full**: một ZIP `Kaorios-Helper-0.3.0-experimental.zip` (HMA + COPG + TEE, không có WebUI COPG) cùng source snapshot và checksum trong artifact `Kaorios-Helper-experimental-<số lần chạy>`. Các profile Zygisk/HMA và Combined vẫn được công cụ đóng gói và test hỗ trợ, nhưng workflow này không xuất ZIP riêng cho chúng.
+[Workflow Build Kaorios Helper hiện tại](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/workflows/build-helper.yml) chỉ đóng gói **Full**: một ZIP `Kaorios-Helper-0.3.0-experimental.zip` (HMA + COPG + TEE, không có WebUI COPG) cùng source snapshot và checksum. Job `package` tải các file này lên tmpfiles.org và ghi link vào phần summary của run; artifact của run chỉ giữ input build từng thành phần (`helper-hma-inputs`, `helper-tee-inputs`, `helper-copg-inputs`, retention 1 ngày), không chứa gói Full. Các profile Zygisk/HMA và Combined vẫn được công cụ đóng gói và test hỗ trợ, nhưng workflow này không xuất ZIP riêng cho chúng.
 
 Đây chưa phải bản release production. Module nhắm tới **arm64, Android 12 trở lên**. Build/kiểm tra host không xác nhận boot hoặc hook trên máy thật. Module giữ nguyên SettingsProvider và framework/services của ROM; không patch APK hệ thống.
 
@@ -62,7 +62,7 @@ su -c 'sh /data/adb/modules/kaorios_helper/helperctl.sh status'
 
 ## Build từ source
 
-Source ghim trong `upstreams.json`. Script `tools/prepare_sources.py` chuẩn bị HMA, `tools/prepare_copg.py` chuẩn bị snapshot COPG và kiểm tra commit sạch. Workflow `.github/workflows/build-helper.yml` điều phối các job build độc lập `hma`, `tee`, `copg`; job `package` tạo một artifact bản Full cùng source snapshot và checksum.
+Source ghim trong `upstreams.json`. Script `tools/prepare_sources.py` chuẩn bị HMA, `tools/prepare_copg.py` chuẩn bị snapshot COPG và kiểm tra commit sạch. Workflow `.github/workflows/build-helper.yml` điều phối các job build độc lập `hma`, `tee`, `copg`; job `package` tạo một gói Full cùng source snapshot và checksum, rồi đăng link tải tạm thời trong phần summary của run.
 
 ## Kiểm tra
 

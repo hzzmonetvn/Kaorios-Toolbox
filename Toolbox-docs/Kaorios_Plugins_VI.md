@@ -26,15 +26,17 @@ Khi Helper đã cài, bấm **Mở manager HMA** để cấu hình HMA trong man
 
 ## Các artifact Helper trước đây (08/10/2026)
 
-Bản thử nghiệm **0.2.0 Zygisk/HMA** khi đó: artifact [Kaorios-Helper-Zygisk-7](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37767798839/artifacts/11547145932) chứa ZIP `Kaorios-Helper-0.2.0-zygisk-experimental.zip` để flash và reboot. ZIP này không chứa runtime TEE hay file policy SELinux. Magisk dùng Zygisk tích hợp hoặc một runtime ngoài; KernelSU/APatch cần runtime Zygisk tương thích. Xem [cách cài và kiểm tra](../Kaorios-Helper/README.md).
+Các artifact/run dưới đây đã bị workflow `cleanup-storage.yml` xóa theo lịch; tên artifact, source commit và SHA-256 được giữ làm mốc lịch sử, không còn link tải.
+
+Bản thử nghiệm **0.2.0 Zygisk/HMA** khi đó: artifact `Kaorios-Helper-Zygisk-7` chứa ZIP `Kaorios-Helper-0.2.0-zygisk-experimental.zip` để flash và reboot. ZIP này không chứa runtime TEE hay file policy SELinux. Magisk dùng Zygisk tích hợp hoặc một runtime ngoài; KernelSU/APatch cần runtime Zygisk tương thích. Xem [cách cài và kiểm tra](../Kaorios-Helper/README.md).
 
 Bản đã kiểm tra dùng source `81e381f6179e78c8db6f0eba6a93d419c2afecc3`; ZIP flash có SHA-256 `e6da83f564f69c48aa55cc9c67e27add10ca0c4055d0140e63efc3ef79de346c`. Build CI, 32 test Helper, checksum, chữ ký manager khớp runtime và kiểm tra installer trên host đã pass. Artifact có source tương ứng và license đi kèm. Chưa có kết quả boot/hook trên máy thật.
 
 Nếu nâng từ Helper/HMA cũ, export cấu hình trong manager trước; bản mới dùng thư mục HMA riêng, giữ dữ liệu cũ và nhập lại bằng Import. Manager phải đi cùng runtime của cùng build.
 
-Bản combined **HMA + TEE Simulator RS** ở thời điểm đó, arm64 / Android 12 trở lên, có riêng tại [Kaorios-Helper-experimental-7](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37767798839/artifacts/11545692382), cùng source `81e381f6179e78c8db6f0eba6a93d419c2afecc3`. ZIP flash có SHA-256 `948cc6182971b5239506c433e9511b30bf35aa05e2e598712d8b6581ecd2ef8e`. Artifact có ZIP flash, source và SHA256SUMS; không phải APK Toolbox. Xem [cách cài và dùng](../Kaorios-Helper/README.md).
+Bản combined **HMA + TEE Simulator RS** ở thời điểm đó, arm64 / Android 12 trở lên, có riêng trong artifact `Kaorios-Helper-experimental-7`, cùng source `81e381f6179e78c8db6f0eba6a93d419c2afecc3`. ZIP flash có SHA-256 `948cc6182971b5239506c433e9511b30bf35aa05e2e598712d8b6581ecd2ef8e`. Artifact có ZIP flash, source và SHA256SUMS; không phải APK Toolbox. Xem [cách cài và dùng](../Kaorios-Helper/README.md).
 
-HMA chạy qua Zygisk. Trong bản combined, TEE chạy bằng daemon riêng, mặc định tắt ở lần cài đầu, không kèm keybox. Tắt daemon TEE vẫn giữ policy SELinux của module; muốn bỏ policy cần tắt/gỡ Helper rồi khởi động lại. Helper không patch SettingsProvider hay framework/services của ROM. Build CI và kiểm tra artifact đã pass ở [37767798839](https://github.com/hzzmonetvn/Kaorios-Toolbox/actions/runs/37767798839); chưa kiểm chứng boot/hook trên máy thật.
+HMA chạy qua Zygisk. Trong bản combined, TEE chạy bằng daemon riêng, mặc định tắt ở lần cài đầu, không kèm keybox. Tắt daemon TEE vẫn giữ policy SELinux của module; muốn bỏ policy cần tắt/gỡ Helper rồi khởi động lại. Helper không patch SettingsProvider hay framework/services của ROM. Build CI và kiểm tra artifact đã pass ở run `37767798839`; chưa kiểm chứng boot/hook trên máy thật.
 
 Ở mốc này COPG chưa tích hợp vì các phiên bản upstream được kiểm tra thiếu source native. Hiện workflow Helper build bản **Full thử nghiệm** từ snapshot COPG lịch sử có source native, kèm source và license; không có xác nhận boot/hook trên máy thật. Xem [README Helper](../Kaorios-Helper/README.md) và [lịch sử rà soát giấy phép](Kaorios_Helper_Licensing_VI.md).
 

@@ -18,7 +18,7 @@ Lcom/android/server/devicepolicy/DevicePolicyCacheImpl;
 ```smali
 isScreenCaptureAllowed(I)Z
 ```
-Add the following code below `.registers X`:
+Add the following code after `.registers X`/`.locals` and any `.param`/`.annotation` metadata, before the first stock label or instruction:
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
 
@@ -42,15 +42,16 @@ Lcom/android/server/wm/WindowState;
 ```smali
 Lcom/android/server/wm/WindowStateAnimator;
 ```
+Some ROMs keep `isSecureLocked`/`setSecureLocked` in `WindowStateAnimator`; the saved template does not contain either method in that class, so inspect your own build before patching.
 
-**Reference smali:** [`WindowState.smali`](../Template/Template_V2060/service/WindowState.smali) | [`WindowStateAnimator.smali`](../Template/Template_V2060/service/WindowStateAnimator.smali)
+**Reference smali:** [`WindowState.smali`](../Template/Template_V2060/service/WindowState.smali)
 
 **Method:**
 ```smali
 isSecureLocked()Z
 ```
 
-Add the following code below `.registers X`:
+Add the following code after `.registers X`/`.locals` and any `.param`/`.annotation` metadata, before the first stock label or instruction:
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
 
@@ -70,7 +71,7 @@ invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
 setSecureLocked(Z)V
 ```
 
-Add the following code below `.registers X`:
+Add the following code after `.registers X`/`.locals` and any `.param`/`.annotation` metadata, before the first stock label or instruction:
 ```smali
 invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
 

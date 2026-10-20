@@ -386,9 +386,11 @@ jobs:
           cp dist/SHA256SUMS dist/SHA256SUMS.txt
 
           {
-            echo "## Kaorios release artifacts"
+            echo "## Kaorios CI build artifacts"
             echo
             echo "Commit: \`${SOURCE_SHA}\`"
+            echo
+            echo "Not verified as a release: compare the \`classes.dex\` SHA-256 below with the hash in the v2.0.6.1 release notes before using these files as release assets."
             echo
             echo "Toolbox APK: boot-framework helper classes excluded."
             echo
