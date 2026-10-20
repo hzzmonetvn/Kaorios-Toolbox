@@ -316,6 +316,13 @@ def patch_keystore_spi(content: str) -> tuple[str, bool]:
     return content[:start] + body + content[end:], True
 
 
+INSTRUMENTATION_HOOK_RE = re.compile(
+    r'(?m)^[ \t]*invoke-static(?:/range)?\s*\{p\d+(?:\s*\.\.\s*p\d+)?\},\s*'
+    r'Landroid/security/kaorios/KaoriosHook;->initContext\(Landroid/content/Context;\)V[ \t]*(?:#.*)?$'
+)
+INSTRUMENTATION_RETURN_RE = re.compile(r'(?m)^[ \t]*return-object\s+[vp]\d+')
+
+
 def patch_instrumentation(content: str) -> tuple[str, bool]:
     def patch_method(text: str, method_name: str, param: str) -> tuple[str, bool]:
         start = text.find(method_name)
@@ -329,7 +336,7 @@ def patch_instrumentation(content: str) -> tuple[str, bool]:
         header = text[text.rfind('.method', 0, start):start]
         if "Class;" in method_name and re.search(r'\bstatic\b', header):
             param = "p1"
-        if "KaoriosHook;->initContext" in method_body:
+        if INSTRUMENTATION_HOOK_RE.search(method_body):
             return text, False
 
         matches = list(re.finditer(r'(return-object\s+[vp]\d+\s*)', method_body))
@@ -541,7 +548,8 @@ def verify_target_content(filename: str, content: str) -> None:
             r'Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair\(Ljava/lang/Object;\)Ljava/security/KeyPair;\s+'
             r'move-result-object\s+(?P<scratch>v\d+)\s+'
             r'if-eqz\s+(?P=scratch),\s*(?P<label>:[\w$]+)\s+'
-            r'return-object\s+(?P=scratch)\s+'
+            r'return-object\s+(?P=scratch)\s*'
+            r'(?:\.(?:line|local|end local|restart local)[^\n]*\n|\s)*'
             r'(?P=label)\s*', body[entry:]
         )
         if sequence is None or int(sequence['scratch'][1:]) != registers - 2:
@@ -610,10 +618,10 @@ def verify_target_content(filename: str, content: str) -> None:
             "newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;",
             "Instrumentation"
         )
-        returns1 = len(re.findall(r'return-object\s+[vp]\d+', body1))
-        returns2 = len(re.findall(r'return-object\s+[vp]\d+', body2))
-        hooks1 = len(re.findall(r'KaoriosHook;->initContext', body1))
-        hooks2 = len(re.findall(r'KaoriosHook;->initContext', body2))
+        returns1 = len(INSTRUMENTATION_RETURN_RE.findall(body1))
+        returns2 = len(INSTRUMENTATION_RETURN_RE.findall(body2))
+        hooks1 = len(INSTRUMENTATION_HOOK_RE.findall(body1))
+        hooks2 = len(INSTRUMENTATION_HOOK_RE.findall(body2))
         if returns1 > 0 and hooks1 != returns1:
             raise ValueError(
                 f"Instrumentation: newApplication(Class,Context) expected {returns1} initContext hooks, found {hooks1}"
@@ -627,11 +635,11 @@ def verify_target_content(filename: str, content: str) -> None:
         class_header = content[content.rfind('.method', 0, content.find("newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;")):content.find("newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;")]
         class_context = 'p1' if re.search(r'\bstatic\b', class_header) else 'p2'
         for body, context_reg in ((body1, class_context), (body2, 'p3')):
-            for ret in re.finditer(r'\breturn-object\s+[vp]\d+', body):
+            for ret in INSTRUMENTATION_RETURN_RE.finditer(body):
                 preceding = body[:ret.start()]
                 hook = re.search(
-                    rf'invoke-static(?:/range)?\s*\{{{context_reg}(?:\s*\.\.\s*{context_reg})?\}},\s*'
-                    r'Landroid/security/kaorios/KaoriosHook;->initContext\(Landroid/content/Context;\)V\s*$',
+                    rf'(?m)^[ \t]*invoke-static(?:/range)?\s*\{{{context_reg}(?:\s*\.\.\s*{context_reg})?\}},\s*'
+                    r'Landroid/security/kaorios/KaoriosHook;->initContext\(Landroid/content/Context;\)V[ \t]*(?:#.*)?\s*\Z',
                     preceding
                 )
                 if hook is None:

@@ -408,7 +408,8 @@ jobs:
           echo "### Download Artifacts (tempfile)" >> "$GITHUB_STEP_SUMMARY"
           echo "| File | Download URL |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          for file in private-src/dist/*; do
+          uploaded=0
+          for file in dist/*; do
             if [[ -f "$file" ]]; then
               fname=$(basename "$file")
               echo "Uploading $fname to tempfile..."
@@ -418,9 +419,14 @@ jobs:
                 dl_url=$(echo "$url" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')
                 echo "Artifact $fname: $dl_url"
                 echo "| \`$fname\` | [Download $fname]($dl_url) |" >> "$GITHUB_STEP_SUMMARY"
+                uploaded=$((uploaded + 1))
               else
                 echo "Failed to upload $fname: $resp"
                 echo "| \`$fname\` | Upload failed |" >> "$GITHUB_STEP_SUMMARY"
               fi
             fi
           done
+          if (( uploaded == 0 )); then
+            echo "::error::Không có file nào trong dist/ được upload"
+            exit 1
+          fi

@@ -141,6 +141,19 @@ class PatcherRegisterEncodingTest(unittest.TestCase):
         self.assertEqual(bad, result)
         self.assertIn('fallback', error)
 
+    def test_debug_directive_between_hook_return_and_stock_fallback_is_accepted(self):
+        original = generator('    invoke-virtual/range {p0 .. p0}, Ljava/lang/Object;->toString()Ljava/lang/String;\n')
+        patched, _ = patcher.patch_keystore_generator(original)
+        with_debug = patched.replace('    return-object v15\n\n    :cond_kaorios_gen_stock',
+                                     '    return-object v15\n    .line 783\n\n    :cond_kaorios_gen_stock', 1)
+        self.assertNotEqual(patched, with_debug)
+        patcher.verify_target_content('AndroidKeyStoreKeyPairGeneratorSpi.smali', with_debug)
+        status, result, error = patcher.apply_target_patch(
+            'AndroidKeyStoreKeyPairGeneratorSpi.smali', with_debug,
+            {'AndroidKeyStoreKeyPairGeneratorSpi.smali': patcher.patch_keystore_generator})
+        self.assertEqual(patcher.PatchStatus.ALREADY_PATCHED, status, error)
+        self.assertEqual(with_debug, result)
+
     def test_generator_injection_follows_parameter_metadata(self):
         original = generator('    .param p0, "this"    # Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;\n'
                              '        .annotation runtime Ljava/lang/Deprecated;\n'
@@ -235,6 +248,34 @@ class ServicesParameterEncodingTest(unittest.TestCase):
                                       '    const/4 v0, 0x0\n    return v0\n    if-eqz p1, :cond_kaorios_ps_null', 1)
         with self.assertRaisesRegex(ValueError, 'hook must precede a terminating instruction'):
             services.verify(unreachable)
+
+    def test_prepatched_hook_bypassed_by_goto_is_rejected(self):
+        original = computer_engine('', full=False)
+        patched, _ = services.patch(original)
+        bypassed = patched.replace('    if-eqz p1, :cond_kaorios_ps_null',
+                                   '    goto :cond_kaorios_ps_null\n    if-eqz p1, :cond_kaorios_ps_null', 1)
+        self.assertNotEqual(patched, bypassed)
+        with self.assertRaisesRegex(ValueError, 'bypassed by a branch'):
+            services.verify(bypassed)
+
+    def test_prepatched_hook_bypassed_by_conditional_branch_is_rejected(self):
+        original = computer_engine('', full=False)
+        patched, _ = services.patch(original)
+        bypassed = patched.replace('    if-eqz p1, :cond_kaorios_ps_null',
+                                   '    if-nez p2, :cond_kaorios_ps_null\n    if-eqz p1, :cond_kaorios_ps_null', 1)
+        self.assertNotEqual(patched, bypassed)
+        with self.assertRaisesRegex(ValueError, 'bypassed by a branch'):
+            services.verify(bypassed)
+
+    def test_comment_only_hook_is_not_already_patched(self):
+        original = computer_engine('', full=False)
+        commented = original.replace('    const/4 v0, 0x0\n',
+                                     '    # invoke-static {p2, v1, p3}, '
+                                     + services.HOOK_TARGET + '\n    const/4 v0, 0x0\n', 1)
+        self.assertNotEqual(original, commented)
+        result, changed = services.patch(commented)
+        self.assertTrue(changed)
+        services.verify(result)
 
     def test_last_parameter_uses_high_path_and_preserves_physical_stock_operand(self):
         original = computer_engine('    invoke-static {p7}, Ljava/lang/Boolean;->valueOf(Z)Ljava/lang/Boolean;\n')

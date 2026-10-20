@@ -58,8 +58,18 @@ def _method_span(text: str) -> tuple[int, int, int]:
     raise ValueError("target ComputerEngine.shouldFilterApplication method not found")
 
 
+EXECUTABLE_HOOK_RE = re.compile(
+    r"(?m)^[ \t]*invoke-static(?:/range)?\s*\{[^}]*\},\s*"
+    + re.escape(HOOK_TARGET)
+    + r"[ \t]*(?:#.*)?$"
+)
+BRANCH_RE = re.compile(
+    r"(?m)^\s*(goto(?:/16|/32)?|if-[\w]+|packed-switch|sparse-switch)\b"
+)
+
+
 def _hook_count(body: str) -> int:
-    return body.count(HOOK_TARGET)
+    return len(EXECUTABLE_HOOK_RE.findall(body))
 
 
 def _high_hook(param_count, old_base, scratch, label, newline="\n"):
@@ -92,9 +102,13 @@ def _verify_visibility(text: str) -> None:
     directive = LOCALS_RE.search(body) or REGISTERS_RE.search(body)
     if directive is None:
         raise ValueError("missing register directive for visibility hook")
-    prefix = body[directive.end():body.find(HOOK_TARGET)]
+    hook = EXECUTABLE_HOOK_RE.search(body)
+    prefix = body[directive.end():hook.start()]
     if re.search(r'(?m)^\s*(?:return(?:-[\w]+)?|throw)\b', prefix):
         raise ValueError("hook must precede a terminating instruction")
+    branches = BRANCH_RE.findall(prefix)
+    if len(branches) != 2 or any(branch != "if-eqz" for branch in branches):
+        raise ValueError("hook must not be bypassed by a branch before the injected null checks")
     if GET_PACKAGE_NAME_CALL not in body:
         directive = LOCALS_RE.search(body) or REGISTERS_RE.search(body)
         width = 8 if param_count == 7 else 4

@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-10-20 — Close executable-hook verifier false passes and CI upload gaps
+
+- Visibility and Instrumentation verifiers previously located hooks by substring, so a commented-out `invoke-static` counted as patched, and a pre-patched `shouldFilterApplication` could place the hook after an unconditional `return` or behind an extra branch and still pass. The visibility verifier now requires a line-anchored executable `invoke-static`, no terminating instruction between the register directive and the hook, and exactly the two injected `if-eqz` null checks in that prefix; the Instrumentation verifier requires an executable line-anchored hook that directly dominates each `return-object`, using `\Z` so trailing instructions cannot pass. Regression tests cover comment-only hooks, a hook after `return`, a `goto` bypass, an extra conditional bypass, a missing hook before one return, and a hook moved after `.locals` with stock code in between.
+- Rejected matching the hook name anywhere in the method (the previous behavior) and rejected counting branches by textual order alone: both still accept non-executable or unreachable text, which is the failure mode being fixed.
+- The build workflow's tempfile upload loop had no failure condition, so a run could finish green with zero downloadable files; it now fails when nothing uploads. It also iterated `dist/*` relative to the job default `working-directory: private-src`, where `dist/` does not exist; the corrected path is the workspace `dist/`. Rejected keeping a soft warning: a release workflow that uploads nothing is not a success.
+- Artifact shell wrappers used bare `python`, which is absent on common modern hosts; replaced with `python3`. The `agent.md` link fragment was corrected to the actual heading id.
+- Host verification: `python3 -m unittest discover -s script -p 'test_*.py'` passes (50 tests, 2 skipped without `KAORIOS_SMALI_CLASSPATH`). No ROM was patched, no workflow was run, and no release asset was replaced for these changes.
+
+## 2026-10-20 — Accept debug directives after the generator hook return
+
+- The `initGenerateSoftwareKeyPair` pre-patch verifier required the stock fallback label to follow `return-object` with whitespace only. The checked-in A17 template has `.line 783` between `return-object v14` and `:cond_7`, so a correct, already-patched A17 `AndroidKeyStoreKeyPairGeneratorSpi.smali` failed with `generateKeyPair hook must be at entry with a dedicated local and stock fallback`; A13–A16 templates passed. Reproduced against the template files on the host before the change.
+- Allowed only the same non-executable debug directives already accepted by the certificate-chain verifier (`.line`, `.local`, `.end local`, `.restart local`) between the early return and the fallback label. Stock instructions still cannot appear in that gap, the entry/label/register/fallback checks are unchanged, and a regression builds the patched sequence with an inserted `.line` and exercises both `verify_target_content` and `apply_target_patch` (ALREADY_PATCHED).
+- Rejected loosening the gap to arbitrary lines: that would let a stock instruction or a second branch sit before the fallback label and would turn the verifier into a text-presence check.
+- Rejected changing the checked-in template to remove `.line 783`: templates mirror real toolchain output; the verifier must accept valid smali, not the other way around.
+- Host verification: the new test passes; the full public `script/test_*.py` suite passes (44 tests, 2 skipped because no real smali classpath is supplied); all A13–A17 generator templates now pass verification. No ROM or device run was performed.
+
 ## 2026-10-19 — Hook/patch parity audit against EVOX A17 and NTFramework 814da1d
 
 - Confirmed the certificate-chain call shape is equivalent across all three: each intercepts the populated-array return of `AndroidKeyStoreSpi.engineGetCertificateChain` with a one-argument `Certificate[](Certificate[])` hook. Kaorios's framework divergence was the asynchronous TEE warm-up re-entering that hook (fixed in `2ee25ef`), not the injection point.

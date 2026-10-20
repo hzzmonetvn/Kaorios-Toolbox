@@ -32,7 +32,7 @@ Guide tay còn có hook ngoài phạm vi mode 1, như developer/ADB-status tùy 
 
 1. Assemble từng cây smali đã sửa với API/toolchain phù hợp. Trong **bản sao** JAR stock, thay đúng entry DEX gốc của cây đó; giữ các split chưa sửa và các entry non-DEX. Tuyệt đối không dùng đường dẫn stock làm output.
 2. Mở lại archive **đầu ra đã lưu**, trích tất cả DEX vào thư mục mới; so byte DEX đã đóng gói với output assemble, so hash DEX không sửa và kiểm kê entry non-DEX. Kiểm tra mọi class payload hiện diện một lần, class ROM ngoài phạm vi không mất và từng owner đúng như bảng bước 2.
-3. Decompile DEX vừa **trích từ archive cuối** vào cây recheck rỗng. So lại mỗi hook với descriptor, register vật lý, mọi nhánh return/fallback và `invoke`/`move-result*`. Chạy verifier framework, services, SystemServer trong [guide patcher](V2.0.3+/Patcher_Guide_2.0.6.1_VI.md#5-kiểm-tra-chính-archive-đã-lưu) khi phù hợp; ghi chính xác verifier đã kiểm tra phần nào. Kiểm tra tay các hook ngoài phạm vi verifier.
+3. Decompile DEX vừa **trích từ archive cuối** vào cây recheck rỗng. So lại mỗi hook với descriptor, register vật lý, mọi nhánh return/fallback và `invoke`/`move-result*`. Chạy verifier framework, services, SystemServer trong [guide patcher](V2.0.3+/Patcher_Guide_2.0.6.1_VI.md#5-kiểm-tra-jar-đã-lưu) khi phù hợp; ghi chính xác verifier đã kiểm tra phần nào. Kiểm tra tay các hook ngoài phạm vi verifier.
 
 **Đạt trên host:** archive mở được, class inventory/DEX hash/đường hook khớp và các check áp dụng đều PASS. Đây **không phải** xác nhận ROM thực tế boot được, tương thích SELinux, attestation hoặc tính năng chạy trên thiết bị; kiểm thử real ROM/device là bước riêng của người được ủy quyền.
 

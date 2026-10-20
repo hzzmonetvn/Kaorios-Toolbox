@@ -60,7 +60,7 @@ mkdir -p "$TASK_UNPACKED" "$TASK_KAORIOS_SMALI" "$TASK_OWNER_SMALI" "$TASK_VERIF
 
 # 1. Validate Kaorios DEX before merge
 java -jar "$TASK_BAKSMALI" disassemble "$TASK_KAORIOS_DEX" --api "$TASK_API" --output "$TASK_KAORIOS_SMALI"
-python "$TASK_DIR/patch-framework-a17-plan.py" validate-kaorios-smali "$TASK_KAORIOS_SMALI"
+python3 "$TASK_DIR/patch-framework-a17-plan.py" validate-kaorios-smali "$TASK_KAORIOS_SMALI"
 
 # 2. Unpack framework.jar
 unzip -q "$TASK_INPUT" -d "$TASK_UNPACKED"
@@ -68,7 +68,7 @@ unzip -q "$TASK_INPUT" -d "$TASK_UNPACKED"
 # 3. Plan patch: discover ActivityThread owner, KaoriosHook slot, and snapshot before hashes
 TASK_PLAN_OUTPUT="$TASK_WORK/plan.txt"
 TASK_HASHES_JSON="$TASK_WORK/before_hashes.json"
-python "$TASK_DIR/patch-framework-a17-plan.py" plan "$TASK_UNPACKED" \
+python3 "$TASK_DIR/patch-framework-a17-plan.py" plan "$TASK_UNPACKED" \
     --kaorios-dex "$TASK_KAORIOS_DEX" --save-hashes "$TASK_HASHES_JSON" > "$TASK_PLAN_OUTPUT"
 
 TASK_OWNER_DEX=$(grep '^OWNER_DEX=' "$TASK_PLAN_OUTPUT" | cut -d= -f2)
@@ -84,7 +84,7 @@ fi
 java -jar "$TASK_BAKSMALI" disassemble "$TASK_UNPACKED/$TASK_OWNER_DEX" --api "$TASK_API" --output "$TASK_OWNER_SMALI"
 
 # 5. Patch ActivityThread smali
-python "$TASK_DIR/patch-framework-a17-smali.py" "$TASK_OWNER_SMALI"
+python3 "$TASK_DIR/patch-framework-a17-smali.py" "$TASK_OWNER_SMALI"
 
 # 6. Reassemble ONLY ActivityThread owner DEX
 TASK_NEW_OWNER_DEX="$TASK_WORK/$TASK_OWNER_DEX"
@@ -96,7 +96,7 @@ mv "$TASK_NEW_OWNER_DEX" "$TASK_UNPACKED/$TASK_OWNER_DEX"
 cp "$TASK_KAORIOS_DEX" "$TASK_UNPACKED/$TASK_KAORIOS_SLOT"
 
 # 8. Assert all untouched DEX files are byte-for-byte identical
-python "$TASK_DIR/patch-framework-a17-plan.py" verify-untouched "$TASK_HASHES_JSON" "$TASK_UNPACKED" "$TASK_OWNER_DEX" "$TASK_KAORIOS_SLOT"
+python3 "$TASK_DIR/patch-framework-a17-plan.py" verify-untouched "$TASK_HASHES_JSON" "$TASK_UNPACKED" "$TASK_OWNER_DEX" "$TASK_KAORIOS_SLOT"
 
 # 9. Pack candidate patched framework JAR in temporary workspace
 TASK_CANDIDATE="$TASK_WORK/framework-candidate.jar"
@@ -112,9 +112,9 @@ java -jar "$TASK_BAKSMALI" disassemble "$TASK_VERIFY_ROOT/jar/$TASK_OWNER_DEX" \
 java -jar "$TASK_BAKSMALI" disassemble "$TASK_VERIFY_ROOT/jar/$TASK_KAORIOS_SLOT" \
     --api "$TASK_API" --output "$TASK_VERIFY_ROOT/smali/kaorios"
 
-python "$TASK_DIR/verify-framework-a17-hooks.py" "$TASK_VERIFY_ROOT/smali"
+python3 "$TASK_DIR/verify-framework-a17-hooks.py" "$TASK_VERIFY_ROOT/smali"
 
 # 11. Publish verified artifact ONLY after all verifications pass
 TASK_OUTPUT_ABS=$(realpath -m "$TASK_OUTPUT")
-python "$TASK_DIR/publish-verified-artifact.py" "$TASK_CANDIDATE" "$TASK_OUTPUT_ABS"
+python3 "$TASK_DIR/publish-verified-artifact.py" "$TASK_CANDIDATE" "$TASK_OUTPUT_ABS"
 echo "patched and artifact-verified $TASK_OUTPUT_ABS (ActivityThread: $TASK_OWNER_DEX, KaoriosHook: $TASK_KAORIOS_SLOT, action: $TASK_KAORIOS_ACTION)"

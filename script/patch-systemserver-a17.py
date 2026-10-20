@@ -4,13 +4,18 @@ import argparse
 import re
 from pathlib import Path
 
-HOOK_TARGET = "Landroid/security/kaorios/KaoriosHook;->initSystemServer()V"
 HOOK_CALL = "invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V"
 ANCHOR_CALL = "invoke-static {}, Landroid/os/Looper;->loop()V"
 
 CLASS_RE = re.compile(r"(?m)^\.class\s+.*Lcom/android/server/SystemServer;\s*$")
 METHOD_RUN_RE = re.compile(r"(?m)^\.method\s+(?:public\s+|private\s+|protected\s+)?(?:final\s+)?run\(\)V\s*$")
 METHOD_END_RE = re.compile(r"(?m)^[ \t]*\.end method[ \t]*(?:\r?\n|$)")
+EXECUTABLE_HOOK_RE = re.compile(
+    r"(?m)^[ \t]*" + re.escape(HOOK_CALL) + r"[ \t]*(?:#.*)?$"
+)
+EXECUTABLE_ANCHOR_RE = re.compile(
+    r"(?m)^[ \t]*" + re.escape(ANCHOR_CALL) + r"[ \t]*(?:#.*)?$"
+)
 
 
 def _method_span(text: str) -> tuple[int, int]:
@@ -31,27 +36,23 @@ def _method_span(text: str) -> tuple[int, int]:
 
 
 def verify(text: str) -> None:
-    """Assert the final smali has exactly one structural hook sequence in SystemServer.run()V."""
+    """Assert the final smali has exactly one executable hook before Looper.loop()."""
     start, end = _method_span(text)
     body = text[start:end]
 
-    total_hook_count = text.count(HOOK_TARGET)
+    total_hook_count = len(EXECUTABLE_HOOK_RE.findall(text))
     if total_hook_count != 1:
-        raise ValueError(f"expected exactly one initSystemServer hook in class; found {total_hook_count}")
+        raise ValueError(f"expected exactly one executable initSystemServer hook in class; found {total_hook_count}")
 
-    if HOOK_CALL not in body:
+    hooks = list(EXECUTABLE_HOOK_RE.finditer(body))
+    if not hooks:
         raise ValueError("expected exact invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V in run()V")
 
-    if ANCHOR_CALL not in body:
+    anchors = list(EXECUTABLE_ANCHOR_RE.finditer(body))
+    if not anchors:
         raise ValueError("expected Looper.loop() in SystemServer.run()V")
 
-    pattern = (
-        r"\s*" + re.escape(HOOK_CALL)
-        + r"\s*(?:\r?\n)+"
-        + r"(?:(?!\.end method).)*?"
-        + r"\s*" + re.escape(ANCHOR_CALL)
-    )
-    if not re.search(pattern, body, re.DOTALL):
+    if hooks[0].start() > anchors[0].start():
         raise ValueError("hook must precede Looper.loop() in SystemServer.run()V")
 
 
@@ -60,7 +61,7 @@ def patch(text: str) -> str:
     start, end = _method_span(text)
     body = text[start:end]
 
-    if HOOK_TARGET in body:
+    if EXECUTABLE_HOOK_RE.search(body):
         verify(text)
         return text
 
