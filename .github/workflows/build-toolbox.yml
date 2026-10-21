@@ -25,6 +25,11 @@ on:
         description: "Commit SHA cụ thể (để trống = HEAD của nhánh trên)"
         required: false
         default: ""
+      run_regressions:
+        description: "Chạy regression test (tools/run-core-regressions.sh)"
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -89,6 +94,29 @@ jobs:
           else
             echo "NOTICE: KeySign/keystore.properties not found in checkout; running in unsigned release mode."
           fi
+
+      - name: Checkout public Toolbox-data
+        if: ${{ inputs.run_regressions }}
+        run: |
+          set -euo pipefail
+          PUBLIC_DIR="$RUNNER_TEMP/public-toolbox"
+          git clone --depth 1 https://github.com/hzzmonetvn/Kaorios-Toolbox.git "$PUBLIC_DIR"
+          PUBLIC_SHA="$(git -C "$PUBLIC_DIR" rev-parse HEAD)"
+          echo "PUBLIC_TOOLBOX_SHA=$PUBLIC_SHA" >> "$GITHUB_ENV"
+          echo "PUBLIC_TOOLBOX_DATA=$PUBLIC_DIR/Toolbox-data" >> "$GITHUB_ENV"
+          {
+            echo "### Cross-repo Contract Test"
+            echo "Testing against public Toolbox-data at commit: \`${PUBLIC_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run core regressions
+        if: ${{ inputs.run_regressions }}
+        env:
+          KAORIOS_REQUIRE_PUBLIC_CONTRACT: "1"
+          PUBLIC_TOOLBOX_DATA: "${{ runner.temp }}/public-toolbox/Toolbox-data"
+        run: |
+          set -euo pipefail
+          bash tools/run-core-regressions.sh
 
       - name: Set up Java 21 for Gradle
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6

@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-10-21 — Migrate private build workflows to public repository and update v2.0.6.1 pre-release DEX
+
+- Added `build-framework.yml` and `flutter-port.yml` to `.github/workflows/` in the public repository (`Kaorios-Toolbox`), and enhanced `build-toolbox.yml` with optional regression testing inputs (`run_regressions`).
+- These workflows clone the private repository (`KaoriosToolbox-Frameowrk`) into `private-src` using `PRIVATE_REPO_TOKEN` to execute Android app builds, Framework DEX compilation, core regressions, and Flutter/Rust contract checks on public GitHub Actions runners, resolving private spending limit exhaustion.
+- Updated pre-release `v2.0.6.1` asset `classes.dex` and `SHA256SUMS.txt` to the verified Framework DEX from CI run `39521779168` (SHA-256 `ca9489f388e8717463c1f33a56c298a4b6bd5785b82d11f20da1deb65c799c9a`, 578,820 bytes). Synchronized hash references across `README.md`, `Patch_Guide_2.0.6.1.md`, `Patch_Guide_2.0.6.1_VI.md`, `Google_Flags.md`, and `Google_Flags_VI.md`.
+- Unsigned release APK fallback and 48-hour tmpfiles upload expiration (`expire=172800`) are maintained across all public build workflows.
+
 ## 2026-10-21 — Set 48-hour expiration for tmpfiles.org artifact uploads
 
 - In `build-toolbox.yml` and `build-helper.yml`, upload calls to `tmpfiles.org` now include `-F "expire=172800"`.
