@@ -68,6 +68,7 @@ mod_v_ss = _load_sibling("verify-systemserver-a17-hooks.py", "v_ss")
 class PatchStatus:
     PATCHED = "PATCHED"
     ALREADY_PATCHED = "ALREADY_PATCHED"
+    UPDATED = "UPDATED"
     UNSUPPORTED_LAYOUT = "UNSUPPORTED_LAYOUT"
     FAILED = "FAILED"
     NOT_TARGET = "NOT_TARGET"
@@ -773,7 +774,7 @@ def run_directory_verifiers(root_path: Path, processed_filenames: set[str]) -> l
     return errors
 
 
-def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
+def process_files(root_path: str | Path, mode: str, slow: bool = True, update: bool = False) -> bool:
     targets = {}
     if mode in ['1', '3']:
         targets.update({
@@ -813,7 +814,11 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
             print(f"    [+] ĐÃ TỰ ĐỘNG LƯU: {file} (Status: {status})\n")
             return True
         elif status == PatchStatus.ALREADY_PATCHED:
-            print(f"    [=] {file}: ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS).\n")
+            if update:
+                p.write_bytes(patched_content.encode("utf-8"))
+                print(f"    [+] ĐÃ CẬP NHẬT (UPDATE): {file} (Verifier PASS).\n")
+            else:
+                print(f"    [=] {file}: ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS).\n")
             return True
         elif status == PatchStatus.UNSUPPORTED_LAYOUT:
             print(f"    [!] {file}: BỐ CỤC KHÔNG HỖ TRỢ (UNSUPPORTED LAYOUT): {err_msg}\n")
@@ -833,6 +838,7 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
     processed_targets: set[str] = set()
     patched_count = 0
     already_patched_count = 0
+    updated_count = 0
     unsupported_count = 0
     failed_count = 0
 
@@ -856,8 +862,13 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
                     if slow:
                         time.sleep(0.1)
                 elif status == PatchStatus.ALREADY_PATCHED:
-                    print(f"    [=] {file}: ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS).\n")
-                    already_patched_count += 1
+                    if update:
+                        filepath.write_bytes(patched_content.encode("utf-8"))
+                        print(f"    [+] ĐÃ CẬP NHẬT (UPDATE): {file} (Verifier PASS).\n")
+                        updated_count += 1
+                    else:
+                        print(f"    [=] {file}: ĐÃ ĐƯỢC PATCH TỪ TRƯỚC (Verifier PASS).\n")
+                        already_patched_count += 1
                 elif status == PatchStatus.UNSUPPORTED_LAYOUT:
                     print(f"    [!] {file}: BỐ CỤC KHÔNG HỖ TRỢ (UNSUPPORTED LAYOUT): {err_msg}\n")
                     unsupported_count += 1
@@ -865,7 +876,7 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
                     print(f"    [!] {file}: THẤT BẠI (FAILED): {err_msg}\n")
                     failed_count += 1
 
-    total_processed = patched_count + already_patched_count + unsupported_count + failed_count
+    total_processed = patched_count + already_patched_count + updated_count + unsupported_count + failed_count
     if total_processed == 0:
         print("[-] Không tìm thấy file mục tiêu nào trong thư mục.")
         return False
@@ -883,7 +894,12 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True) -> bool:
             print(f"    - {err}")
         return False
 
-    print(f"\n[+] HOÀN TẤT: Đã xử lý {total_processed} file mục tiêu ({patched_count} đã patch, {already_patched_count} đã patch từ trước). Tất cả verifier đều PASS.")
+    summary_details = f"{patched_count} đã patch"
+    if updated_count > 0:
+        summary_details += f", {updated_count} đã cập nhật"
+    if already_patched_count > 0:
+        summary_details += f", {already_patched_count} đã patch từ trước"
+    print(f"\n[+] HOÀN TẤT: Đã xử lý {total_processed} file mục tiêu ({summary_details}). Tất cả verifier đều PASS.")
     return True
 
 
@@ -893,6 +909,7 @@ def main() -> None:
     parser.add_argument("--mode", choices=["1", "2", "3"], default=None, help="1=Hooks (A13-A17), 2=Build Spoof (A17 only), 3=Hooks + Build Spoof (A17 only)")
     parser.add_argument("--android-version", choices=["13", "14", "15", "16", "17"], default=None,
                         help="Target Android generation. Required for documented usage; mode 2/3 only support 17.")
+    parser.add_argument("--update", "-u", action="store_true", help="Update and rewrite targets even if already patched (Verifier PASS)")
     parser.add_argument("--no-delay", action="store_true", help="Disable output animation delays")
     args = parser.parse_args()
 
@@ -905,7 +922,7 @@ def main() -> None:
             print("[!] --android-version not supplied; using layout detection only (legacy compatibility).")
         else:
             print(f"[*] Target Android {args.android_version}; hooks remain verifier/layout driven.")
-        success = process_files(args.path, args.mode, slow=not args.no_delay)
+        success = process_files(args.path, args.mode, slow=not args.no_delay, update=args.update)
         sys.exit(0 if success else 1)
 
     # Interactive mode
@@ -934,13 +951,18 @@ def main() -> None:
             print("Mode 2/3 có Build spoof riêng Android 17. Android 13-16 dùng mode 1.")
             sys.exit(1)
 
+        update = args.update
+        if not update:
+            update_choice = input("-> Cho phép update/ghi đè nếu đã patch từ trước? (y/N): ").strip().lower()
+            update = update_choice in ("y", "yes")
+
         target_dir = args.path
         if target_dir is None:
             target_dir = input("-> Nhập đường dẫn thư mục smali (nhấn Enter để dùng thư mục hiện tại): ").strip()
             if not target_dir:
                 target_dir = str(SCRIPT_DIR)
 
-        success = process_files(target_dir, mode, slow=not args.no_delay)
+        success = process_files(target_dir, mode, slow=not args.no_delay, update=update)
         if not success:
             sys.exit(1)
     except Exception as e:

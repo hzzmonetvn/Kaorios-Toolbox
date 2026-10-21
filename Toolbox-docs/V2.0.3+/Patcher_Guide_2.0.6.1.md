@@ -71,9 +71,11 @@ python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes2/android/os/
   --android-version 17 --mode 2 --no-delay
 ```
 
+The `--update` (or `-u`) option allows updating and rewriting target files even when they were already patched and pass verification (`ALREADY_PATCHED`), rather than automatically skipping writing.
+
 These tree names are examples. Mode 3 can replace mode 1 + 2 for **one** tree only when both required Build files and its mode-1 targets are in that tree; still process other trees and services separately.
 
-**Read each file status:** `PATCHED` means written after per-file verification; `ALREADY_PATCHED` means recognized and verified without a write; `UNSUPPORTED_LAYOUT`/`FAILED` mean stop and inspect that file; no target found is **not** a pass. A directory run may have written earlier files before a later failure. A nonzero exit does **not** roll back the directory: **discard partial working copies and restart from clean stock**. Never force a similar-looking snippet; check method descriptor, `.locals`/`.registers`, physical `pN`/`vN` aliases, instruction encoding and stock fallback paths. `--no-delay` only disables animated output.
+**Read each file status:** `PATCHED` means written after per-file verification; `ALREADY_PATCHED` means recognized and verified without a write (use `--update` to overwrite/update); `UNSUPPORTED_LAYOUT`/`FAILED` mean stop and inspect that file; no target found is **not** a pass. A directory run may have written earlier files before a later failure. A nonzero exit does **not** roll back the directory: **discard partial working copies and restart from clean stock**. Never force a similar-looking snippet; check method descriptor, `.locals`/`.registers`, physical `pN`/`vN` aliases, instruction encoding and stock fallback paths. `--no-delay` only disables animated output.
 
 ## 4. Import payload and rebuild copies
 

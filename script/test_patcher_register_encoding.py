@@ -187,6 +187,41 @@ class PatcherRegisterEncodingTest(unittest.TestCase):
                 patcher.patch_keystore_generator(original)
 
 
+class PatcherUpdateModeTest(unittest.TestCase):
+    def test_update_mode_rewrites_already_patched_target(self):
+        original = generator('    invoke-virtual/range {p0 .. p0}, Ljava/lang/Object;->toString()Ljava/lang/String;\n')
+        patched, changed = patcher.patch_keystore_generator(original)
+        self.assertTrue(changed)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir) / 'AndroidKeyStoreKeyPairGeneratorSpi.smali'
+            file_path.write_text(patched, encoding='utf-8')
+
+            # Without update: file is kept as is and reports already patched
+            res_no_update = patcher.process_files(file_path, mode='1', slow=False, update=False)
+            self.assertTrue(res_no_update)
+            self.assertEqual(file_path.read_text(encoding='utf-8'), patched)
+
+            # With update: file is verified and rewritten
+            res_update = patcher.process_files(file_path, mode='1', slow=False, update=True)
+            self.assertTrue(res_update)
+            self.assertEqual(file_path.read_text(encoding='utf-8'), patched)
+
+    def test_update_mode_directory_scan_counts_updates(self):
+        original = generator('    invoke-virtual/range {p0 .. p0}, Ljava/lang/Object;->toString()Ljava/lang/String;\n')
+        patched, _ = patcher.patch_keystore_generator(original)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            subdir = Path(temp_dir) / 'android' / 'security' / 'keystore2'
+            subdir.mkdir(parents=True)
+            file_path = subdir / 'AndroidKeyStoreKeyPairGeneratorSpi.smali'
+            file_path.write_text(patched, encoding='utf-8')
+
+            res = patcher.process_files(temp_dir, mode='1', slow=False, update=True)
+            self.assertTrue(res)
+            self.assertEqual(file_path.read_text(encoding='utf-8'), patched)
+
+
 def computer_engine(body, directive='.locals 8', full=True):
     signature = ('Lcom/android/server/pm/pkg/PackageStateInternal;ILandroid/content/ComponentName;IIZZ'
                  if full else 'Lcom/android/server/pm/pkg/PackageStateInternal;II')

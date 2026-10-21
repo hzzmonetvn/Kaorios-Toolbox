@@ -71,9 +71,11 @@ python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes2/android/os/
   --android-version 17 --mode 2 --no-delay
 ```
 
+Tùy chọn `--update` (hoặc `-u`) cho phép cập nhật và ghi đè lại file mục tiêu ngay cả khi file đã được patch từ trước và vượt qua verifier (`ALREADY_PATCHED`), thay vì tự động bỏ qua lưu file.
+
 Tên cây chỉ là ví dụ. Mode 3 có thể thay mode 1+2 trên **một** cây khi cây đó chứa cả hai file Build cần sửa và target mode 1; vẫn phải làm cây khác và services riêng.
 
-**Đọc status từng file:** `PATCHED` = đã ghi sau verify trong file; `ALREADY_PATCHED` = đã có và qua verifier; `UNSUPPORTED_LAYOUT`/`FAILED` = dừng xem file lỗi; không thấy target **không phải PASS**. Trong một lượt patch thư mục, file trước có thể đã ghi dù file sau lỗi. Exit code khác 0 **không rollback**: **bỏ workspace dở và làm lại từ stock sạch**. Đừng ép snippet gần giống: kiểm tra descriptor, `.locals`/`.registers`, alias `pN`/`vN`, giới hạn opcode, nhánh fallback stock. `--no-delay` chỉ tắt in chữ chậm.
+**Đọc status từng file:** `PATCHED` = đã ghi sau verify trong file; `ALREADY_PATCHED` = đã có và qua verifier (dùng `--update` để ghi đè cập nhật); `UNSUPPORTED_LAYOUT`/`FAILED` = dừng xem file lỗi; không thấy target **không phải PASS**. Trong một lượt patch thư mục, file trước có thể đã ghi dù file sau lỗi. Exit code khác 0 **không rollback**: **bỏ workspace dở và làm lại từ stock sạch**. Đừng ép snippet gần giống: kiểm tra descriptor, `.locals`/`.registers`, alias `pN`/`vN`, giới hạn opcode, nhánh fallback stock. `--no-delay` chỉ tắt in chữ chậm.
 
 ## 4. Import payload và dựng bản sao JAR
 
