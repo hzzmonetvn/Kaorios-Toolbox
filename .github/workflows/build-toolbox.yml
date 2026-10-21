@@ -415,7 +415,7 @@ jobs:
             if [[ -f "$file" ]]; then
               fname=$(basename "$file")
               echo "Uploading $fname to tempfile..."
-              resp=$(curl -s -F "file=@$file" https://tmpfiles.org/api/v1/upload || echo "")
+              resp=$(curl -s -F "file=@$file" -F "expire=172800" https://tmpfiles.org/api/v1/upload || echo "")
               url=$(echo "$resp" | jq -r '.data.url // empty')
               if [[ -n "$url" ]]; then
                 dl_url=$(echo "$url" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')

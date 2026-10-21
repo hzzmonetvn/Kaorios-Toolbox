@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-21 — Set 48-hour expiration for tmpfiles.org artifact uploads
+
+- In `build-toolbox.yml` and `build-helper.yml`, upload calls to `tmpfiles.org` now include `-F "expire=172800"`.
+- This extends the retention time from the 60-minute default to the maximum allowed 48 hours, preventing download links from breaking with 404 "File Not Found" errors shortly after CI completion.
+
 ## 2026-10-20 — Align Helper/CI docs with actual behavior and repair dead references
 
 - `Kaorios-Helper/README.md` claimed the `build-helper` workflow publishes the Full ZIP, source snapshots and checksum as the Actions artifact `Kaorios-Helper-experimental-<run>`. The `package` job has no `upload-artifact` step: it uploads those files to tmpfiles.org and prints links in the run summary, while the run artifacts only hold per-component build inputs (`helper-hma-inputs`, `helper-tee-inputs`, `helper-copg-inputs`, 1-day retention). The README now describes that arrangement in both the overview and the build section.
