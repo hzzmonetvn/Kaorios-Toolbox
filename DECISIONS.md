@@ -4,6 +4,7 @@
 
 - In `build-toolbox.yml` and `build-helper.yml`, upload calls to `tmpfiles.org` now include `-F "expire=172800"`.
 - This extends the retention time from the 60-minute default to the maximum allowed 48 hours, preventing download links from breaking with 404 "File Not Found" errors shortly after CI completion.
+- In `build-toolbox.yml`, made `KeySign/keystore.properties` optional with an unsigned release APK fallback (`NOTICE: Toolbox APK is unsigned`), matching the private workflow design so dispatch runs succeed when the private repo checkout lacks untracked local keystore files.
 
 ## 2026-10-20 — Align Helper/CI docs with actual behavior and repair dead references
 

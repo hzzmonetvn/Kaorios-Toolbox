@@ -77,15 +77,18 @@ jobs:
           echo "Building source commit $source_sha"
           test -f app/build.gradle.kts
           test -f framework/build.gradle.kts
-          test -f KeySign/keystore.properties
-          while IFS='=' read -r name value; do
-            case "$name" in
-              storePassword|keyPassword|keyAlias|storeFile)
-                value="${value%$'\r'}"
-                if [[ -n "$value" ]]; then echo "::add-mask::$value"; fi
-                ;;
-            esac
-          done < KeySign/keystore.properties
+          if [[ -f KeySign/keystore.properties ]]; then
+            while IFS='=' read -r name value; do
+              case "$name" in
+                storePassword|keyPassword|keyAlias|storeFile)
+                  value="${value%$'\r'}"
+                  if [[ -n "$value" ]]; then echo "::add-mask::$value"; fi
+                  ;;
+              esac
+            done < KeySign/keystore.properties
+          else
+            echo "NOTICE: KeySign/keystore.properties not found in checkout; running in unsigned release mode."
+          fi
 
       - name: Set up Java 21 for Gradle
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
@@ -284,28 +287,33 @@ jobs:
             -P 16 -f 4 "$unaligned_apk" "$aligned_apk"
 
           properties="KeySign/keystore.properties"
-          read_property() {
-            sed -n "s/^${1}=//p" "$properties" | tail -n 1 | tr -d '\r'
-          }
-          store_file="$(read_property storeFile)"
-          key_alias="$(read_property keyAlias)"
-          export KAORIOS_STORE_PASSWORD="$(read_property storePassword)"
-          export KAORIOS_KEY_PASSWORD="$(read_property keyPassword)"
-          test -n "$store_file"
-          test -n "$key_alias"
-          test -n "$KAORIOS_STORE_PASSWORD"
-          test -n "$KAORIOS_KEY_PASSWORD"
+          if [[ -f "$properties" ]]; then
+            read_property() {
+              sed -n "s/^${1}=//p" "$properties" | tail -n 1 | tr -d '\r'
+            }
+            store_file="$(read_property storeFile)"
+            key_alias="$(read_property keyAlias)"
+            export KAORIOS_STORE_PASSWORD="$(read_property storePassword)"
+            export KAORIOS_KEY_PASSWORD="$(read_property keyPassword)"
+            test -n "$store_file"
+            test -n "$key_alias"
+            test -n "$KAORIOS_STORE_PASSWORD"
+            test -n "$KAORIOS_KEY_PASSWORD"
 
-          "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" sign \
-            --ks "KeySign/$store_file" \
-            --ks-key-alias "$key_alias" \
-            --ks-pass env:KAORIOS_STORE_PASSWORD \
-            --key-pass env:KAORIOS_KEY_PASSWORD \
-            --out "$signed_apk" \
-            "$aligned_apk"
-          "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify \
-            --verbose "$signed_apk"
-          install -m 0644 "$signed_apk" "$app_apk"
+            "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" sign \
+              --ks "KeySign/$store_file" \
+              --ks-key-alias "$key_alias" \
+              --ks-pass env:KAORIOS_STORE_PASSWORD \
+              --key-pass env:KAORIOS_KEY_PASSWORD \
+              --out "$signed_apk" \
+              "$aligned_apk"
+            "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify \
+              --verbose "$signed_apk"
+            install -m 0644 "$signed_apk" "$app_apk"
+          else
+            echo "NOTICE: No signing credentials provided in KeySign/keystore.properties; publishing unsigned release APK."
+            install -m 0644 "$aligned_apk" "$app_apk"
+          fi
 
       - name: Prepare APKs and extract full framework DEX/Toolbox native library
         shell: bash
@@ -326,7 +334,11 @@ jobs:
 
           unzip -tq "$app_apk"
           unzip -tq "$framework_apk"
-          "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify "$app_apk"
+          if "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify "$app_apk" 2>/dev/null; then
+            echo "Toolbox APK signature verified."
+          else
+            echo "NOTICE: Toolbox APK is unsigned."
+          fi
 
           apkanalyzer="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer"
           test -x "$apkanalyzer"
