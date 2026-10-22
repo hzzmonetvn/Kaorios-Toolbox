@@ -95,9 +95,30 @@ class FrameworkArtifactPlanTest(unittest.TestCase):
         original = dex([HOOK, ROM])
         existing = self.unpacked / 'classes2.dex'
         existing.write_bytes(original)
-        with self.assertRaisesRegex(ValueError, 'would remove.*class merge/import'):
-            planner.plan_patch(self.unpacked, self.incoming)
+        result = planner.plan_patch(self.unpacked, self.incoming)
+        self.assertEqual('merge', result['kaorios_action'])
+        self.assertEqual('classes2.dex', result['kaorios_slot'])
         self.assertEqual(original, existing.read_bytes())
+
+    def test_verify_merged_classes(self):
+        before = self.root / 'before.dex'
+        before.write_bytes(dex([HOOK, ROM]))
+        incoming = self.incoming
+        merged_ok = self.root / 'merged_ok.dex'
+        merged_ok.write_bytes(dex([ROM, HOOK, POLICY]))
+        planner.verify_merged_classes(merged_ok, before, incoming)
+
+        # Missing ROM class fails
+        merged_no_rom = self.root / 'merged_no_rom.dex'
+        merged_no_rom.write_bytes(dex([HOOK, POLICY]))
+        with self.assertRaisesRegex(ValueError, 'lost 1 existing ROM classes'):
+            planner.verify_merged_classes(merged_no_rom, before, incoming)
+
+        # Missing payload class fails
+        merged_no_payload = self.root / 'merged_no_payload.dex'
+        merged_no_payload.write_bytes(dex([ROM, HOOK]))
+        with self.assertRaisesRegex(ValueError, 'missing 1 incoming payload classes'):
+            planner.verify_merged_classes(merged_no_payload, before, incoming)
 
     def test_duplicate_payload_class_outside_slot_is_rejected(self):
         for existing_hook in (False, True):

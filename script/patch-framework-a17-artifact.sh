@@ -92,8 +92,32 @@ java -jar "$TASK_SMALI" assemble "$TASK_OWNER_SMALI" --api "$TASK_API" --output 
 test -s "$TASK_NEW_OWNER_DEX"
 mv "$TASK_NEW_OWNER_DEX" "$TASK_UNPACKED/$TASK_OWNER_DEX"
 
-# 7. Apply Kaorios DEX (replace existing or append to next slot)
-cp "$TASK_KAORIOS_DEX" "$TASK_UNPACKED/$TASK_KAORIOS_SLOT"
+# 7. Apply Kaorios DEX (replace existing, append to next slot, or merge classes)
+if [[ "$TASK_KAORIOS_ACTION" == "merge" ]]; then
+    TASK_BEFORE_SLOT_DEX="$TASK_WORK/before_$TASK_KAORIOS_SLOT"
+    cp "$TASK_UNPACKED/$TASK_KAORIOS_SLOT" "$TASK_BEFORE_SLOT_DEX"
+    TASK_MERGE_SMALI="$TASK_WORK/merge_smali"
+    mkdir -p "$TASK_MERGE_SMALI"
+    java -jar "$TASK_BAKSMALI" disassemble "$TASK_BEFORE_SLOT_DEX" --api "$TASK_API" --output "$TASK_MERGE_SMALI"
+
+    # Remove existing Kaorios / Kousei smali from this slot so new versions replace them cleanly
+    rm -rf "$TASK_MERGE_SMALI/android/security/kaorios" "$TASK_MERGE_SMALI/com/kousei/framework"
+
+    # Copy all incoming Kaorios smali classes into the merge tree
+    cp -R "$TASK_KAORIOS_SMALI/"* "$TASK_MERGE_SMALI/"
+
+    # Reassemble merged DEX
+    TASK_NEW_MERGED_DEX="$TASK_WORK/merged_$TASK_KAORIOS_SLOT"
+    java -jar "$TASK_SMALI" assemble "$TASK_MERGE_SMALI" --api "$TASK_API" --output "$TASK_NEW_MERGED_DEX"
+    test -s "$TASK_NEW_MERGED_DEX"
+    mv "$TASK_NEW_MERGED_DEX" "$TASK_UNPACKED/$TASK_KAORIOS_SLOT"
+
+    # Verify all retained ROM classes and all incoming payload classes are present
+    python3 "$TASK_DIR/patch-framework-a17-plan.py" verify-merged-classes "$TASK_UNPACKED/$TASK_KAORIOS_SLOT" \
+        --before-dex "$TASK_BEFORE_SLOT_DEX" --incoming-dex "$TASK_KAORIOS_DEX"
+else
+    cp "$TASK_KAORIOS_DEX" "$TASK_UNPACKED/$TASK_KAORIOS_SLOT"
+fi
 
 # 8. Assert all untouched DEX files are byte-for-byte identical
 python3 "$TASK_DIR/patch-framework-a17-plan.py" verify-untouched "$TASK_HASHES_JSON" "$TASK_UNPACKED" "$TASK_OWNER_DEX" "$TASK_KAORIOS_SLOT"

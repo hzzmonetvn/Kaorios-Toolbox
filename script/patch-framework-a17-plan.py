@@ -177,13 +177,10 @@ def plan_patch(unpacked_dir: Path, kaorios_dex: Path | None = None) -> dict:
         kaorios_slot = next_classes_slot(existing_names)
 
     if owner_dex == kaorios_slot:
-        raise ValueError(
-            f"ActivityThread owner DEX ({owner_dex}) also contains KaoriosHook; "
-            "safe replacement requires class-level DEX merge which is currently unsupported"
-        )
+        kaorios_action = "merge"
 
     if kaorios_dex is None:
-        if kaorios_action == "replace":
+        if kaorios_action in ("replace", "merge"):
             raise ValueError(
                 "replacement requires --kaorios-dex to verify that no ROM classes are lost; "
                 "otherwise class merge/import is required"
@@ -195,10 +192,7 @@ def plan_patch(unpacked_dir: Path, kaorios_dex: Path | None = None) -> dict:
         if kaorios_action == "replace":
             retained = dex_classes[kaorios_slot] - incoming
             if retained:
-                raise ValueError(
-                    f"replacement would remove {len(retained)} existing classes from {kaorios_slot}; "
-                    "class merge/import is required"
-                )
+                kaorios_action = "merge"
         for name, classes in dex_classes.items():
             if name == kaorios_slot:
                 continue
@@ -237,6 +231,30 @@ def verify_untouched_hashes(
             )
 
 
+def verify_merged_classes(
+    merged_dex_path: Path,
+    before_dex_path: Path,
+    incoming_dex_path: Path,
+) -> None:
+    """Assert merged DEX retains all non-payload ROM classes and contains all incoming payload classes."""
+    before_classes = get_dex_classes(before_dex_path.read_bytes(), strict=True)
+    incoming_classes = get_dex_classes(incoming_dex_path.read_bytes(), strict=True)
+    merged_classes = get_dex_classes(merged_dex_path.read_bytes(), strict=True)
+
+    retained = before_classes - incoming_classes
+    missing_retained = retained - merged_classes
+    if missing_retained:
+        raise ValueError(
+            f"merged DEX lost {len(missing_retained)} existing ROM classes: {sorted(missing_retained)[:5]}"
+        )
+
+    missing_incoming = incoming_classes - merged_classes
+    if missing_incoming:
+        raise ValueError(
+            f"merged DEX missing {len(missing_incoming)} incoming payload classes: {sorted(missing_incoming)[:5]}"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Android 17 Framework patch planner and verifier.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -258,6 +276,12 @@ def main() -> None:
     p_untouched.add_argument("owner_dex", type=str)
     p_untouched.add_argument("kaorios_slot", type=str)
 
+    # verify-merged-classes
+    p_merged = subparsers.add_parser("verify-merged-classes")
+    p_merged.add_argument("merged_dex", type=Path)
+    p_merged.add_argument("--before-dex", type=Path, required=True)
+    p_merged.add_argument("--incoming-dex", type=Path, required=True)
+
     args = parser.parse_args()
 
     if args.command == "validate-kaorios-smali":
@@ -276,6 +300,10 @@ def main() -> None:
         before_hashes = json.loads(args.hashes_json.read_text(encoding="utf-8"))
         verify_untouched_hashes(before_hashes, args.unpacked_dir, args.owner_dex, args.kaorios_slot)
         print("OK: untouched DEX hashes verified")
+
+    elif args.command == "verify-merged-classes":
+        verify_merged_classes(args.merged_dex, args.before_dex, args.incoming_dex)
+        print("OK: merged DEX classes verified")
 
 
 if __name__ == "__main__":
