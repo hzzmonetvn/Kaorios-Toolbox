@@ -89,15 +89,15 @@ A null hook result continues original key generation.
 
 **Method A:** `engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;`.
 
-**Insert:** just before each original `return-object` of the **completed leaf-and-CA array**, after the final leaf insertion. If the array is `v3`, replace that return with:
+**Insert:** just before each original `return-object` of the **completed leaf-and-CA array**, after the final leaf insertion. If the array is `v3` (with method instance `p0` and alias `p1`), replace that return with:
 
 ```smali
-    invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+    invoke-static {p0, p1, v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
     move-result-object v3
     return-object v3
 ```
 
-Use the actual array register in all three lines; if above 15, use `invoke-static/range {vN .. vN}`. Do not hook null/error returns or an array-building loop.
+Use the actual array register in all three lines. In AndroidKeyStoreSpi instance methods, `p0` is the SPI instance and `p1` is the alias string. Note: KaoriosHook also retains the legacy one-argument overload `CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;` for compatibility with earlier ROM patches, but the 3-argument version is recommended so forged certificates are also persisted into Keystore2 for grant and Binder readers. Do not hook null/error returns or an array-building loop.
 
 **Method B:** `engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;`.
 

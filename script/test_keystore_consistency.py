@@ -73,6 +73,34 @@ class KeystoreConsistencyTest(unittest.TestCase):
         self.assertIn('.registers 4', result)
         patcher.verify_target_content('AndroidKeyStoreSpi.smali', result)
 
+    def test_hook_passes_spi_and_alias_for_entry_persistence(self):
+        result, _ = patcher.patch_keystore_spi(STOCK)
+        self.assertIn(
+            'invoke-static {p0, p1, v1}, Landroid/security/kaorios/KaoriosHook;'
+            '->CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;'
+            '[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;', result)
+        patcher.verify_target_content('AndroidKeyStoreSpi.smali', result)
+
+    def test_legacy_one_argument_hook_is_upgraded(self):
+        legacy = STOCK.replace(
+            '    return-object v1\n.end method',
+            '    invoke-static {v1}, Landroid/security/kaorios/KaoriosHook;'
+            '->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)'
+            '[Ljava/security/cert/Certificate;\n'
+            '    move-result-object v1\n'
+            '    return-object v1\n.end method', 1)
+        with self.assertRaisesRegex(ValueError, 'one-argument chain hook must be updated'):
+            patcher.verify_target_content('AndroidKeyStoreSpi.smali', legacy)
+        upgraded, changed = patcher.patch_keystore_spi(legacy)
+        self.assertTrue(changed)
+        self.assertNotIn('CertificateChainIfNeeded([Ljava/security/cert/Certificate;)', upgraded)
+        patcher.verify_target_content('AndroidKeyStoreSpi.smali', upgraded)
+        self.assertEqual((upgraded, False), patcher.patch_keystore_spi(upgraded))
+
+    def test_wide_registers_fail_closed(self):
+        with self.assertRaisesRegex(ValueError, 'p0/p1 exceed'):
+            patcher.patch_keystore_spi(STOCK.replace('.locals 3', '.registers 18', 1))
+
 
 if __name__ == '__main__':
     unittest.main()

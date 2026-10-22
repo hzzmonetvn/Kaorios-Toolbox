@@ -89,15 +89,15 @@ Hook trả null thì tiếp tục đường tạo key stock.
 
 **Method A:** `engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;`.
 
-**Chèn:** ngay trước mỗi `return-object` stock trả **mảng đầy đủ leaf + CA**, sau khi đã gắn leaf cuối. Nếu mảng là `v3`, thay riêng return đó bằng:
+**Chèn:** ngay trước mỗi `return-object` stock trả **mảng đầy đủ leaf + CA**, sau khi đã gắn leaf cuối. Nếu mảng là `v3` (với đối tượng SPI `p0` và alias `p1`), thay riêng return đó bằng:
 
 ```smali
-    invoke-static {v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+    invoke-static {p0, p1, v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
     move-result-object v3
     return-object v3
 ```
 
-Thay cả ba `v3` bằng register mảng thật; nếu >15 dùng `invoke-static/range {vN .. vN}`. Không chèn vào đường null/lỗi hoặc giữa vòng lặp tạo mảng.
+Thay cả ba `v3` bằng register mảng thật; `p0` là SPI và `p1` là alias. Lưu ý: KaoriosHook vẫn giữ overload một tham số `CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;` để tương thích các ROM đã patch trước đó, nhưng bản 3 tham số được khuyến nghị để chuỗi chứng chỉ giả lập được cập nhật vào Keystore2 cho các reader Binder. Không chèn vào đường null/lỗi hoặc giữa vòng lặp tạo mảng.
 
 **Method B:** `engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;`.
 
