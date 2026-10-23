@@ -48,27 +48,32 @@ if [[ $(realpath -m -- "$TASK_INPUT") == $(realpath -m -- "$TASK_OUTPUT") ]] || 
     exit 2
 fi
 
+TASK_SMALI_API="$TASK_API"
+if (( TASK_SMALI_API > 34 )); then
+    TASK_SMALI_API=34
+fi
+
 run_baksmali() {
     local dex=$1 out_dir=$2
     if java -jar "$TASK_BAKSMALI" --version >/dev/null 2>&1; then
-        java -jar "$TASK_BAKSMALI" disassemble "$dex" --api "$TASK_API" --output "$out_dir"
+        java -jar "$TASK_BAKSMALI" disassemble "$dex" --api "$TASK_SMALI_API" --output "$out_dir"
     else
         local lib_dir
         lib_dir=$(dirname "$TASK_BAKSMALI")
         local cp="$TASK_BAKSMALI:$lib_dir/smali-dexlib2.jar:$lib_dir/smali-util.jar:$lib_dir/antlr-runtime.jar:$lib_dir/jcommander.jar:$lib_dir/guava.jar"
-        java -cp "$cp" com.android.tools.smali.baksmali.Main disassemble "$dex" --api "$TASK_API" --output "$out_dir"
+        java -cp "$cp" com.android.tools.smali.baksmali.Main disassemble "$dex" --api "$TASK_SMALI_API" --output "$out_dir"
     fi
 }
 
 run_smali() {
     local smali_dir=$1 out_dex=$2
     if java -jar "$TASK_SMALI" --version >/dev/null 2>&1; then
-        java -jar "$TASK_SMALI" assemble "$smali_dir" --api "$TASK_API" --output "$out_dex"
+        java -jar "$TASK_SMALI" assemble "$smali_dir" --api "$TASK_SMALI_API" --output "$out_dex"
     else
         local lib_dir
         lib_dir=$(dirname "$TASK_SMALI")
         local cp="$TASK_SMALI:$lib_dir/smali-dexlib2.jar:$lib_dir/smali-util.jar:$lib_dir/antlr-runtime.jar:$lib_dir/jcommander.jar:$lib_dir/guava.jar"
-        java -cp "$cp" com.android.tools.smali.smali.Main assemble "$smali_dir" --api "$TASK_API" --output "$out_dex"
+        java -cp "$cp" com.android.tools.smali.smali.Main assemble "$smali_dir" --api "$TASK_SMALI_API" --output "$out_dex"
     fi
 }
 

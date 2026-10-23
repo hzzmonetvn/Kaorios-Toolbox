@@ -78,22 +78,31 @@ class PatchStatus:
 # CÁC HÀM PATCH KAORIOS HOOK (ANDROID 17)
 # ==========================================
 
-def patch_activity_thread(content: str) -> tuple[str, bool]:
+def patch_activity_thread(content: str, update: bool = False) -> tuple[str, bool]:
     if mod_at is None:
         raise ValueError("patch-activitythread-a17.py required for ActivityThread patch but unavailable")
-    return mod_at.patch(content)
+    try:
+        return mod_at.patch(content, update=update)
+    except TypeError:
+        return mod_at.patch(content)
 
 
-def patch_computer_engine(content: str) -> tuple[str, bool]:
+def patch_computer_engine(content: str, update: bool = False) -> tuple[str, bool]:
     if mod_ce is not None:
-        return mod_ce.patch(content)
+        try:
+            return mod_ce.patch(content, update=update)
+        except TypeError:
+            return mod_ce.patch(content)
     raise ValueError("patch-services-a17.py required for ComputerEngine patch but unavailable")
 
 
-def patch_system_server(content: str) -> tuple[str, bool]:
+def patch_system_server(content: str, update: bool = False) -> tuple[str, bool]:
     if mod_ss is None:
         raise ValueError("patch-systemserver-a17.py required for SystemServer patch but unavailable")
-    patched = mod_ss.patch(content)
+    try:
+        patched = mod_ss.patch(content, update=update)
+    except TypeError:
+        patched = mod_ss.patch(content)
     return patched, (patched != content)
 
 
@@ -169,7 +178,7 @@ def _generator_entry_offset(method_body: str, directive_end: int) -> int:
     raise ValueError('generateKeyPair stock instructions not found')
 
 
-def patch_keystore_generator(content: str) -> tuple[str, bool]:
+def patch_keystore_generator(content: str, update: bool = False) -> tuple[str, bool]:
     start = content.find("generateKeyPair()Ljava/security/KeyPair;")
     if start == -1:
         raise ValueError("generateKeyPair() anchor method not found in KeyPairGeneratorSpi")
@@ -179,7 +188,30 @@ def patch_keystore_generator(content: str) -> tuple[str, bool]:
 
     method_body = content[start:end]
     if "KaoriosHook;->initGenerateSoftwareKeyPair" in method_body:
-        verify_target_content('AndroidKeyStoreKeyPairGeneratorSpi.smali', content)
+        try:
+            verify_target_content('AndroidKeyStoreKeyPairGeneratorSpi.smali', content)
+            return content, False
+        except ValueError:
+            if not update:
+                raise
+        hook_re = re.compile(
+            r'(?m)^[ \t]*invoke-static(?:/range)?[^\n]*KaoriosHook;->initGenerateSoftwareKeyPair[^\n]*\n'
+            r'[ \t]*move-result-object\s+[vp]\d+\n'
+            r'(?:\s*\n)*'
+            r'[ \t]*if-eqz[^\n]*\n'
+            r'[ \t]*return-object\s+[vp]\d+\n'
+            r'(?:\s*\n)*'
+            r'[ \t]*:cond_kaorios_gen_stock[^\n]*\n?'
+        )
+        reg_match = re.search(r'\.(registers|locals)\s+(\d+)', method_body)
+        if reg_match:
+            directive = reg_match.group(1)
+            curr_count = int(reg_match.group(2))
+            dec_directive = f".{directive} {curr_count - 1}"
+            stripped_body = hook_re.sub('', method_body)
+            stripped_body = stripped_body[:reg_match.start()] + dec_directive + stripped_body[reg_match.end():]
+            stripped_content = content[:start] + stripped_body + content[end:]
+            return patch_keystore_generator(stripped_content, update=False)
         return content, False
 
     match = re.search(r'\.(registers|locals)\s+(\d+)', method_body)
@@ -326,7 +358,7 @@ def _patch_certificate_chain(content: str) -> tuple[str, bool]:
     return content[:start] + new_body + content[end:], True
 
 
-def patch_keystore_spi(content: str) -> tuple[str, bool]:
+def patch_keystore_spi(content: str, update: bool = False) -> tuple[str, bool]:
     content, changed = _patch_certificate_chain(content)
     signature = "engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;"
     anchor = re.search(r'(?m)^\.method[^\n]* ' + re.escape(signature) + r'[ \t]*$', content)
@@ -369,7 +401,7 @@ INSTRUMENTATION_HOOK_RE = re.compile(
 INSTRUMENTATION_RETURN_RE = re.compile(r'(?m)^[ \t]*return-object\s+[vp]\d+')
 
 
-def patch_instrumentation(content: str) -> tuple[str, bool]:
+def patch_instrumentation(content: str, update: bool = False) -> tuple[str, bool]:
     def patch_method(text: str, method_name: str, param: str) -> tuple[str, bool]:
         start = text.find(method_name)
         if start == -1:
@@ -383,7 +415,16 @@ def patch_instrumentation(content: str) -> tuple[str, bool]:
         if "Class;" in method_name and re.search(r'\bstatic\b', header):
             param = "p1"
         if INSTRUMENTATION_HOOK_RE.search(method_body):
-            return text, False
+            try:
+                verify_target_content('Instrumentation.smali', text)
+                return text, False
+            except ValueError:
+                if not update:
+                    raise
+            stripped_body = INSTRUMENTATION_HOOK_RE.sub('', method_body)
+            clean_text = text[:start] + stripped_body + text[end:]
+            patched, _ = patch_method(clean_text, method_name, param)
+            return patched, True
 
         matches = list(re.finditer(r'(return-object\s+[vp]\d+\s*)', method_body))
         if not matches:
@@ -419,7 +460,7 @@ def patch_instrumentation(content: str) -> tuple[str, bool]:
     return content, (c1 or c2)
 
 
-def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
+def patch_app_pkg_manager(content: str, update: bool = False) -> tuple[str, bool]:
     pattern = r'(\.method[^\n]*?hasSystemFeature\(Ljava/lang/String;I\)Z.*?\.end method)'
     match = re.search(pattern, content, flags=re.DOTALL)
     if not match:
@@ -427,6 +468,32 @@ def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
 
     method_body = match.group(1)
     if "KaoriosHook;->hasSystemFeature" in method_body:
+        try:
+            verify_target_content('ApplicationPackageManager.smali', content)
+            return content, False
+        except ValueError:
+            if not update:
+                raise
+        hook_re = re.compile(
+            r'(?m)^[ \t]*invoke-static(?:/range)?[^\n]*KaoriosHook;->hasSystemFeature[^\n]*\n'
+            r'[ \t]*move-result-object\s+[vp]\d+\n'
+            r'(?:\s*\n)*'
+            r'[ \t]*if-eqz[^\n]*\n'
+            r'[ \t]*invoke-virtual(?:/range)?[^\n]*Boolean;->booleanValue\(\)Z\n'
+            r'[ \t]*move-result\s+[vp]\d+\n'
+            r'[ \t]*return\s+[vp]\d+\n'
+            r'(?:\s*\n)*'
+            r'[ \t]*:cond_kaorios_feature_stock[^\n]*\n?'
+        )
+        reg_match = re.search(r'\.(registers|locals)\s+(\d+)', method_body)
+        if reg_match:
+            directive = reg_match.group(1)
+            curr_count = int(reg_match.group(2))
+            dec_directive = f".{directive} {curr_count - 1}"
+            stripped_body = hook_re.sub('', method_body)
+            stripped_body = stripped_body[:reg_match.start()] + dec_directive + stripped_body[reg_match.end():]
+            stripped_content = content[:match.start()] + stripped_body + content[match.end():]
+            return patch_app_pkg_manager(stripped_content, update=False)
         return content, False
 
     reg_match = re.search(r'\.(registers|locals)\s+(\d+)([^\n]*)', method_body)
@@ -486,11 +553,7 @@ def patch_app_pkg_manager(content: str) -> tuple[str, bool]:
     return content[:match.start()] + new_method + content[match.end():], True
 
 
-# ==========================================
-# CÁC HÀM PATCH ANDROID 17 SPOOF
-# ==========================================
-
-def patch_build(content: str) -> tuple[str, bool]:
+def patch_build(content: str, update: bool = False) -> tuple[str, bool]:
     fields_null = [
         "BRAND", "BRAND_FOR_ATTESTATION", "DEVICE", "DEVICE_FOR_ATTESTATION",
         "FINGERPRINT", "HARDWARE", "ID", "MANUFACTURER", "MANUFACTURER_FOR_ATTESTATION",
@@ -512,7 +575,7 @@ def patch_build(content: str) -> tuple[str, bool]:
     return patched, (patched != content)
 
 
-def patch_build_version(content: str) -> tuple[str, bool]:
+def patch_build_version(content: str, update: bool = False) -> tuple[str, bool]:
     fields_version = [
         "RELEASE", "RELEASE_OR_CODENAME", "RELEASE_OR_PREVIEW_DISPLAY",
         "SECURITY_PATCH", "DEVICE_INITIAL_SDK_INT"
@@ -760,7 +823,7 @@ def verify_target_content(filename: str, content: str) -> None:
                 raise ValueError(f"Build$VERSION.smali post-patch: field {f} still has 'final' modifier — patch did not apply")
 
 
-def apply_target_patch(filename: str, content: str, targets: dict) -> tuple[str, str, str | None]:
+def apply_target_patch(filename: str, content: str, targets: dict, update: bool = False) -> tuple[str, str, str | None]:
     """Execute patch and verification for a target. Returns (status, patched_content, error_message)."""
     patch_fn = targets.get(filename)
     if patch_fn is None:
@@ -783,7 +846,12 @@ def apply_target_patch(filename: str, content: str, targets: dict) -> tuple[str,
         return PatchStatus.UNSUPPORTED_LAYOUT, content, f'{filename}: expected class descriptor {owner}'
 
     try:
-        patched_content, changed = patch_fn(content)
+        import inspect
+        sig = inspect.signature(patch_fn)
+        if 'update' in sig.parameters:
+            patched_content, changed = patch_fn(content, update=update)
+        else:
+            patched_content, changed = patch_fn(content)
         # Verify the content satisfies all hook constraints
         verify_target_content(filename, patched_content)
         if changed:
@@ -851,7 +919,7 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True, update: b
             return False
 
         content = p.read_text(encoding="utf-8")
-        status, patched_content, err_msg = apply_target_patch(file, content, targets)
+        status, patched_content, err_msg = apply_target_patch(file, content, targets, update=update)
 
         if status == PatchStatus.PATCHED:
             diff_output = get_diff_text(content, patched_content, file)
@@ -896,7 +964,7 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True, update: b
             if file in targets:
                 filepath = Path(subdir) / file
                 content = filepath.read_text(encoding="utf-8")
-                status, patched_content, err_msg = apply_target_patch(file, content, targets)
+                status, patched_content, err_msg = apply_target_patch(file, content, targets, update=update)
                 processed_targets.add(file)
 
                 if status == PatchStatus.PATCHED:

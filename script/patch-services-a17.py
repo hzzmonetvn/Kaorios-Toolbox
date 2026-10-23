@@ -188,11 +188,36 @@ def _canonicalize_parameter_aliases(body, base, width):
     return ''.join(parts)
 
 
-def _patch_visibility(text: str) -> tuple[str, bool]:
+def _patch_visibility(text: str, update: bool = False) -> tuple[str, bool]:
     """Inject Kaorios HMA visibility hook into ComputerEngine.shouldFilterApplication using register-safe allocation."""
     start, end, param_count = _method_span(text)
     body = text[start:end]
     count = _hook_count(body)
+    if count == 1:
+        try:
+            _verify_visibility(text)
+            return text, False
+        except ValueError:
+            if not update:
+                raise
+
+    if count >= 1 and update:
+        hook_pattern = re.compile(
+            r'(?m)^[ \t]*if-eqz\s+[vp]\d+,\s*:cond_kaorios_ps_null[^\n]*\n.*?:cond_kaorios_ps_null[ \t]*(?:\r?\n|$)',
+            flags=re.DOTALL
+        )
+        stripped_body = hook_pattern.sub('', body)
+        loc_match = LOCALS_RE.search(stripped_body)
+        if loc_match:
+            curr_locs = int(loc_match.group("num"))
+            dec_line = f"{loc_match.group('indent')}.locals {curr_locs - 1}\n"
+            stripped_body = stripped_body[:loc_match.start()] + dec_line + stripped_body[loc_match.end():]
+        body = stripped_body
+        text = text[:start] + body + text[end:]
+        start, end, param_count = _method_span(text)
+        body = text[start:end]
+        count = _hook_count(body)
+
     if count == 1:
         _verify_visibility(text)
         return text, False
@@ -313,8 +338,8 @@ def verify(text: str) -> None:
         installer.verify(text)
 
 
-def patch(text: str) -> tuple[str, bool]:
-    patched, changed = _patch_visibility(text)
+def patch(text: str, update: bool = False) -> tuple[str, bool]:
+    patched, changed = _patch_visibility(text, update=update)
     installer = _installer_patcher(text)
     if installer is not None:
         patched, installer_changed = installer.patch(patched)

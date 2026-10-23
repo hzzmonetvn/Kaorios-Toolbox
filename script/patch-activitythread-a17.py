@@ -106,10 +106,28 @@ def verify(text: str) -> None:
         raise ValueError("Object initActivityThread hook must immediately follow proven assignment")
 
 
-def patch(text: str) -> tuple[str, bool]:
+def patch(text: str, update: bool = False) -> tuple[str, bool]:
     start, end = _method_span(text)
     body = text[start:end]
     count = _hook_count(body)
+    if count == 1:
+        try:
+            verify(text)
+            return text, False
+        except ValueError:
+            if not update:
+                raise
+
+    if count >= 1 and update:
+        hook_pattern = re.compile(
+            r'(?m)^[ \t]*invoke-static(?:/range)?[^\n]*' + re.escape(HOOK_TARGET) + r'[ \t]*(?:\r?\n|$)'
+        )
+        body = hook_pattern.sub('', body)
+        text = text[:start] + body + text[end:]
+        start, end = _method_span(text)
+        body = text[start:end]
+        count = _hook_count(body)
+
     if count == 1:
         verify(text)
         return text, False

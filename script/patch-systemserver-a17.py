@@ -56,14 +56,20 @@ def verify(text: str) -> None:
         raise ValueError("hook must precede Looper.loop() in SystemServer.run()V")
 
 
-def patch(text: str) -> str:
+def patch(text: str, update: bool = False) -> str:
     """Inject KaoriosHook.initSystemServer()V right before Looper.loop() in SystemServer.run()V."""
     start, end = _method_span(text)
     body = text[start:end]
 
     if EXECUTABLE_HOOK_RE.search(body):
-        verify(text)
-        return text
+        try:
+            verify(text)
+            return text
+        except ValueError:
+            if not update:
+                raise
+        hook_re = re.compile(r'(?m)^[ \t]*' + re.escape(HOOK_CALL) + r'[ \t]*(?:\r?\n|$)+')
+        body = hook_re.sub('', body)
 
     anchor_matches = list(re.finditer(r"(?m)^(?P<indent>[ \t]*)" + re.escape(ANCHOR_CALL) + r"[ \t]*(?:\r?\n|$)", body))
     if len(anchor_matches) == 0:

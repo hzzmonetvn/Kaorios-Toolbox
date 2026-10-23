@@ -50,6 +50,11 @@ if [[ $(realpath -m -- "$TASK_INPUT") == $(realpath -m -- "$TASK_OUTPUT") ]] || 
     exit 2
 fi
 
+TASK_SMALI_API="$TASK_API"
+if (( TASK_SMALI_API > 34 )); then
+    TASK_SMALI_API=34
+fi
+
 TASK_WORK=$(mktemp -d /tmp/kaorios-framework-a17.XXXXXX)
 trap 'rm -rf -- "$TASK_WORK"' EXIT
 TASK_UNPACKED="$TASK_WORK/unpacked"
@@ -59,7 +64,7 @@ TASK_VERIFY_ROOT="$TASK_WORK/verify"
 mkdir -p "$TASK_UNPACKED" "$TASK_KAORIOS_SMALI" "$TASK_OWNER_SMALI" "$TASK_VERIFY_ROOT"
 
 # 1. Validate Kaorios DEX before merge
-java -jar "$TASK_BAKSMALI" disassemble "$TASK_KAORIOS_DEX" --api "$TASK_API" --output "$TASK_KAORIOS_SMALI"
+java -jar "$TASK_BAKSMALI" disassemble "$TASK_KAORIOS_DEX" --api "$TASK_SMALI_API" --output "$TASK_KAORIOS_SMALI"
 python3 "$TASK_DIR/patch-framework-a17-plan.py" validate-kaorios-smali "$TASK_KAORIOS_SMALI"
 
 # 2. Unpack framework.jar
@@ -81,14 +86,14 @@ if [[ -z "$TASK_OWNER_DEX" || -z "$TASK_KAORIOS_SLOT" ]]; then
 fi
 
 # 4. Disassemble ONLY ActivityThread owner DEX
-java -jar "$TASK_BAKSMALI" disassemble "$TASK_UNPACKED/$TASK_OWNER_DEX" --api "$TASK_API" --output "$TASK_OWNER_SMALI"
+java -jar "$TASK_BAKSMALI" disassemble "$TASK_UNPACKED/$TASK_OWNER_DEX" --api "$TASK_SMALI_API" --output "$TASK_OWNER_SMALI"
 
 # 5. Patch ActivityThread smali
 python3 "$TASK_DIR/patch-framework-a17-smali.py" "$TASK_OWNER_SMALI"
 
 # 6. Reassemble ONLY ActivityThread owner DEX
 TASK_NEW_OWNER_DEX="$TASK_WORK/$TASK_OWNER_DEX"
-java -jar "$TASK_SMALI" assemble "$TASK_OWNER_SMALI" --api "$TASK_API" --output "$TASK_NEW_OWNER_DEX"
+java -jar "$TASK_SMALI" assemble "$TASK_OWNER_SMALI" --api "$TASK_SMALI_API" --output "$TASK_NEW_OWNER_DEX"
 test -s "$TASK_NEW_OWNER_DEX"
 mv "$TASK_NEW_OWNER_DEX" "$TASK_UNPACKED/$TASK_OWNER_DEX"
 
@@ -98,7 +103,7 @@ if [[ "$TASK_KAORIOS_ACTION" == "merge" ]]; then
     cp "$TASK_UNPACKED/$TASK_KAORIOS_SLOT" "$TASK_BEFORE_SLOT_DEX"
     TASK_MERGE_SMALI="$TASK_WORK/merge_smali"
     mkdir -p "$TASK_MERGE_SMALI"
-    java -jar "$TASK_BAKSMALI" disassemble "$TASK_BEFORE_SLOT_DEX" --api "$TASK_API" --output "$TASK_MERGE_SMALI"
+    java -jar "$TASK_BAKSMALI" disassemble "$TASK_BEFORE_SLOT_DEX" --api "$TASK_SMALI_API" --output "$TASK_MERGE_SMALI"
 
     # Remove existing Kaorios / Kousei smali from this slot so new versions replace them cleanly
     rm -rf "$TASK_MERGE_SMALI/android/security/kaorios" "$TASK_MERGE_SMALI/com/kousei/framework"
@@ -108,7 +113,7 @@ if [[ "$TASK_KAORIOS_ACTION" == "merge" ]]; then
 
     # Reassemble merged DEX
     TASK_NEW_MERGED_DEX="$TASK_WORK/merged_$TASK_KAORIOS_SLOT"
-    java -jar "$TASK_SMALI" assemble "$TASK_MERGE_SMALI" --api "$TASK_API" --output "$TASK_NEW_MERGED_DEX"
+    java -jar "$TASK_SMALI" assemble "$TASK_MERGE_SMALI" --api "$TASK_SMALI_API" --output "$TASK_NEW_MERGED_DEX"
     test -s "$TASK_NEW_MERGED_DEX"
     mv "$TASK_NEW_MERGED_DEX" "$TASK_UNPACKED/$TASK_KAORIOS_SLOT"
 
@@ -132,9 +137,9 @@ mkdir -p "$TASK_VERIFY_ROOT/jar" "$TASK_VERIFY_ROOT/smali"
 unzip -q "$TASK_CANDIDATE" -d "$TASK_VERIFY_ROOT/jar"
 
 java -jar "$TASK_BAKSMALI" disassemble "$TASK_VERIFY_ROOT/jar/$TASK_OWNER_DEX" \
-    --api "$TASK_API" --output "$TASK_VERIFY_ROOT/smali/owner"
+    --api "$TASK_SMALI_API" --output "$TASK_VERIFY_ROOT/smali/owner"
 java -jar "$TASK_BAKSMALI" disassemble "$TASK_VERIFY_ROOT/jar/$TASK_KAORIOS_SLOT" \
-    --api "$TASK_API" --output "$TASK_VERIFY_ROOT/smali/kaorios"
+    --api "$TASK_SMALI_API" --output "$TASK_VERIFY_ROOT/smali/kaorios"
 
 python3 "$TASK_DIR/verify-framework-a17-hooks.py" "$TASK_VERIFY_ROOT/smali"
 
