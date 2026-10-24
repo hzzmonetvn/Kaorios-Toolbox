@@ -12,9 +12,8 @@ For **version 2.0.4.0 and below**, see:
 ## ✨ Features
 
 - ✅ Play Integrity fix.
-- 🧩 Pixel & properties spoofing. [PIF preset and OTA channel policy](Toolbox-docs/PIF_PRESETS.md).
-- ⚙️ Per-app spoofing manager.
-- 🙈 Hide installed app list (Caller-aware isolation).
+- 🧩 Pixel & properties spoofing.
+- 🙈 Hide installed app list.
 - 🛠️ Hide Developer Options & ADB status.
 - 🔓 Disable FLAG_SECURE (Take screenshots & screen record restricted apps).
 - ☁️ Google Photos unlimited backup.
@@ -42,39 +41,13 @@ For **version 2.0.4.0 and below**, see:
 
 ## 🚀 How to use
 
-## 📦 Framework and patcher release: v2.0.6.1
+## 1. Patch framework,jar, service.jar and selinux ( Recommend for direct integration into custom ROMs)
 
 See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1_VI.md). Agents manually patching authorized ROM copies should also follow the [manual-patching agent procedure](Toolbox-docs/agent.md).
 
-[Release 2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0) remains stable/latest and supplies the signed manager APK. [2.0.6.1](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.1) is a pre-release with a replaced Framework `classes.dex` (SHA-256 `ca9489f388e8717463c1f33a56c298a4b6bd5785b82d11f20da1deb65c799c9a`) and corrected patcher ZIP (SHA-256 `3e0e761a9121ef83b6339791f8ad60bb4895e6ecb8a2eafcb578333d33e99758`). Download both again if you saved earlier 2.0.6.1 assets from the same URLs, then verify `SHA256SUMS.txt`. The released manager's direct framework method and field references were checked against the replacement DEX; this does not guarantee ABI compatibility for other consumers of an earlier DEX.
+## 2. Use Kaorios Helper module (working in progress) (Recommend for rooted user)
 
-**Bootloop warning:** older Kaorios recipes (2.0.6.0 guides and the original 2.0.6.1 assets) patched `SettingsProvider.apk` to call `KaoriosHook` methods (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) that the current 2.0.6.1 `classes.dex` no longer defines. The system process then throws `NoSuchMethodError`, likely causing a bootloop. If this ROM's `SettingsProvider.apk` was ever patched by an older Kaorios recipe, restore the stock `SettingsProvider.apk` from the same ROM build **before** importing the current 2.0.6.1 `classes.dex`. Do not reuse old patched provider files.
-
-**The 2.0.6.1 ROM patch workflow does not support Google Flags interception.** The replacement DEX contains a callable query-result helper, but importing it or running the patcher does not add a verified ROM Phenotype caller. No Google Flags patch recipe is available for A13–A17. Read the [Google Flags patch status and verification guide](Toolbox-docs/V2.0.3+/Google_Flags.md) ([Tiếng Việt](Toolbox-docs/V2.0.3+/Google_Flags_VI.md)) before making claims about this feature.
-
-### ⚡ Automated Patcher CLI (`script/kaorios_patcher.py`)
-
-**Usage:**
-
-```bash
-python3 script/kaorios_patcher.py <target_dir_or_file> --android-version {13,14,15,16,17} --mode {1,2,3} [--no-delay]
-```
-
-- **Modes**:
-  - `1`: **Hooks Android 13–17** — Patches `ActivityThread`, `ComputerEngine`, `SystemServer`, `Instrumentation`, `ApplicationPackageManager`, `AndroidKeyStoreKeyPairGeneratorSpi`, and `AndroidKeyStoreSpi`.
-  - `2`: **Build Spoof A17 only** — Removes `final` and updates initializers in `Build.smali` and `Build$VERSION.smali`.
-  - `3`: **Hooks + Build Spoof (Android 17 only)** — Executes Mode 1 plus the A17-only Build patch. Android 13–16 must use Mode 1.
-- **Options**:
-  - `--no-delay`: Disables terminal typing effect and runs at maximum speed (ideal for CI/automation).
-
-Follow the separate patcher guide here:
-
-👉 [Kaorios Toolbox Patcher 2.0.6.1 guide](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md)
-
-The maintained entry point is `script/kaorios_patcher.py`. The legacy `kaorios_patcher_a17.py` filename is only a compatibility launcher. The patcher edits decompiled smali and fails closed on unsupported layouts. For ROM deployment, always rebuild/re-disassemble the affected DEX and verify against the exact ROM; Template files are references, not drop-in replacements.
-
-Releases: [Kaorios-Toolbox Releases](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases)  
-Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-Toolbox/releases)
+Install any zygisk module + Kaorios helper
 
 ---
 
@@ -89,6 +62,6 @@ Old release: [Kaorios-Toolbox old_release](https://github.com/wuang26/Kaorios-To
 - **Payload Dumper** — [rcmiku](https://github.com/rcmiku/Payload-Dumper-Compose).
 - **AOSP Framework**
 - **Trickystore**
+- **NTVector-Runtime** - [NTVector](https://github.com/ncd03-nb/NTVector-Runtime)
 
-
-
+##
