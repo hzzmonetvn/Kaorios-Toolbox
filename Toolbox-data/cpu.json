@@ -3,6 +3,106 @@
   "license": "Apache-2.0",
   "cpus": [
     {
+      "key": "sd8eliteextremegen6",
+      "name": "Qualcomm Snapdragon 8 Elite Extreme Gen 6",
+      "vendor": "Qualcomm",
+      "gpu_key": "adreno850",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.qualcomm.com/smartphones/products/8-series/snapdragon-8-elite-extreme-gen-6-mobile-platform"
+    },
+    {
+      "key": "sd8elitegen6",
+      "name": "Qualcomm Snapdragon 8 Elite Gen 6",
+      "vendor": "Qualcomm",
+      "gpu_key": null,
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.qualcomm.com/smartphones/products/8-series/snapdragon-8-elite-gen-6-mobile-platform"
+    },
+    {
+      "key": "sd8elitegen5",
+      "name": "Qualcomm Snapdragon 8 Elite Gen 5",
+      "vendor": "Qualcomm",
+      "gpu_key": "adreno840",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.qualcomm.com/smartphones/products/8-series/snapdragon-8-elite-gen-5"
+    },
+    {
+      "key": "dimensity9600pro",
+      "name": "MediaTek Dimensity 9600 Pro",
+      "vendor": "MediaTek",
+      "gpu_key": "mali_g2_ultra_nx",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9600-pro"
+    },
+    {
+      "key": "dimensity9600m",
+      "name": "MediaTek Dimensity 9600M",
+      "vendor": "MediaTek",
+      "gpu_key": "mali_g1_ultra_mc12",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.mediatek.com/products/smartphones/dimensity-9600m"
+    },
+    {
+      "key": "dimensity9500",
+      "name": "MediaTek Dimensity 9500",
+      "vendor": "MediaTek",
+      "gpu_key": "mali_g1_ultra_mc12",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9500"
+    },
+    {
+      "key": "dimensity9500s",
+      "name": "MediaTek Dimensity 9500s",
+      "vendor": "MediaTek",
+      "gpu_key": "immortalis_g925_mc12",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9500s"
+    },
+    {
+      "key": "dimensity9400",
+      "name": "MediaTek Dimensity 9400",
+      "vendor": "MediaTek",
+      "gpu_key": "immortalis_g925_mc12",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9400"
+    },
+    {
+      "key": "dimensity9400e",
+      "name": "MediaTek Dimensity 9400e",
+      "vendor": "MediaTek",
+      "gpu_key": "immortalis_g720_mc12",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9400e"
+    },
+    {
+      "key": "dimensity8500",
+      "name": "MediaTek Dimensity 8500",
+      "vendor": "MediaTek",
+      "gpu_key": "mali_g720_mc8",
+      "cpuinfo": null,
+      "cpuinfo_status": "unavailable",
+      "profile_status": "metadata_only",
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-8500"
+    },
+    {
       "key": "sd8elite",
       "name": "Qualcomm Snapdragon 8 Elite",
       "cpuinfo": "Processor\t: AArch64 Processor rev 4 (aarch64)\nprocessor\t: 0\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x801\nCPU revision\t: 4\n\nprocessor\t: 1\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x801\nCPU revision\t: 4\n\nprocessor\t: 2\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x801\nCPU revision\t: 4\n\nprocessor\t: 3\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x801\nCPU revision\t: 4\n\nprocessor\t: 4\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x800\nCPU revision\t: 2\n\nprocessor\t: 5\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x800\nCPU revision\t: 2\n\nprocessor\t: 6\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x800\nCPU revision\t: 2\n\nprocessor\t: 7\nBogoMIPS\t: 38.40\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\nCPU implementer\t: 0x51\nCPU architecture: 8\nCPU variant\t: 0xa\nCPU part\t: 0x800\nCPU revision\t: 2\n\nHardware : Qualcomm Technologies, Inc SM8750-AB\n"
@@ -57,5 +157,7 @@
       "name": "MediaTek Dimensity 9400+",
       "cpuinfo": "processor\t: 0\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\nprocessor\t: 1\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\nprocessor\t: 2\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\nprocessor\t: 3\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\nprocessor\t: 4\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd82\nCPU revision\t: 1\n\nprocessor\t: 5\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd82\nCPU revision\t: 1\n\nprocessor\t: 6\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd82\nCPU revision\t: 1\n\nprocessor\t: 7\nBogoMIPS\t: 26.00\nFeatures\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\nCPU implementer\t: 0x41\nCPU architecture: 8\nCPU variant\t: 0x0\nCPU part\t: 0xd85\nCPU revision\t: 1\n\n"
     }
-  ]
+  ],
+  "updated_at": "2026-10-24",
+  "notes": "Entries with cpuinfo=null are metadata-only; never mount or apply them as /proc/cpuinfo. A verified dump from a real device is required."
 }
