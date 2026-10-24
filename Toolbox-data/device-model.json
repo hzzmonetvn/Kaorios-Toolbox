@@ -7,7 +7,7 @@
       "MANUFACTURER": "asus",
       "MODEL": "ASUSAI2501",
       "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
-      "PRODUCT": "ASUSAI2501"
+      "PRODUCT": "WWAI2501"
     },
     {
       "name": "Black Shark 5 Pro",
@@ -23,7 +23,8 @@
       "DEVICE": "kodiak",
       "MANUFACTURER": "Google",
       "MODEL": "Pixel 11 Pro XL",
-      "PRODUCT": "kodiak"
+      "PRODUCT": "kodiak",
+      "FINGERPRINT": "google/kodiak/kodiak:17/CD1A.261005.003/16262255:user/release-keys"
     },
     {
       "name": "HONOR Magic9 Pro Max",
@@ -36,10 +37,11 @@
     {
       "name": "Infinix GT 50 Pro",
       "BRAND": "Infinix",
-      "DEVICE": "X6891",
+      "DEVICE": "Infinix-X6891",
       "MANUFACTURER": "INFINIX",
       "MODEL": "X6891",
-      "PRODUCT": "X6891"
+      "PRODUCT": "X6891-OP",
+      "FINGERPRINT": "Infinix/X6891-OP/Infinix-X6891:16/BP2A.250605.031.A3/301550032:user/release-keys"
     },
     {
       "name": "iQOO 16",
@@ -89,7 +91,7 @@
       "MANUFACTURER": "Xiaomi",
       "MODEL": "25102PCBEG",
       "FINGERPRINT": "POCO/myron_global/myron:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.3.0.WPMIDXM:user/release-keys",
-      "PRODUCT": "myron"
+      "PRODUCT": "myron_global"
     },
     {
       "name": "realme GT 8 Pro",
@@ -110,10 +112,11 @@
     {
       "name": "REDMAGIC Tablet 3",
       "BRAND": "nubia",
-      "DEVICE": "NP05J",
+      "DEVICE": "PQ84P01",
       "MANUFACTURER": "ZTE",
       "MODEL": "NP05J",
-      "PRODUCT": "NP05J"
+      "PRODUCT": "PQ84P01-EEA",
+      "FINGERPRINT": "nubia/PQ84P01-EEA/PQ84P01:15/AQ3A.240812.002/REDMAGICOS10.5.9_NP05J_EU:user/release-keys"
     },
     {
       "name": "Redmi K100 Pro Max (China)",
@@ -126,10 +129,11 @@
     {
       "name": "Samsung Galaxy S26 Ultra",
       "BRAND": "samsung",
-      "DEVICE": "SM-S948B",
+      "DEVICE": "m3q",
       "MANUFACTURER": "samsung",
       "MODEL": "SM-S948B",
-      "PRODUCT": "SM-S948B"
+      "PRODUCT": "m3qxeea",
+      "FINGERPRINT": "samsung/m3qxeea/m3q:16/BP4A.251205.006/S948BXXS4AZG5_OXM4AZG5:user/release-keys"
     },
     {
       "name": "Samsung Galaxy Z Fold8 Ultra",
@@ -163,6 +167,60 @@
       "MODEL": "25091RP04C",
       "FINGERPRINT": "Xiaomi/piano/piano:15/AQ3A.250226.002/OS3.0.4.0.WPYCNXM:user/release-keys",
       "PRODUCT": "piano"
+    },
+    {
+      "name": "OnePlus 15 (verified firmware)",
+      "BRAND": "OnePlus",
+      "DEVICE": "OP60FFL1",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "PLK110",
+      "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+      "PRODUCT": "PLK110"
+    },
+    {
+      "name": "Lenovo Legion Y700 Gen 3 / Legion Tab (8.8, 3) (verified firmware)",
+      "BRAND": "Lenovo",
+      "DEVICE": "TB321FU",
+      "MANUFACTURER": "LENOVO",
+      "MODEL": "TB321FU",
+      "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+      "PRODUCT": "TB321FU"
+    },
+    {
+      "name": "realme 15 Pro 5G (verified firmware)",
+      "BRAND": "realme",
+      "DEVICE": "RE60B4L1",
+      "MANUFACTURER": "realme",
+      "MODEL": "RMX5101",
+      "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+      "PRODUCT": "RMX5101IN"
+    },
+    {
+      "name": "REDMAGIC 10 Pro (verified firmware)",
+      "BRAND": "nubia",
+      "DEVICE": "NX789J",
+      "MANUFACTURER": "ZTE",
+      "MODEL": "NX789J",
+      "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+      "PRODUCT": "NX789J-UN"
+    },
+    {
+      "name": "Xiaomi 17 (verified firmware)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "pudding",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "25113PN0EG",
+      "FINGERPRINT": "Xiaomi/pudding_global/pudding:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.9.0.WPCMIXM:user/release-keys",
+      "PRODUCT": "pudding_global"
+    },
+    {
+      "name": "iQOO 13 (verified firmware)",
+      "BRAND": "iQOO",
+      "DEVICE": "I2401",
+      "MANUFACTURER": "vivo",
+      "MODEL": "I2401",
+      "FINGERPRINT": "iQOO/I2401/I2401:15/AP3A.240905.015.A2/compiler250328151630:user/release-keys",
+      "PRODUCT": "I2401"
     }
   ]
 }
