@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Manual ROM patch (Android 13–17)
 
-[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
+[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic patcher](Patcher_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md)
 
 **Bootloop warning:** older Kaorios recipes (2.0.6.0 guides and the original 2.0.6.1 assets) patched `SettingsProvider.apk` to call `KaoriosHook` methods (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) that the current 2.0.6.1 `classes.dex` no longer defines. The system process then throws `NoSuchMethodError`, likely causing a bootloop. If this ROM's `SettingsProvider.apk` was ever patched by an older Kaorios recipe, restore the stock `SettingsProvider.apk` from the same ROM build **before** importing the current 2.0.6.1 `classes.dex`. Do not reuse old patched provider files.
 
@@ -10,7 +10,7 @@
 
 **Before inserting any snippet:** find the method's `.locals` or `.registers` and existing `pN`/`vN` aliases. Reserve any needed fresh locals; if increasing locals shifts parameter registers, change old `vN` parameter aliases to `pN` *before* increasing the count and check that all stock instructions remain encodable. Ordinary `invoke {…}` operands must have physical register indices ≤15; `/range` operands must be consecutive. Keep `invoke` next to its `move-result`. Insert entry hooks after `.param`/`.annotation` metadata and **before the first stock label/instruction**. Choose fallback labels not already in the method. The stock lines shown below are **position markers**, not extra lines to duplicate. If these checks cannot be met, stop; do not paste the example unchanged.
 
-**Payload boundary:** This guide covers the listed hooks with the **current 2.0.6.1 pre-release payload** and does not install a Phenotype query-result ROM caller, even though the replacement DEX contains a callable helper. Read the [Google Flags patch status](Google_Flags.md) for the evidence required before that feature can be patched. Check the current release checksum; do not substitute an unverified DEX or call the result a supported Google Flags ROM patch.
+**Payload boundary:** This guide covers only the explicitly listed hooks in the current 2.0.6.1 pre-release payload. Verify the release checksum before importing the DEX; do not substitute an unverified payload.
 
 ## 1. Import payload — `framework.jar`
 
