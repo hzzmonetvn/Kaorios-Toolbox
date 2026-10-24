@@ -47,7 +47,7 @@ See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/2.0.6+/Patch_Guide
 
 ## 2. Use Kaorios Helper module (working in progress) (Recommend for rooted user)
 
-Install any zygisk module + Kaorios helper
+Install any zygisk module + [Kaorios helper](https://github.com/hzzmonetvn/KaoriosHelper)
 
 ---
 
