@@ -1,12 +1,12 @@
 # Kaorios Toolbox 2.0.6.1 — Patcher smali tự động (Android 13–17)
 
-[English](Patcher_Guide_2.0.6.1.md) | [Các hook patch tay](Patch_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
+[English](Patcher_Guide_2.0.6.1.md) | [Các hook patch tay](Patch_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md)
 
 **Cảnh báo bootloop:** recipe Kaorios cũ (guide 2.0.6.0 và asset 2.0.6.1 ban đầu) patch `SettingsProvider.apk` để gọi các method `KaoriosHook` (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) mà `classes.dex` 2.0.6.1 hiện tại không còn định nghĩa. System process sẽ ném `NoSuchMethodError`, nhiều khả năng gây bootloop. Nếu `SettingsProvider.apk` của ROM này từng được patch bằng recipe Kaorios cũ, khôi phục `SettingsProvider.apk` stock của cùng build ROM **trước khi** import `classes.dex` 2.0.6.1 hiện tại. Không dùng lại file provider đã patch trước đây.
 
 **Patcher làm gì:** patch **file smali** được hỗ trợ, không tự sửa JAR nguyên chiếc. Nó **không** import payload hoặc thêm mọi hook tùy chọn. Archive patcher có thể tải về tại [kaorios-patcher-2.0.6.1.zip](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/kaorios-patcher-2.0.6.1.zip) (SHA-256: `3e0e761a9121ef83b6339791f8ad60bb4895e6ecb8a2eafcb578333d33e99758`). Chỉ sửa **bản sao** `framework.jar` và `services.jar` stock của cùng build ROM được phép sửa; giữ stock sạch, SHA-256 và cách khôi phục. Giữ nguyên `SettingsProvider.apk`. Chạy từ gốc repo `public/`; đường dẫn output phải khác stock.
 
-**Ranh giới payload:** Patcher này chỉ bao phủ các hook ROM được liệt kê; nó không chèn caller query-result Phenotype, kể cả với DEX pre-release 2.0.6.1 hiện tại. [Guide Google Flags](Google_Flags_VI.md) nêu bằng chứng còn thiếu và điểm dừng. Kiểm tra checksum asset release hiện tại trước khi import; patcher PASS không chứng minh hỗ trợ Google Flags.
+**Ranh giới payload:** Patcher chỉ hỗ trợ các hook ROM được liệt kê; kết quả PASS không xác minh những hook ngoài phạm vi này. Kiểm tra checksum asset phát hành trước khi import.
 
 ## 1. Tìm class và DEX owner
 
