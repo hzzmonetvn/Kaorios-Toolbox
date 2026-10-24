@@ -221,6 +221,290 @@
       "MODEL": "I2401",
       "FINGERPRINT": "iQOO/I2401/I2401:15/AP3A.240905.015.A2/compiler250328151630:user/release-keys",
       "PRODUCT": "I2401"
+    },
+    {
+      "name": "Samsung Galaxy Z Fold8 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F971B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F971B",
+      "PRODUCT": "SM-F971B"
+    },
+    {
+      "name": "Samsung Galaxy Z Fold7 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F966B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F966B",
+      "PRODUCT": "SM-F966B"
+    },
+    {
+      "name": "Samsung Galaxy Z Flip8 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F776B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F776B",
+      "PRODUCT": "SM-F776B"
+    },
+    {
+      "name": "Samsung Galaxy Z Flip7 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F766B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F766B",
+      "PRODUCT": "SM-F766B"
+    },
+    {
+      "name": "Samsung Galaxy Z Flip7 FE",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F761B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F761B",
+      "PRODUCT": "SM-F761B"
+    },
+    {
+      "name": "Samsung Galaxy Z TriFold",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F968B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F968B",
+      "PRODUCT": "SM-F968B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S12 Ultra 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X946B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X946B",
+      "PRODUCT": "SM-X946B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S12+ 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X846B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X846B",
+      "PRODUCT": "SM-X846B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S11 Ultra 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X936B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X936B",
+      "PRODUCT": "SM-X936B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S11 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X736B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X736B",
+      "PRODUCT": "SM-X736B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S10 Ultra Wi-Fi",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X920",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X920",
+      "PRODUCT": "SM-X920"
+    },
+    {
+      "name": "Google Pixel 10 Pro Fold",
+      "BRAND": "google",
+      "DEVICE": "rango",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel 10 Pro Fold",
+      "PRODUCT": "rango"
+    },
+    {
+      "name": "Google Pixel 9 Pro Fold",
+      "BRAND": "google",
+      "DEVICE": "comet",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel 9 Pro Fold",
+      "FINGERPRINT": "google/comet/comet:17/CP2A.260605.012/15430684:user/release-keys",
+      "PRODUCT": "comet"
+    },
+    {
+      "name": "Google Pixel Fold",
+      "BRAND": "google",
+      "DEVICE": "felix",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel Fold",
+      "FINGERPRINT": "google/felix/felix:16/BP4A.260205.001/14624666:user/release-keys",
+      "PRODUCT": "felix"
+    },
+    {
+      "name": "Google Pixel Tablet",
+      "BRAND": "google",
+      "DEVICE": "tangorpro",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel Tablet",
+      "FINGERPRINT": "google/tangorpro/tangorpro:13/TQ3A.230605.009.A1/10100517:user/release-keys",
+      "PRODUCT": "tangorpro"
+    },
+    {
+      "name": "OnePlus Open",
+      "BRAND": "OnePlus",
+      "DEVICE": "OP5973L1",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "CPH2551",
+      "FINGERPRINT": "OnePlus/CPH2551/OP5973L1:16/BP2A.250605.015/T.R4T3.39d0968-17b17ea-17b17e8:user/release-keys",
+      "PRODUCT": "CPH2551"
+    },
+    {
+      "name": "OnePlus Pad 4",
+      "BRAND": "OnePlus",
+      "DEVICE": "OPD2514",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "OPD2514",
+      "PRODUCT": "OPD2514"
+    },
+    {
+      "name": "OnePlus Pad 3",
+      "BRAND": "OnePlus",
+      "DEVICE": "OPD2415",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "OPD2415",
+      "PRODUCT": "OPD2415"
+    },
+    {
+      "name": "OnePlus Pad Go 2 (Wi-Fi)",
+      "BRAND": "OnePlus",
+      "DEVICE": "OPD2504",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "OPD2504",
+      "PRODUCT": "OPD2504"
+    },
+    {
+      "name": "OPPO Find N6",
+      "BRAND": "OPPO",
+      "DEVICE": "CPH2765",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "CPH2765",
+      "PRODUCT": "CPH2765"
+    },
+    {
+      "name": "OPPO Find N5",
+      "BRAND": "OPPO",
+      "DEVICE": "CPH2671",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "CPH2671",
+      "PRODUCT": "CPH2671"
+    },
+    {
+      "name": "OPPO Pad 5 Pro (China)",
+      "BRAND": "OPPO",
+      "DEVICE": "iceland",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "OPD2511",
+      "PRODUCT": "iceland"
+    },
+    {
+      "name": "OPPO Pad 4 Pro (China)",
+      "BRAND": "OPPO",
+      "DEVICE": "erhai",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "OPD2409",
+      "PRODUCT": "erhai"
+    },
+    {
+      "name": "HONOR Magic V6 (Global)",
+      "BRAND": "HONOR",
+      "DEVICE": "PNM-N49",
+      "MANUFACTURER": "HONOR",
+      "MODEL": "PNM-N49",
+      "PRODUCT": "PNM-N49"
+    },
+    {
+      "name": "HONOR Magic V5 (Global)",
+      "BRAND": "HONOR",
+      "DEVICE": "MBH-N49",
+      "MANUFACTURER": "HONOR",
+      "MODEL": "MBH-N49",
+      "PRODUCT": "MBH-N49"
+    },
+    {
+      "name": "Xiaomi MIX Flip 2 (China)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "2505APX7BC",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "2505APX7BC",
+      "PRODUCT": "2505APX7BC"
+    },
+    {
+      "name": "Xiaomi MIX Fold 4 (China)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "24076PX3BC",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "24076PX3BC",
+      "PRODUCT": "24076PX3BC"
+    },
+    {
+      "name": "Xiaomi Pad 8 (Global)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "25097RP43G",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "25097RP43G",
+      "PRODUCT": "25097RP43G"
+    },
+    {
+      "name": "vivo X Fold6 (Global)",
+      "BRAND": "vivo",
+      "DEVICE": "V2559",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2559",
+      "PRODUCT": "V2559"
+    },
+    {
+      "name": "vivo X Fold5 (Global)",
+      "BRAND": "vivo",
+      "DEVICE": "V2429",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2429",
+      "PRODUCT": "V2429"
+    },
+    {
+      "name": "vivo X Fold3 Pro (Global)",
+      "BRAND": "vivo",
+      "DEVICE": "V2330",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2330",
+      "PRODUCT": "V2330"
+    },
+    {
+      "name": "motorola razr 60 ultra (EU)",
+      "BRAND": "motorola",
+      "DEVICE": "XT2551-6",
+      "MANUFACTURER": "motorola",
+      "MODEL": "XT2551-6",
+      "PRODUCT": "XT2551-6"
+    },
+    {
+      "name": "motorola razr 60 (EU)",
+      "BRAND": "motorola",
+      "DEVICE": "XT2553-1",
+      "MANUFACTURER": "motorola",
+      "MODEL": "XT2553-1",
+      "PRODUCT": "XT2553-1"
+    },
+    {
+      "name": "Lenovo Yoga Tab Plus 12.7",
+      "BRAND": "Lenovo",
+      "DEVICE": "TB520FU",
+      "MANUFACTURER": "LENOVO",
+      "MODEL": "TB520FU",
+      "PRODUCT": "TB520FU"
+    },
+    {
+      "name": "Lenovo Idea Tab 5G",
+      "BRAND": "Lenovo",
+      "DEVICE": "TB336FU",
+      "MANUFACTURER": "LENOVO",
+      "MODEL": "TB336FU",
+      "PRODUCT": "TB336FU"
     }
   ]
 }
