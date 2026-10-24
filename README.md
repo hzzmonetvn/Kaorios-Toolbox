@@ -43,7 +43,7 @@ For **version 2.0.4.0 and below**, see:
 
 ## 1. Patch framework,jar, service.jar and selinux ( Recommend for direct integration into custom ROMs)
 
-See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/V2.0.3+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/V2.0.3+/Patcher_Guide_2.0.6.1_VI.md). Agents manually patching authorized ROM copies should also follow the [manual-patching agent procedure](Toolbox-docs/agent.md).
+See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1_VI.md).
 
 ## 2. Use Kaorios Helper module (working in progress) (Recommend for rooted user)
 

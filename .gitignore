@@ -8,9 +8,9 @@ script/validate_toolbox_data.py
 script/validate_keybox_test.py
 Toolbox-Update/scripts/update_pif_test.sh
 Toolbox-docs/Toolbox-data-schema.md
-Toolbox-docs/V2.0.3+/Sample_Compatibility_2.0.6.0.md
-Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0.md
-Toolbox-docs/V2.0.3+/Keybox_Guide_2.0.6.0_VI.md
+Toolbox-docs/2.0.6+/Sample_Compatibility_2.0.6.0.md
+Toolbox-docs/2.0.6+/Keybox_Guide_2.0.6.0.md
+Toolbox-docs/2.0.6+/Keybox_Guide_2.0.6.0_VI.md
 tmp/fw/
 script/check-framework-samples.py
 script/check-framework-samples-test.py
@@ -24,8 +24,8 @@ script/*-test.py
 script/*_test.py
 script/fixtures/
 script/smoke-test-device.sh
-Toolbox-docs/V2.0.3+/notes-a17.md
-Toolbox-docs/V2.0.3+/notes-a17_VI.md
+Toolbox-docs/2.0.6+/notes-a17.md
+Toolbox-docs/2.0.6+/notes-a17_VI.md
 AGENT.md
 AGENTS.md
 agent.md
