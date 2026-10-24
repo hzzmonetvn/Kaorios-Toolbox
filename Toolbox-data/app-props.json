@@ -1,463 +1,522 @@
 {
   "com.activision.callofduty.shooter": {
     "BRAND": "Lenovo",
-    "DEVICE": "TB323FU",
+    "DEVICE": "TB321FU",
     "MANUFACTURER": "LENOVO",
-    "MODEL": "TB323FU",
-    "PRODUCT": "TB323FU"
+    "MODEL": "TB321FU",
+    "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+    "PRODUCT": "TB321FU"
   },
   "com.clashoftitansandroid.india": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.dts.freefiremax": {
     "BRAND": "Infinix",
-    "DEVICE": "X6891",
+    "DEVICE": "Infinix-X6891",
     "MANUFACTURER": "INFINIX",
     "MODEL": "X6891",
-    "PRODUCT": "X6891"
+    "FINGERPRINT": "Infinix/X6891-OP/Infinix-X6891:16/BP2A.250605.031.A3/301550032:user/release-keys",
+    "PRODUCT": "X6891-OP"
   },
   "com.dts.freefireth": {
     "BRAND": "Infinix",
-    "DEVICE": "X6891",
+    "DEVICE": "Infinix-X6891",
     "MANUFACTURER": "INFINIX",
     "MODEL": "X6891",
-    "PRODUCT": "X6891"
+    "FINGERPRINT": "Infinix/X6891-OP/Infinix-X6891:16/BP2A.250605.031.A3/301550032:user/release-keys",
+    "PRODUCT": "X6891-OP"
   },
   "com.ea.gp.apexlegendsmobilefps": {
     "BRAND": "Xiaomi",
-    "DEVICE": "madrid",
+    "DEVICE": "pudding",
     "MANUFACTURER": "Xiaomi",
-    "MODEL": "2611FPNFAG",
-    "PRODUCT": "madrid"
+    "MODEL": "25113PN0EG",
+    "FINGERPRINT": "Xiaomi/pudding_global/pudding:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.9.0.WPCMIXM:user/release-keys",
+    "PRODUCT": "pudding_global"
   },
   "com.ea.gp.fifamobile": {
     "BRAND": "asus",
     "DEVICE": "ASUSAI2501",
     "MANUFACTURER": "asus",
     "MODEL": "ASUSAI2501",
-    "PRODUCT": "ASUSAI2501",
-    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys"
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
   },
   "com.epicgames.fortnite": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.epicgames.portal": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.facebook.orca": {
     "BRAND": "samsung",
-    "DEVICE": "SM-S948B",
+    "DEVICE": "m3q",
     "MANUFACTURER": "samsung",
     "MODEL": "SM-S948B",
-    "PRODUCT": "SM-S948B"
+    "FINGERPRINT": "samsung/m3qxeea/m3q:16/BP4A.251205.006/S948BXXS4AZG5_OXM4AZG5:user/release-keys",
+    "PRODUCT": "m3qxeea"
   },
   "com.gameloft.android.ANMP.GloftA9HM": {
     "BRAND": "asus",
     "DEVICE": "ASUSAI2501",
     "MANUFACTURER": "asus",
     "MODEL": "ASUSAI2501",
-    "PRODUCT": "ASUSAI2501",
-    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys"
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
   },
   "com.garena.game.codm": {
     "BRAND": "Lenovo",
-    "DEVICE": "TB323FU",
+    "DEVICE": "TB321FU",
     "MANUFACTURER": "LENOVO",
-    "MODEL": "TB323FU",
-    "PRODUCT": "TB323FU"
+    "MODEL": "TB321FU",
+    "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+    "PRODUCT": "TB321FU"
   },
   "com.garena.game.kgid": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.garena.game.kgms": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.garena.game.kgph": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.garena.game.kgth": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.garena.game.kgtw": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.garena.game.kgvn": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.garena.game.kgvntest": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.levelinfinite.aov": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.levelinfinite.hotta.gp": {
     "BRAND": "Xiaomi",
-    "DEVICE": "madrid",
+    "DEVICE": "pudding",
     "MANUFACTURER": "Xiaomi",
-    "MODEL": "2611FPNFAG",
-    "PRODUCT": "madrid"
+    "MODEL": "25113PN0EG",
+    "FINGERPRINT": "Xiaomi/pudding_global/pudding:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.9.0.WPCMIXM:user/release-keys",
+    "PRODUCT": "pudding_global"
   },
   "com.levelinfinite.sgameGlobal": {
     "BRAND": "Xiaomi",
-    "DEVICE": "madrid",
+    "DEVICE": "pudding",
     "MANUFACTURER": "Xiaomi",
-    "MODEL": "2611FPNFAG",
-    "PRODUCT": "madrid"
+    "MODEL": "25113PN0EG",
+    "FINGERPRINT": "Xiaomi/pudding_global/pudding:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.9.0.WPCMIXM:user/release-keys",
+    "PRODUCT": "pudding_global"
   },
   "com.madfingergames.legends": {
     "BRAND": "asus",
     "DEVICE": "ASUSAI2501",
     "MANUFACTURER": "asus",
     "MODEL": "ASUSAI2501",
-    "PRODUCT": "ASUSAI2501",
-    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys"
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
   },
   "com.mobile.legends": {
     "BRAND": "Lenovo",
-    "DEVICE": "TB323FU",
+    "DEVICE": "TB321FU",
     "MANUFACTURER": "LENOVO",
-    "MODEL": "TB323FU",
-    "PRODUCT": "TB323FU"
+    "MODEL": "TB321FU",
+    "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+    "PRODUCT": "TB321FU"
   },
   "com.mobilelegends.mi": {
     "BRAND": "Lenovo",
-    "DEVICE": "TB323FU",
+    "DEVICE": "TB321FU",
     "MANUFACTURER": "LENOVO",
-    "MODEL": "TB323FU",
-    "PRODUCT": "TB323FU"
+    "MODEL": "TB321FU",
+    "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+    "PRODUCT": "TB321FU"
   },
   "com.netease.lztgglobal": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.netease.newspike": {
     "BRAND": "nubia",
-    "DEVICE": "NX819J",
+    "DEVICE": "NX789J",
     "MANUFACTURER": "ZTE",
-    "MODEL": "NX819J",
-    "PRODUCT": "NX819J"
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
   },
   "com.netflix.mediaclient": {
     "BRAND": "google",
     "DEVICE": "kodiak",
     "MANUFACTURER": "Google",
     "MODEL": "Pixel 11 Pro XL",
+    "FINGERPRINT": "google/kodiak/kodiak:17/CD1A.261005.003/16262255:user/release-keys",
     "PRODUCT": "kodiak"
   },
   "com.ngame.allstar.eu": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.nhs.online.nhsonline": {
     "BRAND": "google",
     "DEVICE": "kodiak",
     "MANUFACTURER": "Google",
     "MODEL": "Pixel 11 Pro XL",
+    "FINGERPRINT": "google/kodiak/kodiak:17/CD1A.261005.003/16262255:user/release-keys",
     "PRODUCT": "kodiak"
   },
   "com.omarea.vtools": {
     "BRAND": "Xiaomi",
-    "DEVICE": "madrid",
+    "DEVICE": "pudding",
     "MANUFACTURER": "Xiaomi",
-    "MODEL": "2611FPNFAG",
-    "PRODUCT": "madrid"
+    "MODEL": "25113PN0EG",
+    "FINGERPRINT": "Xiaomi/pudding_global/pudding:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.9.0.WPCMIXM:user/release-keys",
+    "PRODUCT": "pudding_global"
   },
   "com.pearlabyss.blackdesertm": {
     "BRAND": "asus",
     "DEVICE": "ASUSAI2501",
     "MANUFACTURER": "asus",
     "MODEL": "ASUSAI2501",
-    "PRODUCT": "ASUSAI2501",
-    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys"
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
   },
   "com.pearlabyss.blackdesertm.gl": {
     "BRAND": "asus",
     "DEVICE": "ASUSAI2501",
     "MANUFACTURER": "asus",
     "MODEL": "ASUSAI2501",
-    "PRODUCT": "ASUSAI2501",
-    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys"
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
   },
   "com.proxima.dfm": {
     "BRAND": "asus",
     "DEVICE": "ASUSAI2501",
     "MANUFACTURER": "asus",
     "MODEL": "ASUSAI2501",
-    "PRODUCT": "ASUSAI2501",
-    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys"
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
   },
   "com.proximabeta.mf.uamo": {
-    "BRAND": "Black Shark",
-    "DEVICE": "KTUS-H0",
-    "MANUFACTURER": "Black Shark",
-    "MODEL": "SHARK KTUS-H0",
-    "PRODUCT": "KTUS-H0"
+    "BRAND": "nubia",
+    "DEVICE": "NX789J",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
   },
   "com.pubg.imobile": {
     "BRAND": "samsung",
-    "DEVICE": "SM-S948B",
+    "DEVICE": "m3q",
     "MANUFACTURER": "samsung",
     "MODEL": "SM-S948B",
-    "PRODUCT": "SM-S948B"
+    "FINGERPRINT": "samsung/m3qxeea/m3q:16/BP4A.251205.006/S948BXXS4AZG5_OXM4AZG5:user/release-keys",
+    "PRODUCT": "m3qxeea"
   },
   "com.pubg.krmobile": {
     "BRAND": "samsung",
-    "DEVICE": "SM-S948B",
+    "DEVICE": "m3q",
     "MANUFACTURER": "samsung",
     "MODEL": "SM-S948B",
-    "PRODUCT": "SM-S948B"
+    "FINGERPRINT": "samsung/m3qxeea/m3q:16/BP4A.251205.006/S948BXXS4AZG5_OXM4AZG5:user/release-keys",
+    "PRODUCT": "m3qxeea"
   },
   "com.rekoo.pubgm": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.riotgames.league.teamfighttactics": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.riotgames.league.teamfighttacticstw": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.riotgames.league.teamfighttacticsvn": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.riotgames.league.wildrift": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.riotgames.league.wildrifttw": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.riotgames.league.wildriftvn": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.supercell.brawlstars": {
     "BRAND": "nubia",
-    "DEVICE": "NX819J",
+    "DEVICE": "NX789J",
     "MANUFACTURER": "ZTE",
-    "MODEL": "NX819J",
-    "PRODUCT": "NX819J"
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
   },
   "com.tencent.aovindia": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.tencent.aovjp": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.tencent.ig": {
     "BRAND": "samsung",
-    "DEVICE": "SM-S948B",
+    "DEVICE": "m3q",
     "MANUFACTURER": "samsung",
     "MODEL": "SM-S948B",
-    "PRODUCT": "SM-S948B"
+    "FINGERPRINT": "samsung/m3qxeea/m3q:16/BP4A.251205.006/S948BXXS4AZG5_OXM4AZG5:user/release-keys",
+    "PRODUCT": "m3qxeea"
   },
   "com.tencent.jkchess": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.tencent.lolm": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.tencent.mf.uam": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.tencent.ngame.chty": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.tencent.ngjp": {
     "BRAND": "realme",
-    "DEVICE": "RMX5210",
+    "DEVICE": "RE60B4L1",
     "MANUFACTURER": "realme",
-    "MODEL": "RMX5210",
-    "PRODUCT": "RMX5210"
+    "MODEL": "RMX5101",
+    "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+    "PRODUCT": "RMX5101IN"
   },
   "com.tencent.tmgp.cf": {
     "BRAND": "nubia",
-    "DEVICE": "NX819J",
+    "DEVICE": "NX789J",
     "MANUFACTURER": "ZTE",
-    "MODEL": "NX819J",
-    "PRODUCT": "NX819J"
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
   },
   "com.vnggames.cfl.crossfirelegends": {
     "BRAND": "nubia",
-    "DEVICE": "NX819J",
+    "DEVICE": "NX789J",
     "MANUFACTURER": "ZTE",
-    "MODEL": "NX819J",
-    "PRODUCT": "NX819J"
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
   },
   "com.tencent.tmgp.cod": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.tencent.tmgp.codev": {
     "BRAND": "iQOO",
-    "DEVICE": "V2606A",
+    "DEVICE": "I2401",
     "MANUFACTURER": "vivo",
-    "MODEL": "V2606A",
-    "PRODUCT": "V2606A"
+    "MODEL": "I2401",
+    "FINGERPRINT": "iQOO/I2401/I2401:15/AP3A.240905.015.A2/compiler250328151630:user/release-keys",
+    "PRODUCT": "I2401"
   },
   "com.tencent.tmgp.dfm": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.tencent.tmgp.kr.codm": {
     "BRAND": "Lenovo",
-    "DEVICE": "TB323FU",
+    "DEVICE": "TB321FU",
     "MANUFACTURER": "LENOVO",
-    "MODEL": "TB323FU",
-    "PRODUCT": "TB323FU"
+    "MODEL": "TB321FU",
+    "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+    "PRODUCT": "TB321FU"
   },
   "com.tencent.tmgp.pubgmhd": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.tencent.tmgp.sgame": {
     "BRAND": "iQOO",
-    "DEVICE": "V2606A",
+    "DEVICE": "I2401",
     "MANUFACTURER": "vivo",
-    "MODEL": "V2606A",
-    "PRODUCT": "V2606A"
+    "MODEL": "I2401",
+    "FINGERPRINT": "iQOO/I2401/I2401:15/AP3A.240905.015.A2/compiler250328151630:user/release-keys",
+    "PRODUCT": "I2401"
   },
   "com.tencent.tmgp.speedmobile": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.vng.codmvn": {
     "BRAND": "Lenovo",
-    "DEVICE": "TB323FU",
+    "DEVICE": "TB321FU",
     "MANUFACTURER": "LENOVO",
-    "MODEL": "TB323FU",
-    "PRODUCT": "TB323FU"
+    "MODEL": "TB321FU",
+    "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+    "PRODUCT": "TB321FU"
   },
   "com.vng.mlbbvn": {
     "BRAND": "Lenovo",
-    "DEVICE": "TB323FU",
+    "DEVICE": "TB321FU",
     "MANUFACTURER": "LENOVO",
-    "MODEL": "TB323FU",
-    "PRODUCT": "TB323FU"
+    "MODEL": "TB321FU",
+    "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+    "PRODUCT": "TB321FU"
   },
   "com.vng.pubgmobile": {
     "BRAND": "OnePlus",
-    "DEVICE": "PYB110",
+    "DEVICE": "OP60FFL1",
     "MANUFACTURER": "OnePlus",
-    "MODEL": "PYB110",
-    "PRODUCT": "PYB110"
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
   },
   "com.kurogame.wutheringwaves.global": {
     "BRAND": "nubia",
-    "DEVICE": "NX819J",
+    "DEVICE": "NX789J",
     "MANUFACTURER": "ZTE",
-    "MODEL": "NX819J",
-    "PRODUCT": "NX819J"
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
   }
 }
