@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.1 — Patch ROM bằng tay (Android 13–17)
 
-[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md) | [Trạng thái patch Google Flags](Google_Flags_VI.md)
+[English](Patch_Guide_2.0.6.1.md) | [Patcher tự động](Patcher_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md)
 
 **Cảnh báo bootloop:** recipe Kaorios cũ (guide 2.0.6.0 và asset 2.0.6.1 ban đầu) patch `SettingsProvider.apk` để gọi các method `KaoriosHook` (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) mà `classes.dex` 2.0.6.1 hiện tại không còn định nghĩa. System process sẽ ném `NoSuchMethodError`, nhiều khả năng gây bootloop. Nếu `SettingsProvider.apk` của ROM này từng được patch bằng recipe Kaorios cũ, khôi phục `SettingsProvider.apk` stock của cùng build ROM **trước khi** import `classes.dex` 2.0.6.1 hiện tại. Không dùng lại file provider đã patch trước đây.
 
@@ -10,7 +10,7 @@
 
 **Trước khi chèn:** kiểm tra `.locals`/`.registers`, alias `pN`/`vN` và cấp đủ local trống. Nếu thêm locals khiến parameter dịch vị trí, chuyển alias `vN` cũ của parameter sang `pN` *trước* khi tăng số rồi kiểm tra mọi lệnh stock còn mã hóa được. `invoke {…}` thường chỉ dùng register vật lý ≤15; `/range` cần operand liên tiếp. `move-result` phải ngay sau `invoke`. Hook đầu method đặt sau metadata `.param`/`.annotation` và **trước label/lệnh stock đầu tiên**. Dùng nhãn fallback chưa có trong method. Dòng stock trong ví dụ chỉ là **mốc vị trí**, không chèn lặp. Nếu không chứng minh được các điều kiện này, dừng thay vì chép snippet nguyên xi.
 
-**Ranh giới payload:** Guide này bao phủ các hook được liệt kê với **payload pre-release 2.0.6.1 hiện tại** và không cài caller query-result Phenotype vào ROM, dù DEX thay thế có helper gọi được. Xem [trạng thái patch Google Flags](Google_Flags_VI.md) để biết bằng chứng cần có trước khi patch tính năng đó. Kiểm tra checksum release hiện tại; không dùng DEX chưa xác minh hoặc coi kết quả là bản patch ROM Google Flags đã hỗ trợ.
+**Ranh giới payload:** Guide này chỉ bao phủ các hook được liệt kê với payload pre-release 2.0.6.1 hiện tại. Kiểm tra checksum của bản phát hành trước khi import DEX; không thay bằng payload chưa xác minh.
 
 ## 1. Import payload — `framework.jar`
 
