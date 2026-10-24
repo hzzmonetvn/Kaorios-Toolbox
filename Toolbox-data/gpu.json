@@ -3,6 +3,100 @@
   "license": "Apache-2.0",
   "gpus": [
     {
+      "key": "adreno850",
+      "name": "Adreno 850 (Snapdragon 8 Elite Extreme Gen 6)",
+      "renderer": null,
+      "vendor": "Qualcomm",
+      "vendor_id": "0x5143",
+      "renderer_status": "unverified",
+      "profile_status": "metadata_only",
+      "chipsets": [
+        "Snapdragon 8 Elite Extreme Gen 6"
+      ],
+      "source": "https://nanoreview.net/en/soc/qualcomm-snapdragon-8-elite-gen-6-pro"
+    },
+    {
+      "key": "mali_g2_ultra_nx",
+      "name": "Arm Mali-G2 Ultra NX (Dimensity 9600 Pro)",
+      "renderer": null,
+      "vendor": "ARM",
+      "vendor_id": null,
+      "renderer_status": "unverified",
+      "profile_status": "metadata_only",
+      "chipsets": [
+        "Dimensity 9600 Pro"
+      ],
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9600-pro"
+    },
+    {
+      "key": "mali_g1_ultra_mc12",
+      "name": "Arm Mali-G1 Ultra MC12 (Dimensity 9500 / 9600M)",
+      "renderer": "Mali-G1-Ultra",
+      "vendor": "ARM",
+      "vendor_id": null,
+      "renderer_status": "khronos_reference",
+      "profile_status": "renderer_reference_only",
+      "chipsets": [
+        "Dimensity 9500",
+        "Dimensity 9600M"
+      ],
+      "source": "https://www.khronos.org/conformance/adopters/conformant-products/opengles"
+    },
+    {
+      "key": "immortalis_g925_mc12",
+      "name": "Arm Immortalis-G925 MC12 (Dimensity 9400 / 9400+ / 9500s)",
+      "renderer": null,
+      "vendor": "ARM",
+      "vendor_id": null,
+      "renderer_status": "unverified",
+      "profile_status": "metadata_only",
+      "chipsets": [
+        "Dimensity 9400",
+        "Dimensity 9400+",
+        "Dimensity 9500s"
+      ],
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9400"
+    },
+    {
+      "key": "immortalis_g925_mc11",
+      "name": "Arm Immortalis-G925 MC11 (Dimensity 9500s variant)",
+      "renderer": null,
+      "vendor": "ARM",
+      "vendor_id": null,
+      "renderer_status": "unverified",
+      "profile_status": "metadata_only",
+      "chipsets": [
+        "Dimensity 9500s"
+      ],
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9500s"
+    },
+    {
+      "key": "immortalis_g720_mc12",
+      "name": "Arm Immortalis-G720 MC12 (Dimensity 9400e)",
+      "renderer": null,
+      "vendor": "ARM",
+      "vendor_id": null,
+      "renderer_status": "unverified",
+      "profile_status": "metadata_only",
+      "chipsets": [
+        "Dimensity 9400e"
+      ],
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-9400e"
+    },
+    {
+      "key": "mali_g720_mc8",
+      "name": "Arm Mali-G720 MC8 (Dimensity 8500)",
+      "renderer": null,
+      "vendor": "ARM",
+      "vendor_id": null,
+      "renderer_status": "unverified",
+      "profile_status": "metadata_only",
+      "chipsets": [
+        "Dimensity 8500"
+      ],
+      "source": "https://www.mediatek.com/products/smartphones/mediatek-dimensity-8500"
+    },
+    {
       "key": "adreno830",
       "name": "Adreno 830 (Snapdragon 8 Elite)",
       "renderer": "Adreno (TM) 830",
@@ -16,5 +110,7 @@
       "vendor": "Qualcomm",
       "vendor_id": "0x5143"
     }
-  ]
+  ],
+  "updated_at": "2026-10-24",
+  "notes": "renderer=null means an exact OpenGL GL_RENDERER string was not verified; do not apply those entries as GPU spoof presets. A Khronos reference string may vary across device drivers."
 }
