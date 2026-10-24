@@ -1,12 +1,12 @@
 # Kaorios Toolbox 2.0.6.1 — Automatic smali patcher (Android 13–17)
 
-[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md) | [Google Flags patch status](Google_Flags.md)
+[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md)
 
 **Bootloop warning:** older Kaorios recipes (2.0.6.0 guides and the original 2.0.6.1 assets) patched `SettingsProvider.apk` to call `KaoriosHook` methods (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) that the current 2.0.6.1 `classes.dex` no longer defines. The system process then throws `NoSuchMethodError`, likely causing a bootloop. If this ROM's `SettingsProvider.apk` was ever patched by an older Kaorios recipe, restore the stock `SettingsProvider.apk` from the same ROM build **before** importing the current 2.0.6.1 `classes.dex`. Do not reuse old patched provider files.
 
 **What this does:** patch supported **smali files**, not whole JARs. It does **not** import payload or patch all optional hooks. The downloadable patcher archive is [kaorios-patcher-2.0.6.1.zip](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/kaorios-patcher-2.0.6.1.zip) (SHA-256: `3e0e761a9121ef83b6339791f8ad60bb4895e6ecb8a2eafcb578333d33e99758`). Work only on authorized **copies** of stock `framework.jar` and `services.jar` from the same ROM build, with clean originals, SHA-256 hashes and a recovery plan. Keep `SettingsProvider.apk` stock. Run from the `public/` repo root; output must differ from stock.
 
-**Payload boundary:** This patcher covers only the listed ROM hooks; it does not insert a Phenotype query-result caller, even with the current 2.0.6.1 pre-release DEX. The [Google Flags guide](Google_Flags.md) explains the missing evidence and stop condition. Verify the current release asset checksum before import; a patcher PASS does not establish Google Flags support.
+**Payload boundary:** This patcher handles only the listed ROM hooks; a patcher PASS does not validate hooks outside that scope. Verify the release asset checksum before import.
 
 ## 1. Find the class and owner DEX
 
