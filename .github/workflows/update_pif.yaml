@@ -1,0 +1,35 @@
+name: Update PIF
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-pif:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Test PIF updater offline
+        run: bash Toolbox-Update/scripts/test_update_pif.sh
+
+      - name: Update PIF
+        run: bash Toolbox-Update/scripts/update_pif.sh
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add Toolbox-data/Pif-props.json Toolbox-data/pif-devices.json
+          # Check if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update PIF props [skip ci]"
+            git push
+          fi

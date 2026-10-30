@@ -1,0 +1,257 @@
+name: Build Framework DEX (private source)
+
+# Build framework DEX từ repo PRIVATE (hzzmonetvn/KaoriosToolbox-Frameowrk) trên runner PUBLIC.
+#
+# CẦN SECRET:
+#   Public repo → Settings → Secrets and variables → Actions → PRIVATE_REPO_TOKEN
+
+on:
+  workflow_dispatch:
+    inputs:
+      private_branch:
+        description: "Nhánh repo private cần build"
+        required: true
+        default: "Toolbox-Framework"
+      private_ref:
+        description: "Commit SHA cụ thể (để trống = HEAD của nhánh trên)"
+        required: false
+        default: ""
+      run_regressions:
+        description: "Chạy regression test (tools/run-core-regressions.sh)"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  ANDROID_ALL_VERSION: 17-robolectric-15733970
+  ANDROID_ALL_SHA256: f6a41ad548bb45cccd3b1d4774cb50d57826dd319b6e5accd6b6269876e12d71
+
+concurrency:
+  group: build-framework-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-framework:
+    name: Framework DEX
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: private-src
+
+    steps:
+      - name: Check PRIVATE_REPO_TOKEN
+        working-directory: ${{ github.workspace }}
+        env:
+          TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Chưa cấu hình secret PRIVATE_REPO_TOKEN."
+            exit 1
+          fi
+
+      - name: Clone private source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: hzzmonetvn/KaoriosToolbox-Frameowrk
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          ref: ${{ inputs.private_ref != '' && inputs.private_ref || inputs.private_branch }}
+          path: private-src
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Java 21 for Gradle
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle without private build caching
+        uses: gradle/actions/setup-gradle@4733eaac7c1b0da527e4206b7671e0061de1ce37 # v6
+        with:
+          cache-disabled: true
+
+      - name: Checkout public Toolbox-data
+        run: |
+          set -euo pipefail
+          PUBLIC_DIR="$RUNNER_TEMP/public-toolbox"
+          git clone --depth 1 https://github.com/hzzmonetvn/Kaorios-Toolbox.git "$PUBLIC_DIR"
+          PUBLIC_SHA="$(git -C "$PUBLIC_DIR" rev-parse HEAD)"
+          echo "PUBLIC_TOOLBOX_SHA=$PUBLIC_SHA" >> "$GITHUB_ENV"
+          echo "PUBLIC_TOOLBOX_DATA=$PUBLIC_DIR/Toolbox-data" >> "$GITHUB_ENV"
+          {
+            echo "### Cross-repo Contract Test"
+            echo "Testing against public Toolbox-data at commit: \`${PUBLIC_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run core regressions
+        if: ${{ inputs.run_regressions }}
+        env:
+          KAORIOS_REQUIRE_PUBLIC_CONTRACT: "1"
+          PUBLIC_TOOLBOX_DATA: "${{ runner.temp }}/public-toolbox/Toolbox-data"
+        run: |
+          set -euo pipefail
+          bash tools/run-core-regressions.sh
+
+      - name: Restore merged android.jar cache
+        id: cache-merged-jar
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/merged-android-cache/android-37-merged.jar
+          key: android-public-stubs-v2-37-${{ env.ANDROID_ALL_SHA256 }}-${{ runner.os }}
+
+      - name: Install Android SDK 37
+        run: |
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37.0" \
+            "build-tools;37.0.0"
+          test -d "$ANDROID_SDK_ROOT/platforms/android-37.0"
+          test -d "$ANDROID_SDK_ROOT/build-tools/37.0.0"
+          [ -d "$ANDROID_SDK_ROOT/platforms/android-37" ] || \
+            ln -sfn android-37.0 "$ANDROID_SDK_ROOT/platforms/android-37"
+
+      - name: Install full AOSP API 37 compile stubs
+        run: |
+          public_android="$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar"
+          core_modules="$ANDROID_SDK_ROOT/platforms/android-37.0/core-for-system-modules.jar"
+          cached_jar="$HOME/merged-android-cache/android-37-merged.jar"
+
+          if [ -f "$cached_jar" ]; then
+            echo "Cache hit — dùng merged android.jar có sẵn, bỏ qua download ~1GB."
+            test -f "$public_android"
+            install -m 0644 "$cached_jar" "$public_android"
+          else
+            echo "Cache miss — download + merge AOSP stubs (chỉ chậm lần đầu)."
+            android_all="$RUNNER_TEMP/android-all-${ANDROID_ALL_VERSION}.jar"
+            merged_dir="$RUNNER_TEMP/android-api-37-merged"
+            merged_android="$RUNNER_TEMP/android-api-37-merged.jar"
+
+            curl --fail --location --retry 3 \
+              --output "$android_all" \
+              "https://repo.maven.apache.org/maven2/org/robolectric/android-all/${ANDROID_ALL_VERSION}/android-all-${ANDROID_ALL_VERSION}.jar"
+            echo "${ANDROID_ALL_SHA256}  ${android_all}" | sha256sum --check --strict
+            unzip -tq "$android_all"
+
+            test -f "$public_android"
+            test -f "$core_modules"
+            mkdir -p "$merged_dir"
+            unzip -q "$public_android" -d "$merged_dir"
+            unzip -oq "$core_modules" -d "$merged_dir"
+            unzip -oq "$android_all" -d "$merged_dir"
+            jar --create --file "$merged_android" --no-manifest -C "$merged_dir" .
+
+            mkdir -p "$HOME/merged-android-cache"
+            cp "$merged_android" "$cached_jar"
+            install -m 0644 "$merged_android" "$public_android"
+          fi
+
+          unzip -Z1 "$public_android" > "$RUNNER_TEMP/android-api-37-merged.entries"
+          grep -Fx "java/lang/Object.class" "$RUNNER_TEMP/android-api-37-merged.entries"
+          grep -Fx "android/app/ActivityThread.class" "$RUNNER_TEMP/android-api-37-merged.entries"
+          grep -Fx "android/hardware/security/keymint/KeyParameter.class" "$RUNNER_TEMP/android-api-37-merged.entries"
+          unzip -tq "$public_android"
+
+      - name: Build framework release APK
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew :framework:assembleRelease --no-daemon --stacktrace
+
+      - name: Extract and validate framework DEX
+        run: |
+          set -euo pipefail
+
+          framework_apk="$(find framework/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          if [[ -z "$framework_apk" ]]; then
+            echo "::error::Không tìm thấy framework release APK"
+            exit 1
+          fi
+
+          unzip -tq "$framework_apk"
+
+          apkanalyzer="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer"
+          test -x "$apkanalyzer"
+
+          framework_packages="$RUNNER_TEMP/kaorios-framework-packages.txt"
+          "$apkanalyzer" dex packages --defined-only "$framework_apk" > "$framework_packages"
+          grep -F 'com.kousei.framework.KaoriosFramework' "$framework_packages"
+          grep -F 'com.kousei.framework.KaoriosFramework$InstalledAppEntry' "$framework_packages"
+          grep -F 'com.kousei.framework.KaoriosFramework$InstalledAppsSnapshot' "$framework_packages"
+          grep -F 'android.security.kaorios.KaoriosHook' "$framework_packages"
+          for api_class in AdvancedPolicyClient AdvancedPolicyRuntimeStatus AdvancedPolicyService AdvancedPolicySnapshot IAdvancedPolicyService 'IAdvancedPolicyService$Stub' 'IAdvancedPolicyService$Stub$Proxy' SettingDecisionParcel ServiceManagerBridge; do
+            grep -F "android.security.kaorios.settings.$api_class" "$framework_packages"
+          done
+
+          dex_entries="$(unzip -Z1 "$framework_apk" | grep -E '^classes([0-9]+)?\.dex$' || true)"
+          if [[ "$dex_entries" != "classes.dex" ]]; then
+            echo "::error::Framework APK phải chứa đúng một classes.dex; tìm thấy: ${dex_entries:-không có}"
+            exit 1
+          fi
+
+          mkdir -p dist
+          cp "$framework_apk" dist/KaoriosFramework-release.apk
+          unzip -p "$framework_apk" classes.dex > dist/classes.dex
+
+          if [[ ! -s dist/classes.dex ]]; then
+            echo "::error::classes.dex được tách ra nhưng đang rỗng"
+            exit 1
+          fi
+          if [[ "$(LC_ALL=C head -c 3 dist/classes.dex)" != "dex" ]]; then
+            echo "::error::File được tách ra không có DEX magic hợp lệ"
+            exit 1
+          fi
+
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          sha256sum \
+            dist/KaoriosFramework-release.apk \
+            dist/classes.dex \
+            > dist/SHA256SUMS
+          cp dist/SHA256SUMS dist/SHA256SUMS.txt
+
+          {
+            echo "## Kaorios Framework DEX"
+            echo
+            echo "Commit: \`${SOURCE_SHA}\`"
+            echo
+            echo "Public Toolbox-data: \`${PUBLIC_TOOLBOX_SHA:-unknown}\`"
+            echo
+            echo "Framework full DEX: \`classes.dex\` extracted from \`KaoriosFramework-release.apk\`."
+            echo
+            echo '```text'
+            cat dist/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload framework artifacts to tempfile
+        run: |
+          set -euo pipefail
+          echo "### Download Artifacts (tempfile)" >> "$GITHUB_STEP_SUMMARY"
+          echo "| File | Download URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          uploaded=0
+          for file in dist/*; do
+            if [[ -f "$file" ]]; then
+              fname=$(basename "$file")
+              echo "Uploading $fname to tempfile..."
+              resp=$(curl -s -F "file=@$file" -F "expire=172800" https://tmpfiles.org/api/v1/upload || echo "")
+              url=$(echo "$resp" | jq -r '.data.url // empty')
+              if [[ -n "$url" ]]; then
+                dl_url=$(echo "$url" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')
+                echo "Artifact $fname: $dl_url"
+                echo "| \`$fname\` | [Download $fname]($dl_url) |" >> "$GITHUB_STEP_SUMMARY"
+                uploaded=$((uploaded + 1))
+              else
+                echo "Failed to upload $fname: $resp"
+                echo "| \`$fname\` | Upload failed |" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          done
+          if (( uploaded == 0 )); then
+            echo "::error::Không có file nào trong dist/ được upload"
+            exit 1
+          fi

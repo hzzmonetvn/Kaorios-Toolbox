@@ -1,0 +1,39 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+# Intentionally removed legacy validation/docs/sample files
+script/validate_toolbox_data.py
+script/validate_keybox_test.py
+Toolbox-Update/scripts/update_pif_test.sh
+Toolbox-docs/Toolbox-data-schema.md
+Toolbox-docs/2.0.6+/Sample_Compatibility_2.0.6.0.md
+Toolbox-docs/2.0.6+/Keybox_Guide_2.0.6.0.md
+Toolbox-docs/2.0.6+/Keybox_Guide_2.0.6.0_VI.md
+tmp/fw/
+script/check-framework-samples.py
+script/check-framework-samples-test.py
+script/refresh-sample-compatibility.py
+
+# Intentionally removed repository-only test/debug clutter
+.github/workflows/test-patcher.yml
+.github/workflows/README.md
+.github/workflows/NO_BUG_CHARM.webp
+script/*-test.py
+script/*_test.py
+script/fixtures/
+script/smoke-test-device.sh
+Toolbox-docs/2.0.6+/notes-a17.md
+Toolbox-docs/2.0.6+/notes-a17_VI.md
+AGENT.md
+AGENTS.md
+agent.md
+agents.md
+
+# Signing material and local build config
+KeySign/
+*.jks
+*.keystore
+keystore.properties
+local.properties

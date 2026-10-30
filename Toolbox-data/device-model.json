@@ -1,0 +1,510 @@
+{
+  "devices": [
+    {
+      "name": "ASUS ROG Phone 9 Pro",
+      "BRAND": "asus",
+      "DEVICE": "ASUSAI2501",
+      "MANUFACTURER": "asus",
+      "MODEL": "ASUSAI2501",
+      "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+      "PRODUCT": "WWAI2501"
+    },
+    {
+      "name": "Black Shark 5 Pro",
+      "BRAND": "Black Shark",
+      "DEVICE": "KTUS-H0",
+      "MANUFACTURER": "Black Shark",
+      "MODEL": "SHARK KTUS-H0",
+      "PRODUCT": "KTUS-H0"
+    },
+    {
+      "name": "Google Pixel 11 Pro XL",
+      "BRAND": "google",
+      "DEVICE": "kodiak",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel 11 Pro XL",
+      "PRODUCT": "kodiak",
+      "FINGERPRINT": "google/kodiak/kodiak:17/CD1A.261005.003/16262255:user/release-keys"
+    },
+    {
+      "name": "HONOR Magic9 Pro Max",
+      "BRAND": "HONOR",
+      "DEVICE": "WKL-AN20",
+      "MANUFACTURER": "HONOR",
+      "MODEL": "WKL-AN20",
+      "PRODUCT": "WKL-AN20"
+    },
+    {
+      "name": "Infinix GT 50 Pro",
+      "BRAND": "Infinix",
+      "DEVICE": "Infinix-X6891",
+      "MANUFACTURER": "INFINIX",
+      "MODEL": "X6891",
+      "PRODUCT": "X6891-OP",
+      "FINGERPRINT": "Infinix/X6891-OP/Infinix-X6891:16/BP2A.250605.031.A3/301550032:user/release-keys"
+    },
+    {
+      "name": "iQOO 16",
+      "BRAND": "iQOO",
+      "DEVICE": "V2606A",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2606A",
+      "PRODUCT": "V2606A"
+    },
+    {
+      "name": "Lenovo Legion Y700 Gen 5 (2026)",
+      "BRAND": "Lenovo",
+      "DEVICE": "TB323FU",
+      "MANUFACTURER": "LENOVO",
+      "MODEL": "TB323FU",
+      "PRODUCT": "TB323FU"
+    },
+    {
+      "name": "Nothing Phone (4a) Pro",
+      "BRAND": "Nothing",
+      "DEVICE": "FroggerPro",
+      "MANUFACTURER": "Nothing",
+      "MODEL": "A069P",
+      "FINGERPRINT": "Nothing/FroggerPro/FroggerPro:15/AQ3A.250924.001/2603231635:user/release-keys",
+      "PRODUCT": "FroggerPro"
+    },
+    {
+      "name": "OnePlus 16",
+      "BRAND": "OnePlus",
+      "DEVICE": "PYB110",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "PYB110",
+      "PRODUCT": "PYB110"
+    },
+    {
+      "name": "OPPO Find X10 Pro Max",
+      "BRAND": "OPPO",
+      "DEVICE": "PMX110",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "PMX110",
+      "PRODUCT": "PMX110"
+    },
+    {
+      "name": "POCO F8 Ultra",
+      "BRAND": "POCO",
+      "DEVICE": "myron",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "25102PCBEG",
+      "FINGERPRINT": "POCO/myron_global/myron:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.3.0.WPMIDXM:user/release-keys",
+      "PRODUCT": "myron_global"
+    },
+    {
+      "name": "realme GT 8 Pro",
+      "BRAND": "realme",
+      "DEVICE": "RMX5210",
+      "MANUFACTURER": "realme",
+      "MODEL": "RMX5210",
+      "PRODUCT": "RMX5210"
+    },
+    {
+      "name": "REDMAGIC 12 Pro+ (China, 2026)",
+      "BRAND": "nubia",
+      "DEVICE": "NX819J",
+      "MANUFACTURER": "ZTE",
+      "MODEL": "NX819J",
+      "PRODUCT": "NX819J"
+    },
+    {
+      "name": "REDMAGIC Tablet 3",
+      "BRAND": "nubia",
+      "DEVICE": "PQ84P01",
+      "MANUFACTURER": "ZTE",
+      "MODEL": "NP05J",
+      "PRODUCT": "PQ84P01-EEA",
+      "FINGERPRINT": "nubia/PQ84P01-EEA/PQ84P01:15/AQ3A.240812.002/REDMAGICOS10.5.9_NP05J_EU:user/release-keys"
+    },
+    {
+      "name": "Redmi K100 Pro Max (China)",
+      "BRAND": "Redmi",
+      "DEVICE": "songyuan",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "M098FE",
+      "PRODUCT": "songyuan"
+    },
+    {
+      "name": "Samsung Galaxy S26 Ultra",
+      "BRAND": "samsung",
+      "DEVICE": "m3q",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-S948B",
+      "PRODUCT": "m3qxeea",
+      "FINGERPRINT": "samsung/m3qxeea/m3q:16/BP4A.251205.006/S948BXXS4AZG5_OXM4AZG5:user/release-keys"
+    },
+    {
+      "name": "Samsung Galaxy Z Fold8 Ultra",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F976B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F976B",
+      "PRODUCT": "SM-F976B"
+    },
+    {
+      "name": "vivo X500 Pro Max",
+      "BRAND": "vivo",
+      "DEVICE": "V2610",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2610",
+      "PRODUCT": "V2610"
+    },
+    {
+      "name": "Xiaomi 18 Pro Max (China)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "madrid",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "2611FPNFAG",
+      "PRODUCT": "madrid"
+    },
+    {
+      "name": "Xiaomi Pad 8 Pro",
+      "BRAND": "Xiaomi",
+      "DEVICE": "piano",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "25091RP04C",
+      "FINGERPRINT": "Xiaomi/piano/piano:15/AQ3A.250226.002/OS3.0.4.0.WPYCNXM:user/release-keys",
+      "PRODUCT": "piano"
+    },
+    {
+      "name": "OnePlus 15 (verified firmware)",
+      "BRAND": "OnePlus",
+      "DEVICE": "OP60FFL1",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "PLK110",
+      "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+      "PRODUCT": "PLK110"
+    },
+    {
+      "name": "Lenovo Legion Y700 Gen 3 / Legion Tab (8.8, 3) (verified firmware)",
+      "BRAND": "Lenovo",
+      "DEVICE": "TB321FU",
+      "MANUFACTURER": "LENOVO",
+      "MODEL": "TB321FU",
+      "FINGERPRINT": "Lenovo/TB321FU/TB321FU:16/BQ2A.250610.001-BP2A.250605.031.A3/ZUI_17.5.10.031_251125_ROW:user/release-keys",
+      "PRODUCT": "TB321FU"
+    },
+    {
+      "name": "realme 15 Pro 5G (verified firmware)",
+      "BRAND": "realme",
+      "DEVICE": "RE60B4L1",
+      "MANUFACTURER": "realme",
+      "MODEL": "RMX5101",
+      "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
+      "PRODUCT": "RMX5101IN"
+    },
+    {
+      "name": "REDMAGIC 10 Pro (verified firmware)",
+      "BRAND": "nubia",
+      "DEVICE": "NX789J",
+      "MANUFACTURER": "ZTE",
+      "MODEL": "NX789J",
+      "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+      "PRODUCT": "NX789J-UN"
+    },
+    {
+      "name": "Xiaomi 17 (verified firmware)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "pudding",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "25113PN0EG",
+      "FINGERPRINT": "Xiaomi/pudding_global/pudding:16/BQ2A.250705.001-BP2A.250605.031.A3/OS3.0.9.0.WPCMIXM:user/release-keys",
+      "PRODUCT": "pudding_global"
+    },
+    {
+      "name": "iQOO 13 (verified firmware)",
+      "BRAND": "iQOO",
+      "DEVICE": "I2401",
+      "MANUFACTURER": "vivo",
+      "MODEL": "I2401",
+      "FINGERPRINT": "iQOO/I2401/I2401:15/AP3A.240905.015.A2/compiler250328151630:user/release-keys",
+      "PRODUCT": "I2401"
+    },
+    {
+      "name": "Samsung Galaxy Z Fold8 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F971B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F971B",
+      "PRODUCT": "SM-F971B"
+    },
+    {
+      "name": "Samsung Galaxy Z Fold7 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F966B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F966B",
+      "PRODUCT": "SM-F966B"
+    },
+    {
+      "name": "Samsung Galaxy Z Flip8 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F776B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F776B",
+      "PRODUCT": "SM-F776B"
+    },
+    {
+      "name": "Samsung Galaxy Z Flip7 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F766B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F766B",
+      "PRODUCT": "SM-F766B"
+    },
+    {
+      "name": "Samsung Galaxy Z Flip7 FE",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F761B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F761B",
+      "PRODUCT": "SM-F761B"
+    },
+    {
+      "name": "Samsung Galaxy Z TriFold",
+      "BRAND": "samsung",
+      "DEVICE": "SM-F968B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-F968B",
+      "PRODUCT": "SM-F968B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S12 Ultra 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X946B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X946B",
+      "PRODUCT": "SM-X946B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S12+ 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X846B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X846B",
+      "PRODUCT": "SM-X846B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S11 Ultra 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X936B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X936B",
+      "PRODUCT": "SM-X936B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S11 5G",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X736B",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X736B",
+      "PRODUCT": "SM-X736B"
+    },
+    {
+      "name": "Samsung Galaxy Tab S10 Ultra Wi-Fi",
+      "BRAND": "samsung",
+      "DEVICE": "SM-X920",
+      "MANUFACTURER": "samsung",
+      "MODEL": "SM-X920",
+      "PRODUCT": "SM-X920"
+    },
+    {
+      "name": "Google Pixel 10 Pro Fold",
+      "BRAND": "google",
+      "DEVICE": "rango",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel 10 Pro Fold",
+      "PRODUCT": "rango"
+    },
+    {
+      "name": "Google Pixel 9 Pro Fold",
+      "BRAND": "google",
+      "DEVICE": "comet",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel 9 Pro Fold",
+      "FINGERPRINT": "google/comet/comet:17/CP2A.260605.012/15430684:user/release-keys",
+      "PRODUCT": "comet"
+    },
+    {
+      "name": "Google Pixel Fold",
+      "BRAND": "google",
+      "DEVICE": "felix",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel Fold",
+      "FINGERPRINT": "google/felix/felix:16/BP4A.260205.001/14624666:user/release-keys",
+      "PRODUCT": "felix"
+    },
+    {
+      "name": "Google Pixel Tablet",
+      "BRAND": "google",
+      "DEVICE": "tangorpro",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel Tablet",
+      "FINGERPRINT": "google/tangorpro/tangorpro:13/TQ3A.230605.009.A1/10100517:user/release-keys",
+      "PRODUCT": "tangorpro"
+    },
+    {
+      "name": "OnePlus Open",
+      "BRAND": "OnePlus",
+      "DEVICE": "OP5973L1",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "CPH2551",
+      "FINGERPRINT": "OnePlus/CPH2551/OP5973L1:16/BP2A.250605.015/T.R4T3.39d0968-17b17ea-17b17e8:user/release-keys",
+      "PRODUCT": "CPH2551"
+    },
+    {
+      "name": "OnePlus Pad 4",
+      "BRAND": "OnePlus",
+      "DEVICE": "OPD2514",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "OPD2514",
+      "PRODUCT": "OPD2514"
+    },
+    {
+      "name": "OnePlus Pad 3",
+      "BRAND": "OnePlus",
+      "DEVICE": "OPD2415",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "OPD2415",
+      "PRODUCT": "OPD2415"
+    },
+    {
+      "name": "OnePlus Pad Go 2 (Wi-Fi)",
+      "BRAND": "OnePlus",
+      "DEVICE": "OPD2504",
+      "MANUFACTURER": "OnePlus",
+      "MODEL": "OPD2504",
+      "PRODUCT": "OPD2504"
+    },
+    {
+      "name": "OPPO Find N6",
+      "BRAND": "OPPO",
+      "DEVICE": "CPH2765",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "CPH2765",
+      "PRODUCT": "CPH2765"
+    },
+    {
+      "name": "OPPO Find N5",
+      "BRAND": "OPPO",
+      "DEVICE": "CPH2671",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "CPH2671",
+      "PRODUCT": "CPH2671"
+    },
+    {
+      "name": "OPPO Pad 5 Pro (China)",
+      "BRAND": "OPPO",
+      "DEVICE": "iceland",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "OPD2511",
+      "PRODUCT": "iceland"
+    },
+    {
+      "name": "OPPO Pad 4 Pro (China)",
+      "BRAND": "OPPO",
+      "DEVICE": "erhai",
+      "MANUFACTURER": "OPPO",
+      "MODEL": "OPD2409",
+      "PRODUCT": "erhai"
+    },
+    {
+      "name": "HONOR Magic V6 (Global)",
+      "BRAND": "HONOR",
+      "DEVICE": "PNM-N49",
+      "MANUFACTURER": "HONOR",
+      "MODEL": "PNM-N49",
+      "PRODUCT": "PNM-N49"
+    },
+    {
+      "name": "HONOR Magic V5 (Global)",
+      "BRAND": "HONOR",
+      "DEVICE": "MBH-N49",
+      "MANUFACTURER": "HONOR",
+      "MODEL": "MBH-N49",
+      "PRODUCT": "MBH-N49"
+    },
+    {
+      "name": "Xiaomi MIX Flip 2 (China)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "2505APX7BC",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "2505APX7BC",
+      "PRODUCT": "2505APX7BC"
+    },
+    {
+      "name": "Xiaomi MIX Fold 4 (China)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "24076PX3BC",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "24076PX3BC",
+      "PRODUCT": "24076PX3BC"
+    },
+    {
+      "name": "Xiaomi Pad 8 (Global)",
+      "BRAND": "Xiaomi",
+      "DEVICE": "25097RP43G",
+      "MANUFACTURER": "Xiaomi",
+      "MODEL": "25097RP43G",
+      "PRODUCT": "25097RP43G"
+    },
+    {
+      "name": "vivo X Fold6 (Global)",
+      "BRAND": "vivo",
+      "DEVICE": "V2559",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2559",
+      "PRODUCT": "V2559"
+    },
+    {
+      "name": "vivo X Fold5 (Global)",
+      "BRAND": "vivo",
+      "DEVICE": "V2429",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2429",
+      "PRODUCT": "V2429"
+    },
+    {
+      "name": "vivo X Fold3 Pro (Global)",
+      "BRAND": "vivo",
+      "DEVICE": "V2330",
+      "MANUFACTURER": "vivo",
+      "MODEL": "V2330",
+      "PRODUCT": "V2330"
+    },
+    {
+      "name": "motorola razr 60 ultra (EU)",
+      "BRAND": "motorola",
+      "DEVICE": "XT2551-6",
+      "MANUFACTURER": "motorola",
+      "MODEL": "XT2551-6",
+      "PRODUCT": "XT2551-6"
+    },
+    {
+      "name": "motorola razr 60 (EU)",
+      "BRAND": "motorola",
+      "DEVICE": "XT2553-1",
+      "MANUFACTURER": "motorola",
+      "MODEL": "XT2553-1",
+      "PRODUCT": "XT2553-1"
+    },
+    {
+      "name": "Lenovo Yoga Tab Plus 12.7",
+      "BRAND": "Lenovo",
+      "DEVICE": "TB520FU",
+      "MANUFACTURER": "LENOVO",
+      "MODEL": "TB520FU",
+      "PRODUCT": "TB520FU"
+    },
+    {
+      "name": "Lenovo Idea Tab 5G",
+      "BRAND": "Lenovo",
+      "DEVICE": "TB336FU",
+      "MANUFACTURER": "LENOVO",
+      "MODEL": "TB336FU",
+      "PRODUCT": "TB336FU"
+    }
+  ]
+}

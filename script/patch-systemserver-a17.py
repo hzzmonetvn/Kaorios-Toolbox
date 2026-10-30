@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""Fail-closed Android 17 SystemServer smali patcher for Kaorios initSystemServer hook."""
+import argparse
+import re
+from pathlib import Path
+
+HOOK_CALL = "invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V"
+ANCHOR_CALL = "invoke-static {}, Landroid/os/Looper;->loop()V"
+
+CLASS_RE = re.compile(r"(?m)^\.class\s+.*Lcom/android/server/SystemServer;\s*$")
+METHOD_RUN_RE = re.compile(r"(?m)^\.method\s+(?:public\s+|private\s+|protected\s+)?(?:final\s+)?run\(\)V\s*$")
+METHOD_END_RE = re.compile(r"(?m)^[ \t]*\.end method[ \t]*(?:\r?\n|$)")
+EXECUTABLE_HOOK_RE = re.compile(
+    r"(?m)^[ \t]*" + re.escape(HOOK_CALL) + r"[ \t]*(?:#.*)?$"
+)
+EXECUTABLE_ANCHOR_RE = re.compile(
+    r"(?m)^[ \t]*" + re.escape(ANCHOR_CALL) + r"[ \t]*(?:#.*)?$"
+)
+
+
+def _method_span(text: str) -> tuple[int, int]:
+    """Returns (start, end) for the target SystemServer.run()V method."""
+    if not CLASS_RE.search(text):
+        raise ValueError("expected .class Lcom/android/server/SystemServer;")
+
+    matches = list(METHOD_RUN_RE.finditer(text))
+    if len(matches) == 0:
+        raise ValueError("target SystemServer.run()V method not found")
+    if len(matches) > 1:
+        raise ValueError(f"ambiguous SystemServer.run()V: found {len(matches)} matches")
+
+    end = METHOD_END_RE.search(text, matches[0].end())
+    if end is None:
+        raise ValueError("unterminated SystemServer.run()V method")
+    return matches[0].start(), end.end()
+
+
+def verify(text: str) -> None:
+    """Assert the final smali has exactly one executable hook before Looper.loop()."""
+    start, end = _method_span(text)
+    body = text[start:end]
+
+    total_hook_count = len(EXECUTABLE_HOOK_RE.findall(text))
+    if total_hook_count != 1:
+        raise ValueError(f"expected exactly one executable initSystemServer hook in class; found {total_hook_count}")
+
+    hooks = list(EXECUTABLE_HOOK_RE.finditer(body))
+    if not hooks:
+        raise ValueError("expected exact invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V in run()V")
+
+    anchors = list(EXECUTABLE_ANCHOR_RE.finditer(body))
+    if len(anchors) != 1:
+        raise ValueError(f"expected exactly one Looper.loop() in SystemServer.run()V; found {len(anchors)}")
+
+    gap = body[hooks[0].end():anchors[0].start()]
+    gap = re.sub(r'(?m)^[ \t]*(?:#.*|\.(?:line|local|end local|restart local)[^\n]*)$', '', gap)
+    if hooks[0].start() > anchors[0].start() or gap.strip():
+        raise ValueError("hook must immediately precede Looper.loop() in SystemServer.run()V")
+
+
+def patch(text: str, update: bool = False) -> str:
+    """Inject KaoriosHook.initSystemServer()V right before Looper.loop() in SystemServer.run()V."""
+    start, end = _method_span(text)
+    body = text[start:end]
+
+    if EXECUTABLE_HOOK_RE.search(body):
+        try:
+            verify(text)
+            return text
+        except ValueError:
+            if not update:
+                raise
+        hook_re = re.compile(r'(?m)^[ \t]*' + re.escape(HOOK_CALL) + r'[ \t]*(?:\r?\n|$)+')
+        body = hook_re.sub('', body)
+
+    anchor_matches = list(re.finditer(r"(?m)^(?P<indent>[ \t]*)" + re.escape(ANCHOR_CALL) + r"[ \t]*(?:\r?\n|$)", body))
+    if len(anchor_matches) == 0:
+        raise ValueError("anchor 'invoke-static {}, Landroid/os/Looper;->loop()V' not found in SystemServer.run()V")
+    if len(anchor_matches) > 1:
+        raise ValueError(f"ambiguous anchor: found {len(anchor_matches)} Looper.loop() in SystemServer.run()V")
+
+    match = anchor_matches[0]
+    indent = match.group("indent")
+    anchor_pos = match.start()
+
+    injection = f"{indent}{HOOK_CALL}\n\n"
+    new_body = body[:anchor_pos] + injection + body[anchor_pos:]
+    new_text = text[:start] + new_body + text[end:]
+
+    verify(new_text)
+    return new_text
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Patch Android 17 SystemServer.smali for Kaorios")
+    parser.add_argument("smali_path", type=Path, help="Path to SystemServer.smali")
+    parser.add_argument("--check-only", action="store_true", help="Verify without modifying")
+    parser.add_argument("--update", action="store_true", help="Update existing hook")
+    args = parser.parse_args()
+
+    content = args.smali_path.read_text(encoding="utf-8")
+    if args.check_only:
+        verify(content)
+        print("OK: SystemServer smali verified")
+    else:
+        patched = patch(content, update=args.update)
+        args.smali_path.write_text(patched, encoding="utf-8")
+        print("OK: SystemServer smali patched")
+
+
+if __name__ == "__main__":
+    main()

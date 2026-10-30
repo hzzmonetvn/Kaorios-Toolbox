@@ -1,0 +1,543 @@
+name: Build APK and framework DEX (private source)
+
+# Build app Toolbox từ source repo PRIVATE (hzzmonetvn/KaoriosToolbox-Frameowrk).
+#
+# CẦN THÊM SECRET TRƯỚC KHI CHẠY (tự nhập):
+#   Public repo → Settings → Secrets and variables → Actions
+#   → New repository secret:
+#     Name : PRIVATE_REPO_TOKEN
+#     Value: GitHub Personal Access Token có quyền ĐỌC repo private
+#            - Classic PAT: tick scope `repo`
+#            - Hoặc Fine-grained PAT: Repository access = Only select repositories
+#              → chọn KaoriosToolbox-Frameowrk, quyền Contents = Read-only
+#
+# Chạy: Actions → Build Toolbox (private source) → Run workflow
+#       → chọn nhánh repo private cần build (mặc định: Toolbox-Framework).
+
+on:
+  workflow_dispatch:
+    inputs:
+      private_branch:
+        description: "Nhánh repo private cần build"
+        required: true
+        default: "Toolbox-Framework"
+      private_ref:
+        description: "Commit SHA cụ thể (để trống = HEAD của nhánh trên)"
+        required: false
+        default: ""
+      run_regressions:
+        description: "Chạy regression test (tools/run-core-regressions.sh)"
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  ANDROID_ALL_VERSION: 17-robolectric-15733970
+  ANDROID_ALL_SHA256: f6a41ad548bb45cccd3b1d4774cb50d57826dd319b6e5accd6b6269876e12d71
+
+concurrency:
+  group: build-toolbox-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    name: Android APK and framework DEX
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: private-src
+
+    steps:
+      - name: Check PRIVATE_REPO_TOKEN
+        # Chạy TRƯỚC khi clone nên phải override working-directory mặc định.
+        working-directory: ${{ github.workspace }}
+        env:
+          TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Chưa cấu hình secret PRIVATE_REPO_TOKEN. Vào repo Settings → Secrets and variables → Actions → New repository secret (xem chú thích đầu file)."
+            exit 1
+          fi
+
+      - name: Clone private source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: hzzmonetvn/KaoriosToolbox-Frameowrk
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          ref: ${{ inputs.private_ref != '' && inputs.private_ref || inputs.private_branch }}
+          path: private-src
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify source and mask signing properties
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          echo "SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
+          echo "Building source commit $source_sha"
+          test -f app/build.gradle.kts
+          test -f framework/build.gradle.kts
+          if [[ -f KeySign/keystore.properties ]]; then
+            while IFS='=' read -r name value; do
+              case "$name" in
+                storePassword|keyPassword|keyAlias|storeFile)
+                  value="${value%$'\r'}"
+                  if [[ -n "$value" ]]; then echo "::add-mask::$value"; fi
+                  ;;
+              esac
+            done < KeySign/keystore.properties
+          else
+            echo "NOTICE: KeySign/keystore.properties not found in checkout; running in unsigned release mode."
+          fi
+
+      - name: Checkout public Toolbox-data
+        if: ${{ inputs.run_regressions }}
+        run: |
+          set -euo pipefail
+          PUBLIC_DIR="$RUNNER_TEMP/public-toolbox"
+          git clone --depth 1 https://github.com/hzzmonetvn/Kaorios-Toolbox.git "$PUBLIC_DIR"
+          PUBLIC_SHA="$(git -C "$PUBLIC_DIR" rev-parse HEAD)"
+          echo "PUBLIC_TOOLBOX_SHA=$PUBLIC_SHA" >> "$GITHUB_ENV"
+          echo "PUBLIC_TOOLBOX_DATA=$PUBLIC_DIR/Toolbox-data" >> "$GITHUB_ENV"
+          {
+            echo "### Cross-repo Contract Test"
+            echo "Testing against public Toolbox-data at commit: \`${PUBLIC_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Java 21 for Gradle
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle without private build caching
+        uses: gradle/actions/setup-gradle@4733eaac7c1b0da527e4206b7671e0061de1ce37 # v6
+        with:
+          cache-disabled: true
+
+      - name: Restore merged android.jar cache
+        id: cache-merged-jar
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/merged-android-cache/android-37-merged.jar
+          key: android-public-stubs-v2-37-${{ env.ANDROID_ALL_SHA256 }}-${{ runner.os }}
+
+      - name: Run core regressions
+        if: ${{ inputs.run_regressions }}
+        env:
+          KAORIOS_REQUIRE_PUBLIC_CONTRACT: "1"
+          PUBLIC_TOOLBOX_DATA: "${{ runner.temp }}/public-toolbox/Toolbox-data"
+        run: |
+          set -euo pipefail
+          bash tools/run-core-regressions.sh
+
+      - name: Install Android SDK 37, NDK and CMake
+        shell: bash
+        run: |
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37.0" \
+            "build-tools;37.0.0" \
+            "ndk;28.2.13676358" \
+            "cmake;3.22.1"
+          test -d "$ANDROID_SDK_ROOT/platforms/android-37.0"
+          test -d "$ANDROID_SDK_ROOT/build-tools/37.0.0"
+          test -d "$ANDROID_SDK_ROOT/ndk/28.2.13676358"
+          test -d "$ANDROID_SDK_ROOT/cmake/3.22.1"
+          [ -d "$ANDROID_SDK_ROOT/platforms/android-37" ] || \
+            ln -sfn android-37.0 "$ANDROID_SDK_ROOT/platforms/android-37"
+
+      - name: Install full AOSP API 37 compile stubs
+        shell: bash
+        run: |
+          public_android="$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar"
+          core_modules="$ANDROID_SDK_ROOT/platforms/android-37.0/core-for-system-modules.jar"
+          cached_jar="$HOME/merged-android-cache/android-37-merged.jar"
+
+          if [ -f "$cached_jar" ]; then
+            echo "Cache hit — dùng merged android.jar có sẵn, bỏ qua download ~1GB."
+            test -f "$public_android"
+            install -m 0644 "$cached_jar" "$public_android"
+          else
+            echo "Cache miss — download + merge AOSP stubs (chỉ chậm lần đầu)."
+            android_all="$RUNNER_TEMP/android-all-${ANDROID_ALL_VERSION}.jar"
+            merged_dir="$RUNNER_TEMP/android-api-37-merged"
+            merged_android="$RUNNER_TEMP/android-api-37-merged.jar"
+
+            curl --fail --location --retry 3 \
+              --output "$android_all" \
+              "https://repo.maven.apache.org/maven2/org/robolectric/android-all/${ANDROID_ALL_VERSION}/android-all-${ANDROID_ALL_VERSION}.jar"
+            echo "${ANDROID_ALL_SHA256}  ${android_all}" | sha256sum --check --strict
+            unzip -tq "$android_all"
+
+            test -f "$public_android"
+            test -f "$core_modules"
+            mkdir -p "$merged_dir"
+            unzip -q "$public_android" -d "$merged_dir"
+            unzip -oq "$core_modules" -d "$merged_dir"
+            unzip -oq "$android_all" -d "$merged_dir"
+            jar --create --file "$merged_android" --no-manifest -C "$merged_dir" .
+
+            mkdir -p "$HOME/merged-android-cache"
+            cp "$merged_android" "$cached_jar"
+            install -m 0644 "$merged_android" "$public_android"
+          fi
+
+          unzip -Z1 "$public_android" > "$RUNNER_TEMP/android-api-37-merged.entries"
+          grep -Fx "java/lang/Object.class" "$RUNNER_TEMP/android-api-37-merged.entries"
+          grep -Fx "android/app/ActivityThread.class" "$RUNNER_TEMP/android-api-37-merged.entries"
+          grep -Fx "android/hardware/security/keymint/KeyParameter.class" "$RUNNER_TEMP/android-api-37-merged.entries"
+          unzip -tq "$public_android"
+
+      - name: Add Kaorios framework API to compile boot classpath
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew \
+            :framework:compileReleaseJavaWithJavac \
+            --no-daemon \
+            --no-build-cache
+
+          public_android="$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar"
+          framework_classes="framework/build/intermediates/javac/release/compileReleaseJavaWithJavac/classes"
+          api_dir="$RUNNER_TEMP/kaorios-framework-boot-api"
+          api_package="$api_dir/com/kousei/framework"
+
+          test -f "$public_android"
+          test -f "$framework_classes/com/kousei/framework/KaoriosFramework.class"
+          mkdir -p "$api_package"
+          find "$framework_classes/com/kousei/framework" \
+            -maxdepth 1 \
+            -type f \
+            -name 'KaoriosFramework*.class' \
+            -exec cp {} "$api_package/" \;
+
+          settings_api="$api_dir/android/security/kaorios/settings"
+          mkdir -p "$settings_api"
+          for api_class in AdvancedPolicyClient AdvancedPolicyRuntimeStatus IAdvancedPolicyService SettingDecisionParcel ServiceManagerBridge; do
+            test -f "$framework_classes/android/security/kaorios/settings/$api_class.class"
+            find "$framework_classes/android/security/kaorios/settings" \
+              -maxdepth 1 -type f -name "$api_class*.class" \
+              -exec cp {} "$settings_api/" \;
+          done
+
+          jar --update --file "$public_android" -C "$api_dir" .
+          unzip -Z1 "$public_android" > "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
+          grep -Fx "com/kousei/framework/KaoriosFramework.class" \
+            "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
+          grep -Fx "android/security/kaorios/settings/AdvancedPolicyClient.class" \
+            "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
+          grep -Fx "android/security/kaorios/settings/AdvancedPolicyRuntimeStatus.class" \
+            "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
+          unzip -tq "$public_android"
+
+      - name: Build app and framework release APKs
+        run: bash gradlew :framework:assembleRelease :app:assembleRelease --no-daemon --parallel --max-workers=2 --no-build-cache
+
+      - name: Test and build native Rust engine (aarch64-linux-android)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --target aarch64-linux-android
+          rustup default 1.98.0
+          cargo install cargo-ndk --version 3.5.4 --locked
+          bash tools/run-rust-regressions.sh
+          cargo test --manifest-path rust_app/Cargo.toml --no-default-features --locked
+          cargo doc --manifest-path rust_app/Cargo.toml --no-deps --locked
+
+          echo "Cross-compiling kaorios-toolbox standalone binary for aarch64-linux-android..."
+          NDK_TOOLCHAIN="$ANDROID_SDK_ROOT/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$NDK_TOOLCHAIN/aarch64-linux-android34-clang"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR="$NDK_TOOLCHAIN/llvm-ar"
+          export CC_aarch64_linux_android="$NDK_TOOLCHAIN/aarch64-linux-android34-clang"
+          export AR_aarch64_linux_android="$NDK_TOOLCHAIN/llvm-ar"
+          test -x "$CC_aarch64_linux_android"
+          test -x "$AR_aarch64_linux_android"
+
+          cargo build \
+            --manifest-path rust_app/Cargo.toml \
+            --bin kaorios-toolbox \
+            --target aarch64-linux-android \
+            --release \
+            --no-default-features
+
+          test -f rust_app/target/aarch64-linux-android/release/kaorios-toolbox
+
+      - name: Build and inspect native Rust development APK
+        run: |
+          set -euo pipefail
+          bash gradlew :app-rust:assembleDebug --no-daemon --no-build-cache
+          apk=app-rust/build/outputs/apk/debug/app-rust-debug.apk
+          unzip -tq "$apk"
+          unzip -Z1 "$apk" > "$RUNNER_TEMP/rust-apk.entries"
+          grep -Fx 'lib/arm64-v8a/libkaorios_rust_app.so' "$RUNNER_TEMP/rust-apk.entries"
+          if grep -Fq 'libkaorios_toolbox.so' "$RUNNER_TEMP/rust-apk.entries"; then
+            printf '%s\n' 'Baseline native library unexpectedly packaged in Rust APK.' >&2
+            exit 1
+          fi
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer" manifest print "$apk" > "$RUNNER_TEMP/rust-manifest.xml"
+          grep -F 'com.kousei.kaorios.rustdev' "$RUNNER_TEMP/rust-manifest.xml"
+          grep -F 'com.kousei.kaorios.rustapp.RustActivity' "$RUNNER_TEMP/rust-manifest.xml"
+          grep -F 'android.intent.category.LAUNCHER' "$RUNNER_TEMP/rust-manifest.xml"
+          unzip -p "$apk" lib/arm64-v8a/libkaorios_rust_app.so > "$RUNNER_TEMP/rust-app.so"
+          readelf="$ANDROID_SDK_ROOT/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          "$readelf" -h "$RUNNER_TEMP/rust-app.so" | grep -F AArch64
+          "$readelf" --dyn-syms --wide "$RUNNER_TEMP/rust-app.so" > "$RUNNER_TEMP/rust-symbols.txt"
+          grep -w 'Java_com_kousei_kaorios_rustapp_RustActivity_requestBackNavigation' "$RUNNER_TEMP/rust-symbols.txt"
+          printf '%s\n' 'Native Rust development APK packaged; device launch is not verified. Development APK is excluded from release uploads.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove boot framework helper classes from Toolbox APK
+        shell: bash
+        env:
+          SMALI_VERSION: 3.0.9
+          BAKSMALI_SHA256: 1b206070701b2145bd1e6204abd6c14fea877f335486845cd4df149bf5f79c2e
+          SMALI_SHA256: b5e2aa019c49ddaf7b2cace80f60ebbfd61f7ac18e7a3dea1075bec8779cc37a
+        run: |
+          set -euo pipefail
+
+          app_apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          test -n "$app_apk"
+
+          apkanalyzer="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer"
+          test -x "$apkanalyzer"
+          "$apkanalyzer" dex packages --defined-only "$app_apk" > "$RUNNER_TEMP/toolbox-packages.txt"
+          if ! grep -qE 'com\.kousei\.framework|android\.security\.kaorios' "$RUNNER_TEMP/toolbox-packages.txt"; then
+            echo "Toolbox APK đã sạch; không có class helper framework cần xóa."
+            exit 0
+          fi
+
+          baksmali="$RUNNER_TEMP/baksmali-${SMALI_VERSION}.jar"
+          smali="$RUNNER_TEMP/smali-${SMALI_VERSION}.jar"
+          curl --fail --location --retry 3 \
+            --output "$baksmali" \
+            "https://github.com/baksmali/smali/releases/download/${SMALI_VERSION}/baksmali-${SMALI_VERSION}-fat-release.jar"
+          curl --fail --location --retry 3 \
+            --output "$smali" \
+            "https://github.com/baksmali/smali/releases/download/${SMALI_VERSION}/smali-${SMALI_VERSION}-fat-release.jar"
+          echo "${BAKSMALI_SHA256}  ${baksmali}" | sha256sum --check --strict
+          echo "${SMALI_SHA256}  ${smali}" | sha256sum --check --strict
+
+          repack_dir="$RUNNER_TEMP/kaorios-toolbox-repack"
+          apk_dir="$repack_dir/apk"
+          unaligned_apk="$repack_dir/KaoriosToolbox-unsigned.apk"
+          aligned_apk="$repack_dir/KaoriosToolbox-aligned.apk"
+          signed_apk="$repack_dir/KaoriosToolbox-release.apk"
+          mkdir -p "$apk_dir"
+          unzip -q "$app_apk" -d "$apk_dir"
+
+          shopt -s nullglob
+          dex_files=("$apk_dir"/classes*.dex)
+          if (( ${#dex_files[@]} == 0 )); then
+            echo "::error::Toolbox APK không chứa DEX"
+            exit 1
+          fi
+
+          removed=0
+          for dex_file in "${dex_files[@]}"; do
+            dex_name="$(basename "$dex_file" .dex)"
+            smali_dir="$repack_dir/${dex_name}-smali"
+            java -jar "$baksmali" disassemble "$dex_file" --output "$smali_dir"
+
+            for helper_dir in \
+              "$smali_dir/com/kousei/framework" \
+              "$smali_dir/android/security/kaorios"; do
+              if [[ -d "$helper_dir" ]]; then
+                find "$helper_dir" -type f -name '*.smali' -print
+                rm -rf -- "$helper_dir"
+                removed=1
+              fi
+            done
+
+            java -jar "$smali" assemble "$smali_dir" --output "$dex_file"
+          done
+
+          if (( removed == 0 )); then
+            echo "::error::Không tìm thấy class helper framework trong DEX Toolbox để xóa"
+            exit 1
+          fi
+
+          rm -rf -- "$apk_dir/META-INF"
+          (cd "$apk_dir" && zip -q -0 -r "$unaligned_apk" .)
+          "$ANDROID_SDK_ROOT/build-tools/37.0.0/zipalign" \
+            -P 16 -f 4 "$unaligned_apk" "$aligned_apk"
+
+          properties="KeySign/keystore.properties"
+          if [[ -f "$properties" ]]; then
+            read_property() {
+              sed -n "s/^${1}=//p" "$properties" | tail -n 1 | tr -d '\r'
+            }
+            store_file="$(read_property storeFile)"
+            key_alias="$(read_property keyAlias)"
+            export KAORIOS_STORE_PASSWORD="$(read_property storePassword)"
+            export KAORIOS_KEY_PASSWORD="$(read_property keyPassword)"
+            test -n "$store_file"
+            test -n "$key_alias"
+            test -n "$KAORIOS_STORE_PASSWORD"
+            test -n "$KAORIOS_KEY_PASSWORD"
+
+            "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" sign \
+              --ks "KeySign/$store_file" \
+              --ks-key-alias "$key_alias" \
+              --ks-pass env:KAORIOS_STORE_PASSWORD \
+              --key-pass env:KAORIOS_KEY_PASSWORD \
+              --out "$signed_apk" \
+              "$aligned_apk"
+            "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify \
+              --verbose "$signed_apk"
+            install -m 0644 "$signed_apk" "$app_apk"
+          else
+            echo "NOTICE: No signing credentials provided in KeySign/keystore.properties; publishing unsigned release APK."
+            install -m 0644 "$aligned_apk" "$app_apk"
+          fi
+
+      - name: Prepare APKs and extract full framework DEX/Toolbox native library
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          app_apk="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          framework_apk="$(find framework/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+
+          if [[ -z "$app_apk" ]]; then
+            echo "::error::Không tìm thấy app release APK"
+            exit 1
+          fi
+          if [[ -z "$framework_apk" ]]; then
+            echo "::error::Không tìm thấy framework release APK"
+            exit 1
+          fi
+
+          unzip -tq "$app_apk"
+          unzip -tq "$framework_apk"
+          if "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify "$app_apk" 2>/dev/null; then
+            echo "Toolbox APK signature verified."
+          else
+            echo "NOTICE: Toolbox APK is unsigned."
+          fi
+
+          apkanalyzer="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer"
+          test -x "$apkanalyzer"
+
+          # Toolbox must link against the boot framework, never bundle its helper/hook classes.
+          if "$apkanalyzer" dex packages --defined-only "$app_apk" | \
+              grep -E 'com\.kousei\.framework|android\.security\.kaorios'; then
+            echo "::error::Toolbox APK vẫn đang đóng gói class của boot framework"
+            exit 1
+          fi
+
+          toolbox_native_entry="lib/arm64-v8a/libkaorios_toolbox.so"
+          toolbox_native_count="$(unzip -Z1 "$app_apk" | grep -Fxc "$toolbox_native_entry" || true)"
+          if [[ "$toolbox_native_count" != "1" ]]; then
+            echo "::error::Toolbox APK thiếu ${toolbox_native_entry}"
+            exit 1
+          fi
+
+          framework_packages="$RUNNER_TEMP/kaorios-framework-packages.txt"
+          "$apkanalyzer" dex packages --defined-only "$framework_apk" > "$framework_packages"
+          grep -F 'com.kousei.framework.KaoriosFramework' "$framework_packages"
+          grep -F 'android.security.kaorios.KaoriosHook' "$framework_packages"
+
+          dex_entries="$(unzip -Z1 "$framework_apk" | grep -E '^classes([0-9]+)?\.dex$' || true)"
+          if [[ "$dex_entries" != "classes.dex" ]]; then
+            echo "::error::Framework APK phải chứa đúng một classes.dex; tìm thấy: ${dex_entries:-không có}"
+            exit 1
+          fi
+
+          mkdir -p dist
+          cp "$app_apk" dist/KaoriosToolbox-release.apk
+          cp "$framework_apk" dist/KaoriosFramework-release.apk
+          unzip -p "$framework_apk" classes.dex > dist/classes.dex
+
+          mkdir -p dist/lib/arm64-v8a
+          unzip -p "$app_apk" "$toolbox_native_entry" \
+            > dist/lib/arm64-v8a/libkaorios_toolbox.so
+
+          cp rust_app/target/aarch64-linux-android/release/kaorios-toolbox dist/kaorios-toolbox
+          chmod +x dist/kaorios-toolbox
+          tar -czf dist/kaorios-toolbox-aarch64.tar.gz -C dist kaorios-toolbox
+
+          if [[ ! -s dist/classes.dex ]]; then
+            echo "::error::classes.dex được tách ra nhưng đang rỗng"
+            exit 1
+          fi
+          if [[ "$(LC_ALL=C head -c 3 dist/classes.dex)" != "dex" ]]; then
+            echo "::error::File được tách ra không có DEX magic hợp lệ"
+            exit 1
+          fi
+          test -s dist/lib/arm64-v8a/libkaorios_toolbox.so
+          "$ANDROID_SDK_ROOT/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
+            -h dist/lib/arm64-v8a/libkaorios_toolbox.so | grep -F "AArch64"
+
+          test -s dist/kaorios-toolbox
+          "$ANDROID_SDK_ROOT/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
+            -h dist/kaorios-toolbox | grep -F "AArch64"
+
+          sha256sum \
+            dist/KaoriosToolbox-release.apk \
+            dist/KaoriosFramework-release.apk \
+            dist/classes.dex \
+            dist/lib/arm64-v8a/libkaorios_toolbox.so \
+            dist/kaorios-toolbox \
+            dist/kaorios-toolbox-aarch64.tar.gz \
+            > dist/SHA256SUMS
+          cp dist/SHA256SUMS dist/SHA256SUMS.txt
+
+          {
+            echo "## Kaorios CI build artifacts"
+            echo
+            echo "Commit: \`${SOURCE_SHA}\`"
+            echo
+            echo "Not verified as a release: compare the \`classes.dex\` SHA-256 below with the hash in the v2.0.6.1 release notes before using these files as release assets."
+            echo
+            echo "Toolbox APK: boot-framework helper classes excluded."
+            echo
+            echo "Toolbox native logic: \`lib/arm64-v8a/libkaorios_toolbox.so\` (AArch64)."
+            echo
+            echo "Toolbox native CLI binary: \`kaorios-toolbox\` (AArch64 standalone)."
+            echo
+            echo "Framework full DEX: \`classes.dex\` extracted from \`KaoriosFramework-release.apk\`."
+            echo
+            echo '```text'
+            cat dist/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build artifacts to tempfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "### Download Artifacts (tempfile)" >> "$GITHUB_STEP_SUMMARY"
+          echo "| File | Download URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          uploaded=0
+          for file in dist/*; do
+            if [[ -f "$file" ]]; then
+              fname=$(basename "$file")
+              # tmpfiles.org rejects extensionless files; kaorios-toolbox is packaged as kaorios-toolbox-aarch64.tar.gz
+              if [[ "$fname" == "kaorios-toolbox" ]]; then
+                echo "Skipping extensionless binary $fname for tmpfiles upload (packaged in kaorios-toolbox-aarch64.tar.gz)"
+                continue
+              fi
+              echo "Uploading $fname to tempfile..."
+              resp=$(curl -s -F "file=@$file" -F "expire=172800" https://tmpfiles.org/api/v1/upload || echo "")
+              url=$(echo "$resp" | jq -r '.data.url // empty')
+              if [[ -n "$url" ]]; then
+                dl_url=$(echo "$url" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')
+                echo "Artifact $fname: $dl_url"
+                echo "| \`$fname\` | [Download $fname]($dl_url) |" >> "$GITHUB_STEP_SUMMARY"
+                uploaded=$((uploaded + 1))
+              else
+                echo "Failed to upload $fname: $resp"
+                echo "| \`$fname\` | Upload failed |" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          done
+          if (( uploaded == 0 )); then
+            echo "::error::Không có file nào trong dist/ được upload"
+            exit 1
+          fi

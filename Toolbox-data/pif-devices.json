@@ -1,0 +1,48 @@
+{
+  "devices": [
+    {
+      "name": "Pixel 7 Pro (cheetah)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 7 Pro",
+      "DEVICE": "cheetah",
+      "PRODUCT": "cheetah_beta",
+      "FINGERPRINT": "google/cheetah_beta/cheetah:CANARY/ZP11.260918.007/16484274:user/release-keys",
+      "SECURITY_PATCH": "2026-10-05",
+      "DEVICE_INITIAL_SDK_INT": "33"
+    },
+    {
+      "name": "Pixel 7 (panther)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 7",
+      "DEVICE": "panther",
+      "PRODUCT": "panther_beta",
+      "FINGERPRINT": "google/panther_beta/panther:CANARY/ZP11.260918.007/16484274:user/release-keys",
+      "SECURITY_PATCH": "2026-10-05",
+      "DEVICE_INITIAL_SDK_INT": "33"
+    },
+    {
+      "name": "Pixel 7a (lynx)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 7a",
+      "DEVICE": "lynx",
+      "PRODUCT": "lynx_beta",
+      "FINGERPRINT": "google/lynx_beta/lynx:CANARY/ZP11.260918.007/16484274:user/release-keys",
+      "SECURITY_PATCH": "2026-10-05",
+      "DEVICE_INITIAL_SDK_INT": "33"
+    },
+    {
+      "name": "Pixel 6a (bluejay)",
+      "MANUFACTURER": "Google",
+      "BRAND": "google",
+      "MODEL": "Pixel 6a",
+      "DEVICE": "bluejay",
+      "PRODUCT": "bluejay_beta",
+      "FINGERPRINT": "google/bluejay_beta/bluejay:CANARY/ZP11.260918.007/16484274:user/release-keys",
+      "SECURITY_PATCH": "2026-10-05",
+      "DEVICE_INITIAL_SDK_INT": "32"
+    }
+  ]
+}
