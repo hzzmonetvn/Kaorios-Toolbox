@@ -518,5 +518,101 @@
     "MODEL": "NX789J",
     "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
     "PRODUCT": "NX789J-UN"
+  },
+  "com.miHoYo.GenshinImpact": {
+    "BRAND": "nubia",
+    "DEVICE": "NX789J",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
+  },
+  "com.HoYoverse.hkrpgoversea": {
+    "BRAND": "nubia",
+    "DEVICE": "NX789J",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
+  },
+  "com.HoYoverse.Nap": {
+    "BRAND": "nubia",
+    "DEVICE": "NX789J",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
+  },
+  "com.miHoYo.bh3oversea": {
+    "BRAND": "nubia",
+    "DEVICE": "NX789J",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
+  },
+  "com.blizzard.diablo.immortal": {
+    "BRAND": "asus",
+    "DEVICE": "ASUSAI2501",
+    "MANUFACTURER": "asus",
+    "MODEL": "ASUSAI2501",
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
+  },
+  "com.gameloft.android.ANMP.GloftA8HM": {
+    "BRAND": "asus",
+    "DEVICE": "ASUSAI2501",
+    "MANUFACTURER": "asus",
+    "MODEL": "ASUSAI2501",
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
+  },
+  "jp.konami.pesam": {
+    "BRAND": "asus",
+    "DEVICE": "ASUSAI2501",
+    "MANUFACTURER": "asus",
+    "MODEL": "ASUSAI2501",
+    "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
+    "PRODUCT": "WWAI2501"
+  },
+  "com.roblox.client": {
+    "BRAND": "OnePlus",
+    "DEVICE": "OP60FFL1",
+    "MANUFACTURER": "OnePlus",
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
+  },
+  "com.mojang.minecraftpe": {
+    "BRAND": "OnePlus",
+    "DEVICE": "OP60FFL1",
+    "MANUFACTURER": "OnePlus",
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
+  },
+  "com.pubg.newstate": {
+    "BRAND": "OnePlus",
+    "DEVICE": "OP60FFL1",
+    "MANUFACTURER": "OnePlus",
+    "MODEL": "PLK110",
+    "FINGERPRINT": "OnePlus/PLK110/OP60FFL1:17/CP2A.260605.016/B.3e2f3d0-1859d0c-1859d08:user/release-keys",
+    "PRODUCT": "PLK110"
+  },
+  "com.supercell.clashroyale": {
+    "BRAND": "nubia",
+    "DEVICE": "NX789J",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
+  },
+  "com.supercell.clashofclans": {
+    "BRAND": "nubia",
+    "DEVICE": "NX789J",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
+    "PRODUCT": "NX789J-UN"
   }
 }
