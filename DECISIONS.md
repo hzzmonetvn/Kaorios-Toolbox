@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-10-31 (later) — v2.0.6.1 `classes.dex` asset replaced with the current build
+
+- **Chosen:**
+  1. Overwrite the `classes.dex` asset on release `v2.0.6.1` with the current-source build — 91,160 bytes, SHA-256 `f95ab89e1ac51cb37d98046a32f5ccd36021e1898db2d335924b9cd15520546f`, 44 classes — using `gh release upload --clobber`. The asset id changed (`RA_kwDOQWV3bM4pcl3n`), so the file is a new upload, not an in-place byte swap.
+  2. Rewrite the release body. It previously advertised the Enhanced PIF Spoofing Engine, DroidGuard chain blocking, keybox attestation and TEE warm-up — all purged by `71185bc` — and listed a third SHA-256 (`ca9489f3…`) matching neither artifact. It now describes the stock-Keystore payload, carries the correct hash, records that the patcher ZIP is no longer attached, and keeps the `SettingsProvider.apk` bootloop warning.
+  3. Replace the "two DEX artifacts, not interchangeable" wording in all four guides and `script/patcher_v2061_README.txt`. The asset and a current-source build are now the same artifact, so both guides state that and give the old `94848e18…` hash only as a "this is the stale build, discard it" check.
+- **Considered:**
+  - Publishing under a new tag (`v2.0.6.2`): rejected — the guides, the app's version checks and the release URL all point at 2.0.6.1; a new tag would strand them for no artifact benefit.
+  - Leaving the guides' "two artifacts" section in place: rejected — it would assert something false about a file users download from the link in the same paragraph.
+  - Deleting the old asset instead of overwriting: rejected — macOS/GitHub keeps no per-asset history either way, and an empty release for the duration of the re-upload is worse.
+- **Consequences:** download counts on the asset reset to 0 (the new asset id has its own counter). The 161 earlier downloads received the 858,636-byte build and are unaffected by this change — anyone holding it keeps a payload that rewrites certificate chains, which is why the guides now tell them how to identify and discard it.
+- **Evidence boundary:** verified host-side only — `gh release view` reports the new size and digest, and the uploaded bytes came from the same `unzip -p` extraction whose hash matches the guide. No device flashed this asset; nothing here shows it boots or what Play Integrity reports.
+
 ## 2026-10-31 — Keystore hooks removed; caller manifest reduced to four
 
 - **Chosen:**
