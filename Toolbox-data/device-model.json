@@ -6,8 +6,9 @@
       "DEVICE": "ASUSAI2501",
       "MANUFACTURER": "asus",
       "MODEL": "ASUSAI2501",
-      "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/36.0810.1810.43-0:user/release-keys",
-      "PRODUCT": "WWAI2501"
+      "FINGERPRINT": "asus/WWAI2501/ASUSAI2501:15/AQ3A.240829.003/35.1810.1810.346-0:user/release-keys",
+      "PRODUCT": "ASUSAI2501",
+      "id": "ROG9P"
     },
     {
       "name": "Black Shark 5 Pro",
@@ -24,7 +25,8 @@
       "MANUFACTURER": "Google",
       "MODEL": "Pixel 11 Pro XL",
       "PRODUCT": "kodiak",
-      "FINGERPRINT": "google/kodiak/kodiak:17/CD1A.261005.003/16262255:user/release-keys"
+      "FINGERPRINT": "google/kodiak/kodiak:17/CD1A.260714.001.A9/15938155:user/release-keys",
+      "id": "PXL11PXL"
     },
     {
       "name": "HONOR Magic9 Pro Max",
@@ -193,7 +195,8 @@
       "MANUFACTURER": "realme",
       "MODEL": "RMX5101",
       "FINGERPRINT": "realme/RMX5101IN/RE60B4L1:15/AP3A.240617.008/V.R4T2.26cec0e-80bb4e-80b757:user/release-keys",
-      "PRODUCT": "RMX5101IN"
+      "PRODUCT": "RMX5101",
+      "id": "RM15P5G"
     },
     {
       "name": "REDMAGIC 10 Pro (verified firmware)",
@@ -201,8 +204,9 @@
       "DEVICE": "NX789J",
       "MANUFACTURER": "ZTE",
       "MODEL": "NX789J",
-      "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
-      "PRODUCT": "NX789J-UN"
+      "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/20241212.194919:user/release-keys",
+      "PRODUCT": "NX789J",
+      "id": "RM10P"
     },
     {
       "name": "Xiaomi 17 (verified firmware)",
@@ -505,6 +509,136 @@
       "MANUFACTURER": "LENOVO",
       "MODEL": "TB336FU",
       "PRODUCT": "TB336FU"
+    },
+    {
+      "id": "BS4C",
+      "name": "Black Shark 4",
+      "BRAND": "Black Shark",
+      "MODEL": "2SM-X706B",
+      "MANUFACTURER": "Xiaomi",
+      "DEVICE": "2SM-X706B",
+      "PRODUCT": "2SM-X706B",
+      "FINGERPRINT": "BlackShark/PRS-H0/Black Shark 4:13/TQ3A.230805.001/20230315:user/release-keys"
+    },
+    {
+      "id": "F5",
+      "name": "POCO F5",
+      "BRAND": "POCO",
+      "MODEL": "23049PCD8G",
+      "MANUFACTURER": "Xiaomi",
+      "DEVICE": "marble",
+      "PRODUCT": "marble",
+      "FINGERPRINT": "POCO/marble_global/marble:15/AQ3A.250226.002/OS3.0.3.0.VMRMIXM:user/release-keys"
+    },
+    {
+      "id": "S25U",
+      "name": "Samsung Galaxy S25 Ultra",
+      "BRAND": "samsung",
+      "MODEL": "SM-S938B",
+      "MANUFACTURER": "samsung",
+      "DEVICE": "pa3q",
+      "PRODUCT": "pa3qxxx",
+      "FINGERPRINT": "samsung/pa3qxxx/pa3q:15/AP3A.240905.015.A2/S938BXXU9CZDP:user/release-keys"
+    },
+    {
+      "id": "GZF5",
+      "name": "Samsung Galaxy Z Fold5",
+      "BRAND": "samsung",
+      "MODEL": "SM-F9460",
+      "MANUFACTURER": "samsung",
+      "DEVICE": "q2q",
+      "PRODUCT": "q2qxxx",
+      "FINGERPRINT": "samsung/q2qzh/q2q:15/UP1A.231005.007/F946BXXU1BWK4:user/release-keys"
+    },
+    {
+      "id": "HMV2R",
+      "name": "HONOR Magic V2 RSR",
+      "BRAND": "HONOR",
+      "MODEL": "VER-N49DP",
+      "MANUFACTURER": "HONOR",
+      "DEVICE": "VER",
+      "PRODUCT": "VER-N49DP",
+      "FINGERPRINT": "HONOR/VER-N49DP/VER:13/ENG.20240918.123456:user/release-keys"
+    },
+    {
+      "id": "LY70023",
+      "name": "Lenovo Legion Y700 (2023)",
+      "BRAND": "Lenovo",
+      "MODEL": "Lenovo TB-9707F",
+      "MANUFACTURER": "lenovo",
+      "DEVICE": "TB-9707F",
+      "PRODUCT": "TB-9707F",
+      "FINGERPRINT": "Lenovo/TB-9707F_PRC/TB-9707F:13/TKQ1.221013.002/15.0.342_231018:user/release-keys"
+    },
+    {
+      "id": "MI11TP",
+      "name": "Xiaomi 11T Pro",
+      "BRAND": "Xiaomi",
+      "MODEL": "2107113SG",
+      "MANUFACTURER": "Xiaomi",
+      "DEVICE": "vili",
+      "PRODUCT": "vili",
+      "FINGERPRINT": "Xiaomi/vili_global/vili:14/UKQ1.231207.002/V816.0.22.0.UKDMIXM:user/release-keys"
+    },
+    {
+      "id": "MI13",
+      "name": "Xiaomi 13",
+      "BRAND": "Xiaomi",
+      "MODEL": "2211133G",
+      "MANUFACTURER": "Xiaomi",
+      "DEVICE": "fuxi",
+      "PRODUCT": "fuxi",
+      "FINGERPRINT": "Xiaomi/fuxi_global/fuxi:14/UKQ1.230804.001/V816.0.3.0.UMCMIXM:user/release-keys"
+    },
+    {
+      "id": "MI13P",
+      "name": "Xiaomi 13 Pro",
+      "BRAND": "Xiaomi",
+      "MODEL": "2210132G",
+      "MANUFACTURER": "Xiaomi",
+      "DEVICE": "nuwa",
+      "PRODUCT": "nuwa",
+      "FINGERPRINT": "Xiaomi/nuwa_global/nuwa:13/TKQ1.221114.001/OS2.0.100.0.VMBMIXM:user/release-keys"
+    },
+    {
+      "id": "MI14P",
+      "name": "Xiaomi 14 Pro",
+      "BRAND": "Xiaomi",
+      "MODEL": "23116PN5BC",
+      "MANUFACTURER": "Xiaomi",
+      "DEVICE": "shennong",
+      "PRODUCT": "shennong",
+      "FINGERPRINT": "Xiaomi/shennong/shennong:15/AQ3A.240627.003/OS2.0.202.0.VNBCNXM:user/release-keys"
+    },
+    {
+      "id": "OP12",
+      "name": "OnePlus 12",
+      "BRAND": "OnePlus",
+      "MODEL": "CPH2581",
+      "MANUFACTURER": "OnePlus",
+      "DEVICE": "OP594DL1",
+      "PRODUCT": "OP594DL1",
+      "FINGERPRINT": "OnePlus/OP594DL1/OP594DL1:14/UKQ1.230917.001/1702951307528:user/release-keys"
+    },
+    {
+      "id": "OP13",
+      "name": "OnePlus 13",
+      "BRAND": "OnePlus",
+      "MODEL": "PJZ110",
+      "MANUFACTURER": "OnePlus",
+      "DEVICE": "OP5D0DL1",
+      "PRODUCT": "PJZ110",
+      "FINGERPRINT": "OnePlus/PJZ110/OP5D0DL1:15/AP3A.240617.008/V.1bd19a1-1-2:user/release-keys"
+    },
+    {
+      "id": "RM9P",
+      "name": "REDMAGIC 9 Pro",
+      "BRAND": "nubia",
+      "MODEL": "NX769J",
+      "MANUFACTURER": "ZTE",
+      "DEVICE": "NX769J",
+      "PRODUCT": "NX769J",
+      "FINGERPRINT": "nubia/NX769J/NX769J:14/UKQ1.230917.001/20240813.173312:user/release-keys"
     }
   ]
 }
