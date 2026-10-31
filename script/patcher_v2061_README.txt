@@ -3,7 +3,7 @@ Kaorios Toolbox patcher 2.0.6.1
 From the extracted archive root or current public source checkout, run:
 python3 -I script/kaorios_patcher.py <decompiled-smali-tree> --android-version 17 --mode 1 --no-delay --payload-smali /path/to/disassembled-payload
 
-Select Android 13, 14, 15, 16 or 17 to match the ROM. Mode 1 targets six supported framework/services smali classes; modes 2/3 are Android 17 Build-field options. Recognized valid hook content is verified and unchanged (the file may still be rewritten with --update); --update repairs recognized supported blocks, not unknown/partial layouts. Directory runs preflight all selected targets before writing originals; duplicate targets and symlink inputs reject. Filesystem write failures can still leave partial edits: discard working copies on failure.
+Select Android 13, 14, 15, 16 or 17 to match the ROM. Mode 1 targets five supported framework/services smali classes (ActivityThread, ComputerEngine, SystemServer, Instrumentation, Settings$NameValueCache); modes 2/3 are Android 17 Build-field options. Recognized valid hook content is verified and unchanged (the file may still be rewritten with --update); --update repairs recognized supported blocks, not unknown/partial layouts. Directory runs preflight all selected targets before writing originals; duplicate targets and symlink inputs reject. Filesystem write failures can still leave partial edits: discard working copies on failure.
 
 Use authorized copies of framework.jar and services.jar, keep originals/hashes and a recovery plan. Inventory all classes*.dex and discover each class owner; never assume classes6.dex is payload. Keep SettingsProvider.apk stock. If an older patch calls removed KaoriosHook settings methods, restore SettingsProvider.apk from the exact matching stock ROM first.
 
@@ -17,8 +17,8 @@ The smali patcher does not import payload. Import every payload class into frame
 
 Choose an API and DEX format actually supported by the installed smali toolchain. Android version alone does not determine DEX version. DEX 041/container needs explicit tool support; stop on unsupported input and never rewrite DEX magic/header bytes. This is not a universal DEX 041 bootloop claim.
 
-No release archive is published any more (release v2.0.6.1 carries only classes.dex and kaoriostoolbox-release_sign.apk). Build a reproducible local archive from a reviewed public checkout with:
+This file ships inside kaorios-patcher-2.0.6.1.zip on release v2.0.6.1. The archive's SHA-256 is published with the release, not here (a file cannot contain the hash of the archive that contains it). To reproduce the archive from a reviewed public checkout:
 python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip
-The output must not exist. This does not publish or replace a remote release.
+The output must not exist. Record the SHA-256 of the archive you actually use and of every script inside it; a checksum of another build does not describe yours.
 
 Manual and automatic guides are separate English/Vietnamese files under Toolbox-docs/2.0.6+ in the public repository. Artifact scripts have narrower coverage than the main smali patcher; see the automatic guide and each script's --help. Kaorios Helper is a separate Zygisk module: https://github.com/hzzmonetvn/KaoriosHelper

@@ -9,7 +9,8 @@ Supported targets:
 - ActivityThread.smali (process initialization hook)
 - ComputerEngine.smali (Hidden App / package visibility filter hook)
 - SystemServer.smali (initSystemServer lifecycle hook)
-- Instrumentation.smali & ApplicationPackageManager.smali (legacy hooks)
+- Instrumentation.smali (context initialization hook)
+- Settings$NameValueCache.smali (developer/ADB-status entry guard)
 - Build.smali & Build$VERSION.smali (optional Android 17-only Build spoof)
 """
 from __future__ import annotations
