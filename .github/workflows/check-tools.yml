@@ -1,4 +1,4 @@
-name: Check patch tools and Helper
+name: Check patch tools
 
 on:
   workflow_dispatch:
@@ -6,16 +6,10 @@ on:
     branches: [main]
     paths:
       - 'script/**'
-      - 'Kaorios-Helper/module/**'
-      - 'Kaorios-Helper/tools/**'
-      - 'Kaorios-Helper/tests/**'
       - '.github/workflows/check-tools.yml'
   pull_request:
     paths:
       - 'script/**'
-      - 'Kaorios-Helper/module/**'
-      - 'Kaorios-Helper/tools/**'
-      - 'Kaorios-Helper/tests/**'
       - '.github/workflows/check-tools.yml'
 
 permissions:
@@ -46,5 +40,3 @@ jobs:
         run: KAORIOS_SMALI_CLASSPATH="$RUNNER_TEMP/smali/*" python3 -m unittest discover -s script -v
       - name: Build deterministic patcher ZIP
         run: python3 -I script/package_patcher_v2061.py "$RUNNER_TEMP/kaorios-patcher-2.0.6.1.zip"
-      - name: Verify Helper packaging and lifecycle
-        run: python3 -m unittest discover -s Kaorios-Helper/tests -v

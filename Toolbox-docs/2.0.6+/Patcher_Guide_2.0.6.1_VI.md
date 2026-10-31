@@ -168,4 +168,4 @@ Bước này kiểm tra descriptor facade public static khớp, không chứng m
 
 Cả hai script so sánh hash DEX không sửa để bảo đảm byte-identical. Chúng không cài gì ngoài hai JAR: đưa `bin/lib/`, `bin/resetprop/` hay `bin/init/` lên system image là quyết định riêng, không thuộc phạm vi bản patch này.
 
-Bộ regression public gồm 76 test trong sáu file và đều PASS; ba test cần `KAORIOS_SMALI_CLASSPATH` bên ngoài nên bị skip khi không có. Đây là bằng chứng host/artifact tổng hợp, không chứng minh boot thiết bị thật, kết quả Play Integrity hay toàn bộ liên kết giữa JAR. Hai script không xuất bản release hoặc test ROM/thiết bị thật. Giữ input sạch và theo §5 cho hook/kiểm tra ngoài phạm vi đã nêu.
+Bộ regression public gồm 76 test trong sáu file và đều PASS; hai test cần `KAORIOS_SMALI_CLASSPATH` bên ngoài nên bị skip khi không có. Đây là bằng chứng host/artifact tổng hợp, không chứng minh boot thiết bị thật, kết quả Play Integrity hay toàn bộ liên kết giữa JAR. Hai script không xuất bản release hoặc test ROM/thiết bị thật. Giữ input sạch và theo §5 cho hook/kiểm tra ngoài phạm vi đã nêu.

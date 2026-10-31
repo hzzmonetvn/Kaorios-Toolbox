@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-10-31 (latest) — CI references to the deleted Helper removed
+
+- **Chosen:**
+  1. Remove the three `Kaorios-Helper/**` path filters and the `Verify Helper packaging and lifecycle` step from `.github/workflows/check-tools.yml`, and rename the workflow to `Check patch tools`. The step ran `python3 -m unittest discover -s Kaorios-Helper/tests`, and that directory was deleted in `32655d9`; every push to `main` that touched `script/**` failed at that step with `Start directory is not importable`.
+  2. Delete `.github/workflows/build-helper.yml`. Its only trigger was `paths: Kaorios-Helper/**`, a filter that can never match a directory absent from the tree, and it carried 23 further references to the removed module.
+  3. Correct the skip count in both patcher guides: two tests need an external `KAORIOS_SMALI_CLASSPATH`, not three. The gate is `@unittest.skipUnless` on lines 108 and 397 of `script/test_patcher_register_encoding.py`, both in the same file.
+- **Considered:**
+  - Restoring `Kaorios-Helper/` so the step and workflow work again: rejected — the module was removed deliberately, and its Zygisk implementation lives in the separate `KaoriosHelper` repository the guides already link.
+  - Marking the Helper step `continue-on-error: true` or `if: always()`: rejected — it would keep a permanently-red or permanently-skipped step in the run, which reads as coverage that does not exist.
+  - Keeping `build-helper.yml` with only its triggers removed: rejected — a workflow that can never fire is dead config that still has to be read and reasoned about.
+- **Consequences:** `check-tools.yml` now has five steps and no path filter that can never match. The public CI no longer produces any Helper artifact; it already produced none, because the workflow never ran after `32655d9`.
+- **Evidence boundary:** the failure was reproduced from `gh run view --json jobs` on runs at 08:19 and 09:50, both predating the commits in this change: every other step passed and only the Helper step failed. The local suite reports `Ran 76 tests … OK (skipped=2)` with `KAORIOS_SMALI_CLASSPATH` unset. No conclusion here about whether the green run after this commit covers a real ROM or device.
+
 ## 2026-10-31 (later) — v2.0.6.1 `classes.dex` asset replaced with the current build
 
 - **Chosen:**
