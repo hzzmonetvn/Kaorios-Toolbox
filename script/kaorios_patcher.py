@@ -697,7 +697,6 @@ def process_files(root_path: str | Path, mode: str, slow: bool = True, update: b
             "ComputerEngine.smali": patch_computer_engine,
             "SystemServer.smali": patch_system_server,
             "Instrumentation.smali": patch_instrumentation,
-            "ApplicationPackageManager.smali": patch_app_pkg_manager,
             "Settings$NameValueCache.smali": patch_name_value_cache,
         })
     if mode in ['2', '3']:

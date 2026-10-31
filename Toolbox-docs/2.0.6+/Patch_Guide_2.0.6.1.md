@@ -59,23 +59,11 @@ Use `/range {pN .. pN}` if the physical Context register exceeds 15. Keep origin
 
 Do not duplicate the `iput-object`; use `/range {reg .. reg}` if that operand is above 15. Verify the exact `Ljava/lang/Object;` callee overload exists in the imported payload.
 
-### 2.3 System feature / Unlock GMS Feature — `ApplicationPackageManager`
+### 2.3 System feature hook removed (2026-10-31)
 
-**Class:** `Landroid/app/ApplicationPackageManager;`. **Method:** `hasSystemFeature(Ljava/lang/String;I)Z`.
+The previous §2.3 recipe patched `Landroid/app/ApplicationPackageManager;` → `hasSystemFeature(Ljava/lang/String;I)Z`. Do not insert it. `KaoriosHooks.hasSystemFeature` returns `null` unconditionally, so the injected call was a guaranteed passthrough: it changed nothing, while the extra invoke cost a local register and a possible `invoke-static/range` rewrite for nothing.
 
-**Insert:** at method entry with a free local `v0`:
-
-```smali
-    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-    move-result-object v0
-    if-eqz v0, :kaorios_feature_stock
-    invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
-    move-result v0
-    return v0
-    :kaorios_feature_stock
-```
-
-If either parameter is above register 15, change the first call to `invoke-static/range {p1 .. p2}` (only if consecutive); check the other instructions too. `null` means run stock code; `false` is an explicit hook result. This is the **system-feature query hook associated with Unlock GMS Feature**, not proof that all GMS functionality or device behavior works.
+The facade `KaoriosHook.hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;` **remains in the payload** and must stay there. ROMs already patched by an earlier Kaorios recipe still call it; deleting the method would make `ApplicationPackageManager` throw `NoSuchMethodError` in every app process. Leave the facade alone, and leave the stock method unpatched. There is no UI control for this hook and no feature-set config source, so there is nothing to configure.
 
 ## 3. `services.jar` hooks
 
@@ -192,6 +180,6 @@ That constructor line is stock, **not another line to add**. This example only a
 
 1. Assemble **each modified owner split**, including payload additions. In output paths different from stock, replace only corresponding `classes*.dex` entries in copies of the stock JARs; keep untouched DEX and non-DEX entries. Do not copy a template class or payload DEX over a stock split containing other classes.
 2. Reopen the **saved** output JARs into new empty directories. Compare rebuilt DEX bytes to packaged DEX bytes, untouched splits to stock hashes and non-DEX entries to stock. Disassemble the DEX **extracted from these final JARs**; confirm exactly one owner per payload class, unchanged ROM classes, exact method descriptors, hook position, fallback, register encoding and adjacent `move-result` on every edited path.
-3. Verify exact facade signatures with `python3 -I script/verify-payload-abi.py <saved-output-smali-root> --payload-smali <payload-disassembled-root>` for both framework and services trees extracted from the saved JARs. A missing callee is a hard failure: do not flash. This checks public static facade signatures, not implementation correctness or all dependency linkage. Run applicable [framework/services/SystemServer verifiers](Patcher_Guide_2.0.6.1.md#5-check-the-saved-jars), which check all four required framework callers even with `--caller-only`; manually inspect any optional/installer paths outside verifier coverage and all runtime assumptions. Record what was actually checked. On any failure, discard the partial working copy and restart from clean stock. Host checks do **not** prove ROM boot or feature behavior; flashing/signing or device changes require separate authorization and recovery planning.
+3. Verify exact facade signatures with `python3 -I script/verify-payload-abi.py <saved-output-smali-root> --payload-smali <payload-disassembled-root>` for both framework and services trees extracted from the saved JARs. A missing callee is a hard failure: do not flash. This checks public static facade signatures, not implementation correctness or all dependency linkage. Run applicable [framework/services/SystemServer verifiers](Patcher_Guide_2.0.6.1.md#5-check-the-saved-jars), which check all three required framework callers even with `--caller-only`; manually inspect any optional/installer paths outside verifier coverage and all runtime assumptions. Record what was actually checked. On any failure, discard the partial working copy and restart from clean stock. Host checks do **not** prove ROM boot or feature behavior; flashing/signing or device changes require separate authorization and recovery planning.
 
-The four required framework callers are `ActivityThread`, `Instrumentation`, `ApplicationPackageManager` and `Settings$NameValueCache`. `AndroidKeyStoreSpi` and `AndroidKeyStoreKeyPairGeneratorSpi` are no longer required or patched: current sources leave both classes on stock Android behaviour.
+The three required framework callers are `ActivityThread`, `Instrumentation` and `Settings$NameValueCache`. `ApplicationPackageManager` is not patched: its `hasSystemFeature` facade still exists in the payload for compatibility with previously patched ROMs, but current sources return `null` from it, so there is nothing to inject. `AndroidKeyStoreSpi` and `AndroidKeyStoreKeyPairGeneratorSpi` are no longer required or patched: current sources leave both classes on stock Android behaviour.

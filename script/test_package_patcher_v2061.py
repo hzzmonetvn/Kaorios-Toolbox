@@ -111,9 +111,9 @@ class PatcherPackageTest(unittest.TestCase):
                         '.end method\n')
                     command[3] = str(mixed)
                     result = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=10)
-                    self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+                    self.assertNotEqual(0, result.returncode)
                     self.assertEqual(stock, mixed_provider.read_bytes())
-                    self.assertIn('KaoriosHook;->hasSystemFeature', manager.read_text())
+                    self.assertNotIn('KaoriosHook;', manager.read_text())
 
 
 if __name__ == '__main__':

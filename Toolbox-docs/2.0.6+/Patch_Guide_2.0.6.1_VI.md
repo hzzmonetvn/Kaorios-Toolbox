@@ -59,23 +59,11 @@ Dùng `/range {pN .. pN}` nếu Context nằm ở register vật lý >15. Giữ 
 
 Không lặp `iput-object`; nếu operand >15 dùng `/range {reg .. reg}`. Xác nhận payload đã import có overload nhận `Ljava/lang/Object;`.
 
-### 2.3 System feature / Unlock GMS Feature — `ApplicationPackageManager`
+### 2.3 Hook system feature đã gỡ (2026-10-31)
 
-**Class:** `Landroid/app/ApplicationPackageManager;`. **Method:** `hasSystemFeature(Ljava/lang/String;I)Z`.
+Công thức §2.3 trước đây patch `Landroid/app/ApplicationPackageManager;` → `hasSystemFeature(Ljava/lang/String;I)Z`. Không chèn nữa. `KaoriosHooks.hasSystemFeature` luôn trả `null`, nên lời gọi được chèn là passthrough chắc chắn: không thay đổi gì, nhưng vẫn tốn một register local và có thể buộc đổi sang `invoke-static/range` mà vô ích.
 
-**Chèn:** đầu method, với local trống `v0`:
-
-```smali
-    invoke-static {p1, p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-    move-result-object v0
-    if-eqz v0, :kaorios_feature_stock
-    invoke-virtual {v0}, Ljava/lang/Boolean;->booleanValue()Z
-    move-result v0
-    return v0
-    :kaorios_feature_stock
-```
-
-Nếu `p1`/`p2` >15 thì lời gọi đầu dùng `invoke-static/range {p1 .. p2}` (chỉ khi hai register liền nhau); kiểm tra cả lệnh khác. Hook trả `null` thì chạy code stock, còn `false` là kết quả cụ thể. Đây là **hook truy vấn system feature liên quan Unlock GMS Feature**, không chứng minh mọi chức năng GMS/hoạt động trên thiết bị.
+Facade `KaoriosHook.hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;` **vẫn còn trong payload** và phải giữ nguyên. ROM đã patch bởi công thức Kaorios cũ vẫn gọi method này; xóa nó sẽ làm `ApplicationPackageManager` ném `NoSuchMethodError` trong mọi tiến trình app. Để nguyên facade, và để nguyên method stock chưa patch. Không có control UI nào cho hook này và cũng không có nguồn cấu hình feature-set, nên không có gì để cấu hình.
 
 ## 3. Hook trong `services.jar`
 
@@ -192,6 +180,6 @@ Dòng constructor là **stock**, không thêm lại. Ví dụ chỉ đúng nếu
 
 1. Assemble **từng owner split đã sửa**, gồm split thêm payload. Tạo output khác stock, chỉ thay đúng entry `classes*.dex` trong bản sao JAR stock; giữ nguyên DEX chưa sửa và entry khác. Không chép class template hoặc payload DEX đè DEX stock còn class khác.
 2. Mở lại **JAR output đã lưu** vào thư mục mới rỗng. So DEX đã assemble với DEX đóng gói, hash split chưa sửa và entry khác với stock. Disassemble DEX **trích từ JAR cuối**; kiểm tra mỗi class payload có một owner, class ROM còn nguyên, đúng method, vị trí hook, fallback, register và `move-result` kề invoke trên mọi nhánh đã sửa.
-3. Kiểm tra chữ ký facade chính xác bằng `python3 -I script/verify-payload-abi.py <saved-output-smali-root> --payload-smali <payload-disassembled-root>` cho cả cây framework và services trích từ JAR đã lưu. Thiếu callee là lỗi chặn: không flash. Bước này kiểm chữ ký facade public static, không chứng minh logic hay toàn bộ liên kết dependency. Chạy [verifier framework/services/SystemServer](Patcher_Guide_2.0.6.1_VI.md#5-kiểm-tra-jar-đã-lưu) phù hợp, kiểm đủ bốn caller framework bắt buộc kể cả khi dùng `--caller-only`; tự xem installer/tùy chọn ngoài vùng verifier và mọi giả định runtime. Ghi rõ phần thực sự đã kiểm. Nếu lỗi, bỏ workspace dở và làm lại từ stock sạch. Test host **không** chứng minh ROM boot hay tính năng hoạt động trên máy; ký/flash/sửa thiết bị cần được cho phép riêng và có cách khôi phục.
+3. Kiểm tra chữ ký facade chính xác bằng `python3 -I script/verify-payload-abi.py <saved-output-smali-root> --payload-smali <payload-disassembled-root>` cho cả cây framework và services trích từ JAR đã lưu. Thiếu callee là lỗi chặn: không flash. Bước này kiểm chữ ký facade public static, không chứng minh logic hay toàn bộ liên kết dependency. Chạy [verifier framework/services/SystemServer](Patcher_Guide_2.0.6.1_VI.md#5-kiểm-tra-jar-đã-lưu) phù hợp, kiểm đủ ba caller framework bắt buộc kể cả khi dùng `--caller-only`; tự xem installer/tùy chọn ngoài vùng verifier và mọi giả định runtime. Ghi rõ phần thực sự đã kiểm. Nếu lỗi, bỏ workspace dở và làm lại từ stock sạch. Test host **không** chứng minh ROM boot hay tính năng hoạt động trên máy; ký/flash/sửa thiết bị cần được cho phép riêng và có cách khôi phục.
 
-Bốn caller framework bắt buộc là `ActivityThread`, `Instrumentation`, `ApplicationPackageManager` và `Settings$NameValueCache`. `AndroidKeyStoreSpi` và `AndroidKeyStoreKeyPairGeneratorSpi` không còn bắt buộc hay được patch: source hiện tại giữ cả hai class theo hành vi Android stock.
+Ba caller framework bắt buộc là `ActivityThread`, `Instrumentation` và `Settings$NameValueCache`. `ApplicationPackageManager` không được patch: facade `hasSystemFeature` vẫn tồn tại trong payload để tương thích với ROM đã patch trước đó, nhưng source hiện tại trả `null`, nên không có gì để chèn. `AndroidKeyStoreSpi` và `AndroidKeyStoreKeyPairGeneratorSpi` không còn bắt buộc hay được patch: source hiện tại giữ cả hai class theo hành vi Android stock.

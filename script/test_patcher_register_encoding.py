@@ -14,6 +14,17 @@ services = patcher.mod_ce
 
 MANAGER = 'ApplicationPackageManager.smali'
 TARGETS = {MANAGER: patcher.patch_app_pkg_manager}
+CONTEXT_OWNER = 'Instrumentation.smali'
+
+
+def context_owner():
+    """Live mode-1 target, used to exercise patcher plumbing through the real targets map."""
+    return ('.class public Landroid/app/Instrumentation;\n'
+            '.super Ljava/lang/Object;\n'
+            '.method public newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;\n'
+            '    .locals 2\n    const/4 v0, 0x0\n    return-object v0\n.end method\n'
+            '.method public newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroid/content/Context;)Landroid/app/Application;\n'
+            '    .locals 2\n    const/4 v0, 0x0\n    return-object v0\n.end method\n')
 
 
 def manager(body, registers=16):
@@ -119,10 +130,10 @@ class PatcherUpdateModeTest(unittest.TestCase):
     def test_android_version_cli_selection_13_through_17(self):
         # This exercises argument selection, not five distinct device layouts.
         with tempfile.TemporaryDirectory() as directory:
-            target = Path(directory) / MANAGER
+            target = Path(directory) / CONTEXT_OWNER
             for version in ('13', '14', '15', '16', '17'):
                 with self.subTest(version=version):
-                    target.write_text(manager(''), encoding='utf-8')
+                    target.write_text(context_owner(), encoding='utf-8')
                     result = subprocess.run(
                         [os.sys.executable, str(Path(patcher.__file__)), str(target),
                          '--mode', '1', '--android-version', version, '--no-delay'],
@@ -183,12 +194,11 @@ class PatcherUpdateModeTest(unittest.TestCase):
         self.assertIn('ambiguous', error)
 
     def test_update_mode_rewrites_already_patched_target(self):
-        original = manager('    invoke-virtual/range {p0 .. p0}, Ljava/lang/Object;->toString()Ljava/lang/String;\n')
-        patched, changed = patcher.patch_app_pkg_manager(original)
+        patched, changed = patcher.patch_instrumentation(context_owner())
         self.assertTrue(changed)
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            file_path = Path(temp_dir) / MANAGER
+            file_path = Path(temp_dir) / CONTEXT_OWNER
             file_path.write_text(patched, encoding='utf-8')
 
             # Without update: file is kept as is and reports already patched
@@ -202,13 +212,12 @@ class PatcherUpdateModeTest(unittest.TestCase):
             self.assertEqual(file_path.read_text(encoding='utf-8'), patched)
 
     def test_update_mode_directory_scan_counts_updates(self):
-        original = manager('    invoke-virtual/range {p0 .. p0}, Ljava/lang/Object;->toString()Ljava/lang/String;\n')
-        patched, _ = patcher.patch_app_pkg_manager(original)
+        patched, _ = patcher.patch_instrumentation(context_owner())
 
         with tempfile.TemporaryDirectory() as temp_dir:
             subdir = Path(temp_dir) / 'android' / 'app'
             subdir.mkdir(parents=True)
-            file_path = subdir / MANAGER
+            file_path = subdir / CONTEXT_OWNER
             file_path.write_text(patched, encoding='utf-8')
 
             res = patcher.process_files(temp_dir, mode='1', slow=False, update=True)

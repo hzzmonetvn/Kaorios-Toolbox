@@ -36,10 +36,6 @@ def caller_tree(root):
             '    iput-object p1, p0, Landroid/app/ActivityThread;->mBoundApplication:'
             'Landroid/app/ActivityThread$AppBindData;\n    return-void\n.end method\n'),
         'android/app/Instrumentation.smali': load('test_patcher_instrumentation_hooks.py').instrumentation(),
-        'android/app/ApplicationPackageManager.smali': (
-            '.class public Landroid/app/ApplicationPackageManager;\n.super Ljava/lang/Object;\n'
-            '.method public hasSystemFeature(Ljava/lang/String;I)Z\n'
-            '    .locals 1\n    const/4 v0, 0x0\n    return v0\n.end method\n'),
         'android/provider/Settings$NameValueCache.smali': stock(),
     }
     for relative, text in fixtures.items():
@@ -150,9 +146,9 @@ class NameValueCacheTest(unittest.TestCase):
                 name = 'classes.dex' if index == 0 else f'classes{index + 1}.dex'
                 (root / name).write_bytes(dex([descriptor]))
             result = planner.plan_patch(root, require_all_callers=True)
-            self.assertEqual(4, len(result['caller_owners']))
-            self.assertEqual(5, len(result['modified_dexes']))
-            (root / 'classes4.dex').unlink()
+            self.assertEqual(3, len(result['caller_owners']))
+            self.assertEqual(4, len(result['modified_dexes']))
+            (root / 'classes3.dex').unlink()
             with self.assertRaisesRegex(ValueError, 'missing required framework caller'):
                 planner.plan_patch(root, require_all_callers=True)
 
