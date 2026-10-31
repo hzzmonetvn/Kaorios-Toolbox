@@ -26,7 +26,6 @@ MEMBERS = (
     'script/patch-systemserver-a17.py',
     'script/publish-verified-artifact.py',
     'script/test_framework_artifact_plan.py',
-    'script/test_keystore_consistency.py',
     'script/test_name_value_cache_hooks.py',
     'script/test_patcher_instrumentation_hooks.py',
     'script/test_patcher_register_encoding.py',

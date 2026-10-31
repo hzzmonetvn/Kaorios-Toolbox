@@ -100,20 +100,20 @@ class PatcherPackageTest(unittest.TestCase):
                     mixed.mkdir()
                     mixed_provider = mixed / 'SettingsProvider.smali'
                     mixed_provider.write_bytes(stock)
-                    generator = mixed / 'AndroidKeyStoreKeyPairGeneratorSpi.smali'
-                    generator.write_text(
-                        '.class public Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;\n'
-                        '.super Ljava/security/KeyPairGeneratorSpi;\n'
-                        '.method public generateKeyPair()Ljava/security/KeyPair;\n'
+                    manager = mixed / 'ApplicationPackageManager.smali'
+                    manager.write_text(
+                        '.class public Landroid/app/ApplicationPackageManager;\n'
+                        '.super Ljava/lang/Object;\n'
+                        '.method public hasSystemFeature(Ljava/lang/String;I)Z\n'
                         '    .locals 1\n'
                         '    const/4 v0, 0x0\n'
-                        '    return-object v0\n'
+                        '    return v0\n'
                         '.end method\n')
                     command[3] = str(mixed)
                     result = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=10)
                     self.assertEqual(0, result.returncode, result.stdout + result.stderr)
                     self.assertEqual(stock, mixed_provider.read_bytes())
-                    self.assertIn('initGenerateSoftwareKeyPair', generator.read_text())
+                    self.assertIn('KaoriosHook;->hasSystemFeature', manager.read_text())
 
 
 if __name__ == '__main__':

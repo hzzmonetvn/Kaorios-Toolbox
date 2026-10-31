@@ -41,9 +41,6 @@ def caller_tree(root):
             '.method public hasSystemFeature(Ljava/lang/String;I)Z\n'
             '    .locals 1\n    const/4 v0, 0x0\n    return v0\n.end method\n'),
         'android/provider/Settings$NameValueCache.smali': stock(),
-        'android/security/keystore2/AndroidKeyStoreSpi.smali': load('test_keystore_consistency.py').STOCK,
-        'android/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi.smali':
-            load('test_patcher_register_encoding.py').generator('', registers=3),
     }
     for relative, text in fixtures.items():
         path = root / relative
@@ -71,8 +68,8 @@ class NameValueCacheTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             originals = caller_tree(root)
-            last = root / 'android/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi.smali'
-            last.write_text(last.read_text().replace('generateKeyPair()', 'unsupported()'))
+            last = root / 'android/provider' / NAME
+            last.write_text(last.read_text().replace(patcher.NAME_VALUE_METHOD, 'unsupported()'))
             originals[last] = last.read_bytes()
             with self.assertRaises(ValueError):
                 tree_patcher.patch_root(root)
@@ -153,9 +150,9 @@ class NameValueCacheTest(unittest.TestCase):
                 name = 'classes.dex' if index == 0 else f'classes{index + 1}.dex'
                 (root / name).write_bytes(dex([descriptor]))
             result = planner.plan_patch(root, require_all_callers=True)
-            self.assertEqual(6, len(result['caller_owners']))
-            self.assertEqual(7, len(result['modified_dexes']))
-            (root / 'classes6.dex').unlink()
+            self.assertEqual(4, len(result['caller_owners']))
+            self.assertEqual(5, len(result['modified_dexes']))
+            (root / 'classes4.dex').unlink()
             with self.assertRaisesRegex(ValueError, 'missing required framework caller'):
                 planner.plan_patch(root, require_all_callers=True)
 

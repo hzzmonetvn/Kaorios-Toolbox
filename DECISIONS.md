@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10-31 — Keystore hooks removed; caller manifest reduced to four
+
+- **Chosen:**
+  1. Drop the `AndroidKeyStoreKeyPairGeneratorSpi` and `AndroidKeyStoreSpi` hooks from the patcher, the verifiers and every 2.0.6.1 guide. Current sources define the helpers they called as stubs — `CertificateChainIfNeeded` returns its input chain, `initGenerateSoftwareKeyPair`, `OnGetKeyEntry` and `generateKey` return `null`, `Remove` is empty — so a recipe that still inserts those calls assembles and verifies while every inserted call returns the stock value.
+  2. Reduce the framework caller manifest to `ActivityThread`, `Instrumentation`, `ApplicationPackageManager` and `Settings$NameValueCache`. `FRAMEWORK_HOOKS` in `script/framework_hook_manifest.py` drives the planner, the smali patcher and the verifier, so the four-entry manifest propagates without further edits.
+  3. Record that two different `classes.dex` artifacts circulate and are **not** interchangeable. A build of current source is 91,160 bytes, SHA-256 `f95ab89e1ac51cb37d98046a32f5ccd36021e1898db2d335924b9cd15520546f`, 44 classes. The published v2.0.6.1 asset is 858,636 bytes, SHA-256 `94848e186f697e43f0274c545a1350eb2a84b517d3cf1d7e6f50c7b6aec7709d`, 598 classes, and predates commit `71185bc`. Its `CertificateChainIfNeeded` forwards into a helper that matches `"TrickyStoreTeeCheck"` and `"trickystore_attestation_key"`, so it still rewrites certificate chains. Both guides now say so.
+  4. Delete §6 (Native PIF libraries) and §7 (init RC) from the manual guides and the equivalent completion steps from the automatic guides. The files under `bin/lib/`, `bin/resetprop/` and `bin/init/` stay in the repository; they are simply no longer presented as part of the patch procedure.
+  5. Note that `kaorios-patcher-2.0.6.1.zip` (SHA-256 `3e0e761a…`) is no longer published — release v2.0.6.1 carries only `classes.dex` and `kaoriostoolbox-release_sign.apk`. Guides now point at `python3 -I script/package_patcher_v2061.py` instead of a download link.
+- **Considered:**
+  - Keeping §2.4/§2.5 with a "these are stubs" warning: rejected. A recipe that produces working-looking smali while every call is inert teaches the wrong thing; the honest form is to remove the recipe and say why.
+  - Republishing a fresh DEX as the 2.0.6.1 asset: not done here. Publishing is a separate, outward-facing step and needs an explicit go-ahead.
+  - Deleting `bin/lib/`, `bin/resetprop/` and `bin/init/`: rejected — the guide text was wrong, not the files.
+- **Supersedes:** the `CertificateChainIfNeeded` ABI entry of 2026-10-25 (no certificate callee requirement remains) and the six-caller manifest entry of 2026-10-25. The 2026-10-30 Native PIF decision still stands for the files; only its guide text is gone.
+- **Evidence boundary:** this records host/synthetic-artifact checks and a source-to-DEX reading of both artifacts. It does not establish that any ROM boots, that either DEX is safe to flash, or what Play Integrity reports on a device.
 ## 2026-10-30 — Native PIF Libraries and Early-Boot Init Configuration
 
 - **Chosen:**

@@ -10,7 +10,11 @@
 
 **Trước khi chèn:** kiểm tra `.locals`/`.registers`, alias `pN`/`vN` và cấp đủ local trống. Nếu thêm locals khiến parameter dịch vị trí, chuyển alias `vN` cũ của parameter sang `pN` *trước* khi tăng số rồi kiểm tra mọi lệnh stock còn mã hóa được. `invoke {…}` thường chỉ dùng register vật lý ≤15; `/range` cần operand liên tiếp. `move-result` phải ngay sau `invoke`. Hook đầu method đặt sau metadata `.param`/`.annotation` và **trước label/lệnh stock đầu tiên**. Dùng nhãn fallback chưa có trong method. Dòng stock trong ví dụ chỉ là **mốc vị trí**, không chèn lặp. Nếu không chứng minh được các điều kiện này, dừng thay vì chép snippet nguyên xi.
 
-**Tương thích payload:** DEX public 2.0.6.1 đã được cập nhật (SHA-256: `94848e186f697e43f0274c545a1350eb2a84b517d3cf1d7e6f50c7b6aec7709d`) cung cấp đầy đủ cả hai overload `CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;` (3 tham số) và `CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;` (1 tham số), đáp ứng cả hai kiểu caller. Nếu dùng asset cũ (SHA-256 `ca9489f388e8717463c1f33a56c298a4b6bd5785b82d11f20da1deb65c799c9a`), asset đó chỉ có overload 1 tham số và sẽ bị từ chối nếu kết hợp với caller 3 tham số. Luôn xác minh descriptor callee với payload thực tế trước khi flash.
+**Đã bỏ hook Keystore (2026-10-31):** guide này không còn patch `AndroidKeyStoreKeyPairGeneratorSpi` hay `AndroidKeyStoreSpi`. Source hiện tại định nghĩa các helper đó là stub — `CertificateChainIfNeeded` trả lại đúng chain đầu vào, `initGenerateSoftwareKeyPair`, `OnGetKeyEntry`, `generateKey` trả `null`, `Remove` rỗng — nên recipe §2.4/§2.5 cũ vẫn assemble và vẫn verify được, nhưng mọi lời gọi chèn vào đều trả giá trị stock.
+
+Asset `classes.dex` public v2.0.6.1 (`94848e18…`) được build **trước** lần gỡ đó và vẫn thực hiện rewrite: `CertificateChainIfNeeded` của nó chuyển vào helper có phép so alias `"TrickyStoreTeeCheck"` và `"trickystore_attestation_key"`. Đừng flash asset đó với niềm tin đường Keystore đang stock — nó không stock. Muốn luồng Keystore stock như guide này mô tả thì build payload từ source hiện tại.
+
+**Payload:** mọi hook bên dưới đều resolve tới public static method trong bản build từ source hiện tại (`classes.dex`, 91.160 byte, SHA-256: `f95ab89e1ac51cb37d98046a32f5ccd36021e1898db2d335924b9cd15520546f`). Asset public v2.0.6.1 (`classes.dex`, 858.636 byte, SHA-256: `94848e186f697e43f0274c545a1350eb2a84b517d3cf1d7e6f50c7b6aec7709d`) cũng định nghĩa đủ các facade dưới đây, nhưng mang obfuscation map cũ lớn hơn và phần rewrite Keystore nói trên. Hai hash không thay thế nhau; xác minh hash của đúng DEX đã import và đối chiếu descriptor callee với payload đó trước khi flash.
 
 **ROM stock hoặc đã patch:** dùng source public hiện tại cho hướng dẫn này. Với bản đã patch, kiểm kê mọi DEX và giữ class/hook OEM ngoài phạm vi; không reset cả class hoặc chèn hook lần hai. Patcher smali nhận diện hook cũ đã qua verify; `--update` chỉ dành cho cập nhật được hỗ trợ, không ép layout lạ. Nếu hook cũ không rõ, khôi phục file liên quan từ đúng ROM stock rồi làm lại. Luôn khôi phục SettingsProvider cũ đã patch như cảnh báo trên.
 
@@ -18,7 +22,7 @@
 
 ## 1. Import payload — `framework.jar`
 
-Lấy [payload DEX pre-release 2.0.6.1 hiện tại](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex) và kiểm tra SHA-256 (`94848e186f697e43f0274c545a1350eb2a84b517d3cf1d7e6f50c7b6aec7709d`); APK quản lý dùng bản stable [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Asset cũ (`ca9489f388e8717463c1f33a56c298a4b6bd5785b82d11f20da1deb65c799c9a`) không có overload 3 tham số. Archive patcher tương ứng là [kaorios-patcher-2.0.6.1.zip](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/kaorios-patcher-2.0.6.1.zip) (SHA-256: `3e0e761a9121ef83b6339791f8ad60bb4895e6ecb8a2eafcb578333d33e99758`). Archive có hash cố định này có thể cũ hơn các thay đổi source trong hướng dẫn; checksum nhận diện đúng byte đó, không chứng minh đã xuất bản gói mới. Với thay đổi hiện tại, dùng checkout source public đã review hoặc dựng archive local tái lập bằng `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` từ gốc repo public.
+Lấy một payload DEX và kiểm tra SHA-256. Bản build từ source hiện tại cho ra `classes.dex`, 91.160 byte, SHA-256 `f95ab89e1ac51cb37d98046a32f5ccd36021e1898db2d335924b9cd15520546f`, giữ nguyên class Keystore stock. [Asset public v2.0.6.1](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/download/v2.0.6.1/classes.dex) là `classes.dex`, 858.636 byte, SHA-256 `94848e186f697e43f0274c545a1350eb2a84b517d3cf1d7e6f50c7b6aec7709d`, vẫn rewrite certificate chain — kiểm bằng `sha256sum` và đọc lưu ý phía trên. APK quản lý dùng bản stable [2.0.6.0](https://github.com/hzzmonetvn/Kaorios-Toolbox/releases/tag/v2.0.6.0). Archive patcher từng được nêu ở đây (`kaorios-patcher-2.0.6.1.zip`) **không còn được publish**: release v2.0.6.1 chỉ còn `classes.dex` và `kaoriostoolbox-release_sign.apk`. Dựng archive từ checkout source public đã review bằng `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` tại gốc repo public.
 
 Kiểm kê **mọi class payload trên mọi DEX đầu vào**. Với từng descriptor chính xác của payload mới, chỉ thay class đó trong owner DEX cũ; payload cũ có thể nằm ở nhiều owner. Descriptor thật sự mới thì thêm vào split phù hợp. Dừng nếu owner trùng. Không xóa cả namespace `android/security/kaorios`: phải giữ class OEM không nằm trong payload mới. Không chép payload `classes.dex` đè lên cả DEX stock còn chứa class ROM khác. Dựng lại mọi DEX owner đã sửa. Xác nhận mỗi class payload xuất hiện đúng một lần và class stock còn lại nguyên vẹn. Class obfuscate cũ không khớp descriptor mới không tự bị xóa; dọn chúng không an toàn nếu chưa xác minh ownership. Chỉ import payload vào `framework.jar`; `services.jar` giữ nguyên các class ROM của nó. Import không tự chèn ROM hook.
 
@@ -72,56 +76,6 @@ Không lặp `iput-object`; nếu operand >15 dùng `/range {reg .. reg}`. Xác 
 ```
 
 Nếu `p1`/`p2` >15 thì lời gọi đầu dùng `invoke-static/range {p1 .. p2}` (chỉ khi hai register liền nhau); kiểm tra cả lệnh khác. Hook trả `null` thì chạy code stock, còn `false` là kết quả cụ thể. Đây là **hook truy vấn system feature liên quan Unlock GMS Feature**, không chứng minh mọi chức năng GMS/hoạt động trên thiết bị.
-
-### 2.4 Tạo key — `AndroidKeyStoreKeyPairGeneratorSpi`
-
-**Class:** `Landroid/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi;`. **Method:** `generateKeyPair()Ljava/security/KeyPair;`.
-
-**Chèn:** đầu method, cần local trống `v0`:
-
-```smali
-    invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-    move-result-object v0
-    if-eqz v0, :kaorios_key_stock
-    return-object v0
-    :kaorios_key_stock
-```
-
-Hook trả null thì tiếp tục đường tạo key stock.
-
-### 2.5 Certificate chain — `AndroidKeyStoreSpi`
-
-**Class:** `Landroid/security/keystore2/AndroidKeyStoreSpi;`.
-
-**Method A:** `engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;`.
-
-**Recipe ba tham số (được hỗ trợ bởi release payload 94848e18...):** chèn ngay trước mỗi `return-object` stock trả **mảng đầy đủ leaf + CA**, sau khi đã gắn leaf cuối. Nếu mảng là `v3` (với đối tượng SPI `p0` và alias `p1`), thay riêng return đó bằng:
-
-```smali
-    invoke-static {p0, p1, v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
-    move-result-object v3
-    return-object v3
-```
-
-Thay cả ba `v3` bằng register mảng thật; `p0` là SPI và `p1` là alias. Release payload `94848e18...` hỗ trợ cả hai overload `CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;` và `CertificateChainIfNeeded([Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;`. Nếu dùng asset cũ (`ca9489f...`), chỉ có overload 1 tham số và caller 3 tham số sẽ bị lỗi liên kết/verifier từ chối. Mọi caller mới tạo phải khớp method thật sự có trong DEX đã import. Không chèn vào đường null/lỗi hoặc giữa vòng lặp tạo mảng.
-
-**Method B:** `engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;`.
-
-**Chèn:** đầu method, cần **hai local** trống `v0`, `v1`:
-
-```smali
-    invoke-virtual/range {p0 .. p1}, Landroid/security/keystore2/AndroidKeyStoreSpi;->engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
-    move-result-object v0
-    if-eqz v0, :kaorios_certificate_stock
-    array-length v1, v0
-    if-eqz v1, :kaorios_certificate_stock
-    const/4 v1, 0x0
-    aget-object v0, v0, v1
-    return-object v0
-    :kaorios_certificate_stock
-```
-
-Chain null/rỗng tiếp tục method stock.
 
 ## 3. Hook trong `services.jar`
 
@@ -238,36 +192,6 @@ Dòng constructor là **stock**, không thêm lại. Ví dụ chỉ đúng nếu
 
 1. Assemble **từng owner split đã sửa**, gồm split thêm payload. Tạo output khác stock, chỉ thay đúng entry `classes*.dex` trong bản sao JAR stock; giữ nguyên DEX chưa sửa và entry khác. Không chép class template hoặc payload DEX đè DEX stock còn class khác.
 2. Mở lại **JAR output đã lưu** vào thư mục mới rỗng. So DEX đã assemble với DEX đóng gói, hash split chưa sửa và entry khác với stock. Disassemble DEX **trích từ JAR cuối**; kiểm tra mỗi class payload có một owner, class ROM còn nguyên, đúng method, vị trí hook, fallback, register và `move-result` kề invoke trên mọi nhánh đã sửa.
-3. Kiểm tra chữ ký facade chính xác bằng `python3 -I script/verify-payload-abi.py <saved-output-smali-root> --payload-smali <payload-disassembled-root>` cho cả cây framework và services trích từ JAR đã lưu. Thiếu callee là lỗi chặn: không flash. Bước này kiểm chữ ký facade public static, không chứng minh logic hay toàn bộ liên kết dependency. Chạy [verifier framework/services/SystemServer](Patcher_Guide_2.0.6.1_VI.md#5-kiểm-tra-jar-đã-lưu) phù hợp, kiểm đủ sáu caller framework bắt buộc kể cả khi dùng `--caller-only`; tự xem installer/tùy chọn ngoài vùng verifier và mọi giả định runtime. Ghi rõ phần thực sự đã kiểm. Nếu lỗi, bỏ workspace dở và làm lại từ stock sạch. Test host **không** chứng minh ROM boot hay tính năng hoạt động trên máy; ký/flash/sửa thiết bị cần được cho phép riêng và có cách khôi phục.
+3. Kiểm tra chữ ký facade chính xác bằng `python3 -I script/verify-payload-abi.py <saved-output-smali-root> --payload-smali <payload-disassembled-root>` cho cả cây framework và services trích từ JAR đã lưu. Thiếu callee là lỗi chặn: không flash. Bước này kiểm chữ ký facade public static, không chứng minh logic hay toàn bộ liên kết dependency. Chạy [verifier framework/services/SystemServer](Patcher_Guide_2.0.6.1_VI.md#5-kiểm-tra-jar-đã-lưu) phù hợp, kiểm đủ bốn caller framework bắt buộc kể cả khi dùng `--caller-only`; tự xem installer/tùy chọn ngoài vùng verifier và mọi giả định runtime. Ghi rõ phần thực sự đã kiểm. Nếu lỗi, bỏ workspace dở và làm lại từ stock sạch. Test host **không** chứng minh ROM boot hay tính năng hoạt động trên máy; ký/flash/sửa thiết bị cần được cho phép riêng và có cách khôi phục.
 
-## 6. Thư viện Native PIF (`/system/lib64/` & `/system/lib/`)
-
-Bên cạnh việc patch Java bytecode trong `framework.jar`, **đường nạp PIF native trực tiếp từ ROM là thành phần then chốt để đạt `MEETS_DEVICE_INTEGRITY` và `MEETS_STRONG_INTEGRITY`**.
-
-Tiến trình DroidGuard (`com.google.android.gms.unstable`) đọc trực tiếp các system properties qua Bionic libc `__system_property_read_callback`. Việc nạp thư viện native từ ROM loại bỏ sự phụ thuộc vào class loader của APK và ngăn chặn việc DroidGuard phát hiện các hook app bên ngoài.
-
-Các file thư viện nhị phân nằm trong thư mục [`bin/lib/`](../../bin/lib/):
-
-| Kiến trúc | Thư mục đích | Các file cần copy | Quyền | SELinux Context |
-|---|---|---|---|---|
-| **64-bit (ARM64)** | `/system/lib64/` | `libkaoripif.so`, `libkaoriospif.so`, `libshadowhook_kaorios.so` | `0644` | `u:object_r:system_lib_file:s0` |
-| **32-bit (ARM32)** | `/system/lib/` | `libkaoripif.so`, `libkaoriospif.so`, `libshadowhook_kaorios.so` | `0644` | `u:object_r:system_lib_file:s0` |
-
-- **Cài đặt bằng tay:** Copy các file tương ứng vào `/system/lib64/` và `/system/lib/`, gán owner `root:root`, chmod `0644` và setfilecon/chcon `u:object_r:system_lib_file:s0`.
-- **Cài đặt bằng script:** Chạy `sh bin/lib/install.sh /path/to/rom_root`.
-
-## 7. Cấu hình Init RC (`init.kaorios.rc` & `kaorihelper`)
-
-Để đảm bảo các thuộc tính bootloader locked (`ro.boot.flash.locked=1`, `ro.boot.verifiedbootstate=green`, `ro.secure=1`, `ro.debuggable=0`, `ro.build.type=user`, v.v.) được áp dụng sớm ngay từ giai đoạn init trước khi Zygote và System Server khởi động:
-
-1. **Copy binary [`kaorihelper`](../../bin/resetprop/):**
-   - Đặt vào `/system/bin/kaorihelper`.
-   - Chmod `0755`, owner `root:shell` (0:2000), context `u:object_r:system_file:s0`.
-2. **Copy file cấu hình init [`init.kaorios.rc`](../../bin/init/):**
-   - Đặt vào `/system/etc/init/init.kaorios.rc`.
-   - Chmod `0644`, owner `root:root`, context `u:object_r:system_file:s0`.
-   - Android init sẽ tự động nạp toàn bộ các file `.rc` trong `/system/etc/init/` vào giai đoạn `on post-fs-data`.
-   - *Cách thay thế:* Thêm dòng `import /system/etc/init/init.kaorios.rc` vào `/system/etc/init/hw/init.rc`.
-3. **Cài đặt nhanh bằng script:**
-   - Chạy `sh bin/resetprop/install.sh /path/to/rom_root/system/bin`
-   - Chạy `sh bin/init/install.sh /path/to/rom_root`
+Bốn caller framework bắt buộc là `ActivityThread`, `Instrumentation`, `ApplicationPackageManager` và `Settings$NameValueCache`. `AndroidKeyStoreSpi` và `AndroidKeyStoreKeyPairGeneratorSpi` không còn bắt buộc hay được patch: source hiện tại giữ cả hai class theo hành vi Android stock.
