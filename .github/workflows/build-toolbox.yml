@@ -236,6 +236,14 @@ jobs:
             "$RUNNER_TEMP/android-api-37-with-kaorios.entries"
           unzip -tq "$public_android"
 
+      - name: Install Rust toolchain and cargo-ndk
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --target aarch64-linux-android
+          rustup default 1.98.0
+          cargo install cargo-ndk --version 3.5.4 --locked
+
       - name: Build app and framework release APKs
         run: bash gradlew :framework:assembleRelease :app:assembleRelease --no-daemon --parallel --max-workers=2 --no-build-cache
 
@@ -243,9 +251,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy --target aarch64-linux-android
-          rustup default 1.98.0
-          cargo install cargo-ndk --version 3.5.4 --locked
           bash tools/run-rust-regressions.sh
           cargo test --manifest-path rust_app/Cargo.toml --no-default-features --locked
           cargo doc --manifest-path rust_app/Cargo.toml --no-deps --locked
