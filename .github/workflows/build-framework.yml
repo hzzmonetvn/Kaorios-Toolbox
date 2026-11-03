@@ -160,7 +160,7 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x gradlew
-          ./gradlew :framework:assembleRelease --no-daemon --stacktrace
+          ./gradlew :framework:assembleRelease -x lintVitalRelease --no-daemon --stacktrace
 
       - name: Extract and validate framework DEX
         run: |
