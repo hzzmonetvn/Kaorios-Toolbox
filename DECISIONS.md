@@ -1,6 +1,20 @@
 # Decisions
 
-## 2026-10-31 (latest) — CI references to the deleted Helper removed
+## 2026-11-03 (latest) — v2.0.6.1 pre-release updated with dual-layer attestation interception & GameProps toggle
+
+- **Chosen:**
+  1. Overwrite pre-release `v2.0.6.1` assets with the newly verified build artifacts from GitHub Actions remote CI:
+     - `classes.dex`: 170,028 bytes, SHA-256 `4c6f9ca3270e123520312cd0889e7117d933d559fa29d959cf509a4eb67b7ce3`.
+     - `KaoriosToolbox-release.apk` / `kaoriostoolbox-release_sign.apk`: 11,568,515 bytes, SHA-256 `d5b918a8b136668498fbbb409da99379b7432e9fe189fad522f5bfb0e5844412`.
+     - `kaorios-patcher-2.0.6.1.zip`: SHA-256 `6490b913dfab034d58ff4c6c9cd14731ce1a48246c09661c9e0f2c526048690c`.
+  2. Update documentation and patch guides across `Toolbox-docs/2.0.6+/` and `script/patcher_v2061_README.txt` with the updated payload metrics, patcher zip hash, and dual-layer attestation interception notes.
+- **Considered:**
+  - Creating a separate release tag: rejected — `v2.0.6.1` is the designated pre-release for the 2.0.6.x stabilization cycle.
+  - Modifying the ROM smali patcher to target Keystore classes directly: rejected — the payload handles KeyStore interception cleanly via `CustomProvider` and `CustomKeyStoreSpi` registration at runtime, keeping the ROM smali stock.
+- **Consequences:** Pre-release assets, documentation, and patcher zip checksums are completely aligned.
+- **Evidence boundary:** Verified host-side against GitHub Actions remote builds (runs 41569516568 and 41569503853) and public test suite (76 tests passed, 2 skipped).
+
+## 2026-10-31 — CI references to the deleted Helper removed
 
 - **Chosen:**
   1. Remove the three `Kaorios-Helper/**` path filters and the `Verify Helper packaging and lifecycle` step from `.github/workflows/check-tools.yml`, and rename the workflow to `Check patch tools`. The step ran `python3 -m unittest discover -s Kaorios-Helper/tests`, and that directory was deleted in `32655d9`; every push to `main` that touched `script/**` failed at that step with `Start directory is not importable`.
