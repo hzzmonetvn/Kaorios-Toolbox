@@ -28,6 +28,6 @@ Run on device or against extracted ROM directory:
 sh install.sh /path/to/rom_root
 ```
 
-## Security & Verification
-- Intercepts property lookups without leaking companion APK class loader in DroidGuard.
-- Enables Google Play Integrity `MEETS_DEVICE_INTEGRITY` and `MEETS_STRONG_INTEGRITY`.
+## Scope & Verification
+
+These files are prebuilt libraries with an installer for ROM directories. Their presence or installation alone does not establish that property interception works on a device or that Google Play Integrity verdicts will change. No real-ROM or device verification is documented here.

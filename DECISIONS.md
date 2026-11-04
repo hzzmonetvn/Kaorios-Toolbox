@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-11-04 — Public package and guide review
+
+- **Chosen:** Keep the release ZIP inventory and published checksum unchanged; the GitHub release API confirms the attached archive is 209,618 bytes with SHA-256 `f77d0ea52e69ff72ff832b88fa060eb8908ac50fd288f52ed3ab942bb0ef68e6`. Add the verified size to the EN/VI patch guides. Correct the root README to describe only the `framework.jar` and `services.jar` manual workflow; native libraries and init scripts remain separate assets, not components of that patch. Remove the unsupported Google Play Integrity outcome promise from the native-library README and state the evidence limit.
+- **Considered:** Adding release asset hashes for the current app/framework build: rejected because the final artifacts are not yet ready and the published assets must not be replaced. Deleting unused-looking `bin/` assets: rejected because the task establishes guide overclaims, not that these assets are dead.
+- **Evidence boundary:** Confirmed release asset metadata via GitHub API; claims about ROM/device outcomes remain unverified. No release or draft was published.
+
 ## 2026-11-03 (latest) — v2.0.6.1 pre-release updated with ThreadLocal recursion guard, wildcard matching, DroidGuard initial SDK capping & dual-layer Keystore interception
 
 - **Chosen:**

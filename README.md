@@ -41,12 +41,9 @@ For **version 2.0.4.0 and below**, see:
 
 ## 🚀 How to use
 
-## 1. Patch framework.jar, services.jar, native libraries, and init (Recommend for direct integration into custom ROMs)
+## 1. Patch framework.jar and services.jar
 
-See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17.
-- **Framework & Services**: Hook recipes and DEX injection.
-- **Native PIF Bridge**: [`bin/lib/`](bin/lib/) — `libkaoripif.so`, `libkaoriospif.so`, `libshadowhook_kaorios.so` for `/system/lib64/` and `/system/lib/`.
-- **Init Configuration**: [`bin/init/`](bin/init/) — `init.kaorios.rc` and [`kaorihelper`](bin/resetprop/) for early-boot property spoofing.
+See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1.md) or [Tiếng Việt](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1_VI.md) for Android 13–17. The guide covers hook recipes and payload DEX injection. Native libraries and init scripts in `bin/` are separate assets, not part of this patch procedure.
 
 Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1_VI.md).
 
