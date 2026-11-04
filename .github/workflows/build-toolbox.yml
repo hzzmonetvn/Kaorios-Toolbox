@@ -538,6 +538,10 @@ jobs:
               echo "Upload response did not contain a URL for $fname: $resp" >&2
               exit 1
             fi
+            if [[ "$url" == *']('* || "$url" == *')'* || "$url" == *'['* || "$url" == *']'* || "$url" == *' '* ]]; then
+              echo "Upload response contained unsafe URL characters for $fname" >&2
+              exit 1
+            fi
             if [[ "$url" != https://tmpfiles.org/* ]]; then
               echo "Upload response contained an unexpected URL for $fname: $url" >&2
               exit 1

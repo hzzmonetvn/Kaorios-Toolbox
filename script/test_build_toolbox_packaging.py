@@ -35,6 +35,8 @@ class BuildToolboxPackagingTest(unittest.TestCase):
         self.assertIn('uploaded != expected', self.upload)
         self.assertIn('curl --fail --silent --show-error', self.upload)
         self.assertIn('https://tmpfiles.org/*', self.upload)
+        self.assertIn("*']('*", self.upload)
+        self.assertIn("*']'*", self.upload)
 
     def test_release_packaging_starts_with_clean_dist(self):
         self.assertIn('rm -rf -- dist\n          mkdir -p dist', self.package)
@@ -55,6 +57,14 @@ class BuildToolboxPackagingTest(unittest.TestCase):
                  'cd "$1"; sha256sum classes.dex lib/arm64-v8a/libkaorios_toolbox.so > SHA256SUMS; sha256sum --check SHA256SUMS',
                  'test', str(dist)], capture_output=True, text=True, check=False)
             self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_upload_rejects_markdown_link_injection_characters(self):
+        result = subprocess.run(
+            ['bash', '-euo', 'pipefail', '-c',
+             "url='https://tmpfiles.org/file](https://attacker.example)'; "
+             "if [[ $url == *']('* || $url == *')'* || $url == *'['* || $url == *']'* || $url == *' '* ]]; then exit 0; fi; exit 1",
+             'test'], capture_output=True, text=True, check=False)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
     def test_upload_gate_fails_when_one_expected_file_is_missing(self):
         result = subprocess.run(
