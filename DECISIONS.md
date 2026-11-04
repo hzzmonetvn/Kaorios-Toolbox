@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-11-04 — Private-source CI artifact packaging gates
+
+- **Chosen:** Make the manual Toolbox build fail when signing credentials are absent or `apksigner verify` fails; keep unsigned development builds outside this artifact workflow. Remove stale `dist/` before preparing artifacts, write checksums from within `dist/` so paths are valid from that directory, recursively enumerate all artifact files for upload, require every upload to succeed, and validate the upload API response before publishing its link. Add focused workflow regression tests and include `build-toolbox.yml` in the tool-check workflow path filters.
+- **Considered:** Keep unsigned APK uploads as a fallback: rejected because the workflow's signed release artifact is ambiguous and consumers cannot treat an unsigned APK as release-ready. Retain top-level-only upload enumeration or partial-upload success: rejected because it omits the nested native library and can report incomplete delivery as successful.
+- **Evidence boundary:** Focused tests exercise checksum paths, nested enumeration, partial failure, signature gates, and clean output staging; public suite host tests do not build Android APKs or call tmpfiles.org. No release asset or draft was modified.
+
 ## 2026-11-04 — Public package and guide review
 
 - **Chosen:** Keep the release ZIP inventory and published checksum unchanged; the GitHub release API confirms the attached archive is 209,618 bytes with SHA-256 `f77d0ea52e69ff72ff832b88fa060eb8908ac50fd288f52ed3ab942bb0ef68e6`. Add the verified size to the EN/VI patch guides. Correct the root README to describe only the `framework.jar` and `services.jar` manual workflow; native libraries and init scripts remain separate assets, not components of that patch. Remove the unsupported Google Play Integrity outcome promise from the native-library README and state the evidence limit.

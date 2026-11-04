@@ -396,8 +396,8 @@ jobs:
               --verbose "$signed_apk"
             install -m 0644 "$signed_apk" "$app_apk"
           else
-            echo "NOTICE: No signing credentials provided in KeySign/keystore.properties; publishing unsigned release APK."
-            install -m 0644 "$aligned_apk" "$app_apk"
+            echo "::error::No signing credentials provided in KeySign/keystore.properties; refusing to package an unsigned release APK."
+            exit 1
           fi
 
       - name: Prepare APKs and extract full framework DEX/Toolbox native library
@@ -419,11 +419,8 @@ jobs:
 
           unzip -tq "$app_apk"
           unzip -tq "$framework_apk"
-          if "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify "$app_apk" 2>/dev/null; then
-            echo "Toolbox APK signature verified."
-          else
-            echo "NOTICE: Toolbox APK is unsigned."
-          fi
+          "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify --verbose "$app_apk"
+          echo "Toolbox APK signature verified."
 
           apkanalyzer="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer"
           test -x "$apkanalyzer"
@@ -453,6 +450,7 @@ jobs:
             exit 1
           fi
 
+          rm -rf -- dist
           mkdir -p dist
           cp "$app_apk" dist/KaoriosToolbox-release.apk
           cp "$framework_apk" dist/KaoriosFramework-release.apk
@@ -482,14 +480,17 @@ jobs:
           "$ANDROID_SDK_ROOT/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf" \
             -h dist/kaorios-toolbox | grep -F "AArch64"
 
-          sha256sum \
-            dist/KaoriosToolbox-release.apk \
-            dist/KaoriosFramework-release.apk \
-            dist/classes.dex \
-            dist/lib/arm64-v8a/libkaorios_toolbox.so \
-            dist/kaorios-toolbox \
-            dist/kaorios-toolbox-aarch64.tar.gz \
-            > dist/SHA256SUMS
+          (
+            cd dist
+            sha256sum \
+              KaoriosToolbox-release.apk \
+              KaoriosFramework-release.apk \
+              classes.dex \
+              lib/arm64-v8a/libkaorios_toolbox.so \
+              kaorios-toolbox \
+              kaorios-toolbox-aarch64.tar.gz \
+              > SHA256SUMS
+          )
           cp dist/SHA256SUMS dist/SHA256SUMS.txt
 
           {
@@ -519,30 +520,34 @@ jobs:
           echo "### Download Artifacts (tempfile)" >> "$GITHUB_STEP_SUMMARY"
           echo "| File | Download URL |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          expected=0
           uploaded=0
-          for file in dist/*; do
-            if [[ -f "$file" ]]; then
-              fname=$(basename "$file")
-              # tmpfiles.org rejects extensionless files; kaorios-toolbox is packaged as kaorios-toolbox-aarch64.tar.gz
-              if [[ "$fname" == "kaorios-toolbox" ]]; then
-                echo "Skipping extensionless binary $fname for tmpfiles upload (packaged in kaorios-toolbox-aarch64.tar.gz)"
-                continue
-              fi
-              echo "Uploading $fname to tempfile..."
-              resp=$(curl -s -F "file=@$file" -F "expire=172800" https://tmpfiles.org/api/v1/upload || echo "")
-              url=$(echo "$resp" | jq -r '.data.url // empty')
-              if [[ -n "$url" ]]; then
-                dl_url=$(echo "$url" | sed 's|tmpfiles.org/|tmpfiles.org/dl/|')
-                echo "Artifact $fname: $dl_url"
-                echo "| \`$fname\` | [Download $fname]($dl_url) |" >> "$GITHUB_STEP_SUMMARY"
-                uploaded=$((uploaded + 1))
-              else
-                echo "Failed to upload $fname: $resp"
-                echo "| \`$fname\` | Upload failed |" >> "$GITHUB_STEP_SUMMARY"
-              fi
+          while IFS= read -r -d '' file; do
+            fname=${file#dist/}
+            # The extensionless binary is distributed inside its tar archive.
+            if [[ "$fname" == "kaorios-toolbox" ]]; then
+              continue
             fi
-          done
-          if (( uploaded == 0 )); then
-            echo "::error::Không có file nào trong dist/ được upload"
+            expected=$((expected + 1))
+            echo "Uploading $fname to tempfile..."
+            if ! resp=$(curl --fail --silent --show-error -F "file=@$file" -F "expire=172800" https://tmpfiles.org/api/v1/upload); then
+              echo "Upload failed for $fname" >&2
+              exit 1
+            fi
+            if ! url=$(jq -er '.data.url | select(type == "string" and length > 0)' <<<"$resp"); then
+              echo "Upload response did not contain a URL for $fname: $resp" >&2
+              exit 1
+            fi
+            if [[ "$url" != https://tmpfiles.org/* ]]; then
+              echo "Upload response contained an unexpected URL for $fname: $url" >&2
+              exit 1
+            fi
+            dl_url=$(sed 's|tmpfiles.org/|tmpfiles.org/dl/|' <<<"$url")
+            echo "Artifact $fname: $dl_url"
+            echo "| \`$fname\` | [Download $fname]($dl_url) |" >> "$GITHUB_STEP_SUMMARY"
+            uploaded=$((uploaded + 1))
+          done < <(find dist -type f -print0)
+          if (( expected == 0 || uploaded != expected )); then
+            echo "::error::Expected $expected artifacts but uploaded $uploaded"
             exit 1
           fi

@@ -7,10 +7,12 @@ on:
     paths:
       - 'script/**'
       - '.github/workflows/check-tools.yml'
+      - '.github/workflows/build-toolbox.yml'
   pull_request:
     paths:
       - 'script/**'
       - '.github/workflows/check-tools.yml'
+      - '.github/workflows/build-toolbox.yml'
 
 permissions:
   contents: read
