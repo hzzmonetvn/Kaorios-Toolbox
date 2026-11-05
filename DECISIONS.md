@@ -2,7 +2,7 @@
 
 ## 2026-11-05 — Separate historical payload identifiers from current availability
 
-- **Chosen:** Remove unavailable v2.0.6.1 asset download links and source-equivalence claims from the EN/VI guides and patcher README. Retain old hashes as historical identifiers only. The release API currently reports no attached assets. Build the patcher from a reviewed public checkout and checksum the actual archive; no old release is modified.
+- **Chosen:** Remove unavailable v2.0.6.1 asset download links and source-equivalence claims from the EN/VI guides and patcher README. Retain old hashes as historical identifiers only. The v2.0.6.1 release API currently reports no attached assets, and the previously linked v2.0.6.0 release returns 404; remove that manager download claim too. Build the patcher from a reviewed public checkout and checksum the actual archive; no old release is modified.
 - **Considered:** Restore old downloads or advertise the pending RC as available: rejected because neither follows from the observed release inventory. Deleting historical decisions: rejected; qualify their evidence instead.
 - **Verification:** All 83 public regression tests passed with zero skips on 2026-11-05, including real-smali assembly checks with the external classpath. This is host/synthetic-artifact evidence, not real-ROM/device validation. Final manager signing, complete RC assembly and draft upload remain separate gates.
 
