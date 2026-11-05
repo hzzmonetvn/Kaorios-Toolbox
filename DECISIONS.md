@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-11-05 — Separate historical payload identifiers from current availability
+
+- **Chosen:** Remove unavailable v2.0.6.1 asset download links and source-equivalence claims from the EN/VI guides and patcher README. Retain old hashes as historical identifiers only. The release API currently reports no attached assets. Build the patcher from a reviewed public checkout and checksum the actual archive; no old release is modified.
+- **Considered:** Restore old downloads or advertise the pending RC as available: rejected because neither follows from the observed release inventory. Deleting historical decisions: rejected; qualify their evidence instead.
+- **Verification:** All 83 public regression tests passed with zero skips on 2026-11-05, including real-smali assembly checks with the external classpath. This is host/synthetic-artifact evidence, not real-ROM/device validation. Final manager signing, complete RC assembly and draft upload remain separate gates.
+
 ## 2026-11-04 — Private-source CI artifact packaging gates
 
 - **Chosen:** Make the manual Toolbox build fail when signing credentials are absent or `apksigner verify` fails; keep unsigned development builds outside this artifact workflow. Remove stale `dist/` before preparing artifacts, write checksums from within `dist/` so paths are valid from that directory, recursively enumerate all artifact files for upload, require every upload to succeed, validate the upload API response before publishing its link, and reject Markdown link characters in the response URL. Add focused workflow regression tests and include `build-toolbox.yml` in the tool-check workflow path filters.
@@ -8,14 +14,14 @@
 
 ## 2026-11-04 — Public package and guide review
 
-- **Chosen:** Keep the release ZIP inventory and published checksum unchanged; the GitHub release API confirms the attached archive is 209,618 bytes with SHA-256 `f77d0ea52e69ff72ff832b88fa060eb8908ac50fd288f52ed3ab942bb0ef68e6`. Add the verified size to the EN/VI patch guides. Correct the root README to describe only the `framework.jar` and `services.jar` manual workflow; native libraries and init scripts remain separate assets, not components of that patch. Remove the unsupported Google Play Integrity outcome promise from the native-library README and state the evidence limit.
-- **Considered:** Adding release asset hashes for the current app/framework build: rejected because the final artifacts are not yet ready and the published assets must not be replaced. Deleting unused-looking `bin/` assets: rejected because the task establishes guide overclaims, not that these assets are dead.
-- **Evidence boundary:** Confirmed release asset metadata via GitHub API; claims about ROM/device outcomes remain unverified. No release or draft was published.
+- **Historical record:** Keep the release ZIP inventory and checksum unchanged; the GitHub release API confirmed at that time an attached archive of 209,618 bytes with SHA-256 `f77d0ea52e69ff72ff832b88fa060eb8908ac50fd288f52ed3ab942bb0ef68e6`. This is not evidence of current availability. The entry also recorded adding the then-verified size to the EN/VI patch guides. Correct the root README to describe only the `framework.jar` and `services.jar` manual workflow; native libraries and init scripts remain separate assets, not components of that patch. Remove the unsupported Google Play Integrity outcome promise from the native-library README and state the evidence limit.
+- **Considered:** Adding release asset hashes for the current app/framework build: rejected because the final artifacts were not ready and the published assets must not be replaced. Deleting unused-looking `bin/` assets: rejected because the task established guide overclaims, not that these assets were dead.
+- **Evidence boundary:** Release asset metadata was confirmed via GitHub API on 2026-11-04; it is not evidence of current availability. Claims about ROM/device outcomes remain unverified. No release or draft was published.
 
-## 2026-11-03 (latest) — v2.0.6.1 pre-release updated with ThreadLocal recursion guard, wildcard matching, DroidGuard initial SDK capping & dual-layer Keystore interception
+## 2026-11-03 — Historical v2.0.6.1 pre-release and artifact record
 
-- **Chosen:**
-  1. Overwrite pre-release `v2.0.6.1` assets with the newly verified build artifacts from GitHub Actions remote CI (run 41648224328):
+- **Historical record (2026-11-03):**
+  1. The entry records that `v2.0.6.1` assets were overwritten with build artifacts attributed to GitHub Actions remote CI (run 41648224328) at that time:
      - `classes.dex`: 171,100 bytes, SHA-256 `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`.
      - `KaoriosToolbox-release.apk` / `kaoriostoolbox-release_sign.apk`: 11,568,515 bytes, SHA-256 `d5b918a8b136668498fbbb409da99379b7432e9fe189fad522f5bfb0e5844412`.
      - `kaorios-patcher-2.0.6.1.zip`: 209,618 bytes, SHA-256 `f77d0ea52e69ff72ff832b88fa060eb8908ac50fd288f52ed3ab942bb0ef68e6`.
@@ -29,8 +35,8 @@
   - Building `classes.dex` locally on the VPS: rejected — local Gradle daemon and dex compilation would exhaust memory and crash hosted user services; all compilation is strictly offloaded to GitHub Actions CI runners.
   - Creating a separate release tag: rejected — `v2.0.6.1` is the designated pre-release for the 2.0.6.x stabilization cycle.
   - Modifying the ROM smali patcher to target Keystore classes directly: rejected — the payload handles KeyStore interception cleanly via `CustomProvider` and `CustomKeyStoreSpi` registration at runtime, keeping the ROM smali stock.
-- **Consequences:** Pre-release assets, documentation, and patcher zip checksums are completely aligned.
-- **Evidence boundary:** Verified host-side against GitHub Actions remote build run 41648224328, public ABI test suite (`python3 -I script/test_payload_abi.py` - 5/5 passed), and public test suite (76 tests passed, 2 skipped).
+- **Historical consequence:** The entry recorded that pre-release assets, documentation, and patcher ZIP checksums were aligned then; it does not establish present availability or source equivalence.
+- **Historical evidence boundary:** The entry recorded host-side checks attributed to GitHub Actions remote build run 41648224328, public ABI test suite (`python3 -I script/test_payload_abi.py` - 5/5 passed), and public test suite (76 tests passed, 2 skipped). No current 83-test zero-skip result is asserted here.
 
 ## 2026-10-31 — CI references to the deleted Helper removed
 
@@ -45,33 +51,33 @@
 - **Consequences:** `check-tools.yml` now has five steps and no path filter that can never match. The public CI no longer produces any Helper artifact; it already produced none, because the workflow never ran after `32655d9`.
 - **Evidence boundary:** the failure was reproduced from `gh run view --json jobs` on runs at 08:19 and 09:50, both predating the commits in this change: every other step passed and only the Helper step failed. The local suite reports `Ran 76 tests … OK (skipped=2)` with `KAORIOS_SMALI_CLASSPATH` unset. No conclusion here about whether the green run after this commit covers a real ROM or device.
 
-## 2026-10-31 (later) — v2.0.6.1 `classes.dex` asset replaced with the current build
+## 2026-10-31 (later) — Historical v2.0.6.1 `classes.dex` asset replacement record
 
-- **Chosen:**
-  1. Overwrite the `classes.dex` asset on release `v2.0.6.1` with the current-source build — 91,160 bytes, SHA-256 `f95ab89e1ac51cb37d98046a32f5ccd36021e1898db2d335924b9cd15520546f`, 44 classes — using `gh release upload --clobber`. The asset id changed (`RA_kwDOQWV3bM4pcl3n`), so the file is a new upload, not an in-place byte swap.
+- **Historical record (2026-10-31):**
+  1. This entry records an upload of a `classes.dex` artifact to release `v2.0.6.1` — 91,160 bytes, SHA-256 `f95ab89e1ac51cb37d98046a32f5ccd36021e1898db2d335924b9cd15520546f`, 44 classes — using `gh release upload --clobber`. The asset id changed (`RA_kwDOQWV3bM4pcl3n`), so it was a new upload, not an in-place byte swap.
   2. Rewrite the release body. It previously advertised the Enhanced PIF Spoofing Engine, DroidGuard chain blocking, keybox attestation and TEE warm-up — all purged by `71185bc` — and listed a third SHA-256 (`ca9489f3…`) matching neither artifact. It now describes the stock-Keystore payload, carries the correct hash, records that the patcher ZIP is no longer attached, and keeps the `SettingsProvider.apk` bootloop warning.
-  3. Replace the "two DEX artifacts, not interchangeable" wording in all four guides and `script/patcher_v2061_README.txt`. The asset and a current-source build are now the same artifact, so both guides state that and give the old `94848e18…` hash only as a "this is the stale build, discard it" check.
+  3. The historical change replaced the "two DEX artifacts, not interchangeable" wording in all four guides and `script/patcher_v2061_README.txt`, asserting then that an asset and source build were the same and retaining `94848e18…` as an older snapshot identifier. This record does not establish current availability or source equivalence.
 - **Considered:**
   - Publishing under a new tag (`v2.0.6.2`): rejected — the guides, the app's version checks and the release URL all point at 2.0.6.1; a new tag would strand them for no artifact benefit.
   - Leaving the guides' "two artifacts" section in place: rejected — it would assert something false about a file users download from the link in the same paragraph.
   - Deleting the old asset instead of overwriting: rejected — macOS/GitHub keeps no per-asset history either way, and an empty release for the duration of the re-upload is worse.
-- **Consequences:** download counts on the asset reset to 0 (the new asset id has its own counter). The 161 earlier downloads received the 858,636-byte build and are unaffected by this change — anyone holding it keeps a payload that rewrites certificate chains, which is why the guides now tell them how to identify and discard it.
-- **Evidence boundary:** verified host-side only — `gh release view` reports the new size and digest, and the uploaded bytes came from the same `unzip -p` extraction whose hash matches the guide. No device flashed this asset; nothing here shows it boots or what Play Integrity reports.
+- **Historical consequence:** this entry recorded that download counts reset to 0 and that 161 earlier downloads received an 858,636-byte build reported to rewrite certificate chains.
+- **Historical evidence boundary:** this entry recorded a `gh release view` size/digest and an uploaded-byte hash comparison. It does not establish current release contents or availability. No device flashed this asset; nothing here shows it boots or what Play Integrity reports.
 
-## 2026-10-31 — Keystore hooks removed; caller manifest reduced to four
+## 2026-10-31 — Source record: Keystore hooks removed; caller manifest reduced to four
 
 - **Chosen:**
   1. Drop the `AndroidKeyStoreKeyPairGeneratorSpi` and `AndroidKeyStoreSpi` hooks from the patcher, the verifiers and every 2.0.6.1 guide. Current sources define the helpers they called as stubs — `CertificateChainIfNeeded` returns its input chain, `initGenerateSoftwareKeyPair`, `OnGetKeyEntry` and `generateKey` return `null`, `Remove` is empty — so a recipe that still inserts those calls assembles and verifies while every inserted call returns the stock value.
   2. Reduce the framework caller manifest to `ActivityThread`, `Instrumentation`, `ApplicationPackageManager` and `Settings$NameValueCache`. `FRAMEWORK_HOOKS` in `script/framework_hook_manifest.py` drives the planner, the smali patcher and the verifier, so the four-entry manifest propagates without further edits.
   3. Record that two different `classes.dex` artifacts circulate and are **not** interchangeable. A build of current source is 91,160 bytes, SHA-256 `f95ab89e1ac51cb37d98046a32f5ccd36021e1898db2d335924b9cd15520546f`, 44 classes. The published v2.0.6.1 asset is 858,636 bytes, SHA-256 `94848e186f697e43f0274c545a1350eb2a84b517d3cf1d7e6f50c7b6aec7709d`, 598 classes, and predates commit `71185bc`. Its `CertificateChainIfNeeded` forwards into a helper that matches `"TrickyStoreTeeCheck"` and `"trickystore_attestation_key"`, so it still rewrites certificate chains. Both guides now say so.
   4. Delete §6 (Native PIF libraries) and §7 (init RC) from the manual guides and the equivalent completion steps from the automatic guides. The files under `bin/lib/`, `bin/resetprop/` and `bin/init/` stay in the repository; they are simply no longer presented as part of the patch procedure.
-  5. Note that `kaorios-patcher-2.0.6.1.zip` (SHA-256 `3e0e761a…`) is no longer published — release v2.0.6.1 carries only `classes.dex` and `kaoriostoolbox-release_sign.apk`. Guides now point at `python3 -I script/package_patcher_v2061.py` instead of a download link.
+  5. The historical guide state recorded that `kaorios-patcher-2.0.6.1.zip` (SHA-256 `3e0e761a…`) was no longer published and that release v2.0.6.1 then carried `classes.dex` and `kaoriostoolbox-release_sign.apk`. This does not establish current release contents.
 - **Considered:**
   - Keeping §2.4/§2.5 with a "these are stubs" warning: rejected. A recipe that produces working-looking smali while every call is inert teaches the wrong thing; the honest form is to remove the recipe and say why.
   - Republishing a fresh DEX as the 2.0.6.1 asset: not done here. Publishing is a separate, outward-facing step and needs an explicit go-ahead.
   - Deleting `bin/lib/`, `bin/resetprop/` and `bin/init/`: rejected — the guide text was wrong, not the files.
 - **Supersedes:** the `CertificateChainIfNeeded` ABI entry of 2026-10-25 (no certificate callee requirement remains) and the six-caller manifest entry of 2026-10-25. The 2026-10-30 Native PIF decision still stands for the files; only its guide text is gone.
-- **Evidence boundary:** this records host/synthetic-artifact checks and a source-to-DEX reading of both artifacts. It does not establish that any ROM boots, that either DEX is safe to flash, or what Play Integrity reports on a device.
+- **Historical evidence boundary:** the original entry recorded host/synthetic-artifact checks and source-to-DEX readings of two artifacts. This retained history does not establish current release contents, availability, or source equivalence, nor that any ROM boots or that a DEX is safe to flash.
 ## 2026-10-30 — Native PIF Libraries and Early-Boot Init Configuration
 
 - **Chosen:**
