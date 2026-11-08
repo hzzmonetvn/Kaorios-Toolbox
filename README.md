@@ -47,6 +47,8 @@ See the manual Patch Guide v2.0.6.1 in [English](Toolbox-docs/2.0.6+/Patch_Guide
 
 Automatic commands are documented separately in the Patcher Guide: [English](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1.md) / [Tiếng Việt](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1_VI.md).
 
+Developers changing the tooling start at [`script/README.md`](script/README.md) — tool map, dependency graph, invariants and the test suite.
+
 ## 2. Use Kaorios Helper module (working in progress) (Recommend for rooted user)
 
 Install any zygisk module + [Kaorios helper](https://github.com/hzzmonetvn/KaoriosHelper)

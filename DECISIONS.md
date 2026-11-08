@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11-08 — Add a developer reference for `script/`
+
+- **Chosen:** Add `script/README.md` as the single developer reference for the tooling: the dependency graph between the seventeen programs, the CLI surface of each, the invariants the code enforces, the test map, and the evidence boundary. User procedures stay in `Toolbox-docs/2.0.6+/`; this file does not restate them.
+- **Considered:** Put the same material in `Toolbox-docs/` next to the patch guides: rejected because those guides are release-facing and bilingual, and mixing developer invariants into them would force EN/VI duplication of content no end user needs. Adding docstrings only, without a reference page: rejected because most of the invariants are cross-file (manifest as single source of truth, stage-then-write, verify re-extracted output, publish last) and have no natural home in one function. Generating the page from source annotations: rejected as speculative tooling for a 10k-line tree.
+- **What the review found and recorded:** `--api` in both pipeline scripts is a label and a default only — `--smali-api` is the value actually passed to baksmali/smali, so passing only `--api` silently chooses the opcode API too. `bionic_fakelock_patcher.py --help` exits 1 without `keystone-engine` because the import is at module scope. `patch_app_pkg_manager` is no longer reachable from a mode-1 run. Four scripts — `bionic_fakelock_patcher.py`, `validate_keybox.py`, `check-advanced-policy-sepolicy.py`, and the directory driver in `kaorios_patcher.py` — have no automated test. These are documented as gaps, not fixed here.
+- **Considered leaving undocumented:** rejected. Each of the four is a trap for the next contributor, and the `--api` asymmetry in particular produces a DEX that cannot be mixed with one built from a different invocation.
+- **Evidence boundary:** Read-only review of the checked-out sources plus one suite run: `python3 -m unittest discover -s script` reports `Ran 83 tests … OK (skipped=2)` on this host with `KAORIOS_SMALI_CLASSPATH` unset. The two skips are the classpath-gated assembly tests. No patcher, installer, JAR pipeline or device path was executed, and no release asset was touched.
+
 ## 2026-11-05 — Separate historical payload identifiers from current availability
 
 - **Chosen:** Remove unavailable v2.0.6.1 asset download links and source-equivalence claims from the EN/VI guides and patcher README. Retain old hashes as historical identifiers only. The v2.0.6.1 release API currently reports no attached assets, and the previously linked v2.0.6.0 release returns 404; remove that manager download claim too. Build the patcher from a reviewed public checkout and checksum the actual archive; no old release is modified.
