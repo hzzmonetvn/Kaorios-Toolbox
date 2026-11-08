@@ -25,6 +25,11 @@ on:
         description: "Commit SHA cụ thể (để trống = HEAD của nhánh trên)"
         required: false
         default: ""
+      unsigned_test:
+        description: "Export unsigned test APK for manual signing (not a release)"
+        type: boolean
+        required: false
+        default: false
       run_regressions:
         description: "Chạy regression test (tools/run-core-regressions.sh)"
         type: boolean
@@ -395,6 +400,9 @@ jobs:
             "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify \
               --verbose "$signed_apk"
             install -m 0644 "$signed_apk" "$app_apk"
+          elif [[ "${{ inputs.unsigned_test }}" == "true" ]]; then
+            install -m 0644 "$aligned_apk" "$app_apk"
+            echo "Unsigned test APK retained for manual signing; not a release."
           else
             echo "::error::No signing credentials provided in KeySign/keystore.properties; refusing to package an unsigned release APK."
             exit 1
@@ -419,8 +427,12 @@ jobs:
 
           unzip -tq "$app_apk"
           unzip -tq "$framework_apk"
-          "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify --verbose "$app_apk"
-          echo "Toolbox APK signature verified."
+          if [[ "${{ inputs.unsigned_test }}" == "true" ]]; then
+            echo "WARNING: Test APK exported without a signature requirement; sign before installation." >> "$GITHUB_STEP_SUMMARY"
+          else
+            "$ANDROID_SDK_ROOT/build-tools/37.0.0/apksigner" verify --verbose "$app_apk"
+            echo "Toolbox APK signature verified."
+          fi
 
           apkanalyzer="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer"
           test -x "$apkanalyzer"
@@ -452,6 +464,9 @@ jobs:
 
           rm -rf -- dist
           mkdir -p dist
+          if [[ "${{ inputs.unsigned_test }}" == "true" ]]; then
+            printf '%s\n' 'UNSIGNED TEST BUILD: APK must be signed before installation. Not a verified release.' > dist/UNSIGNED-TEST.txt
+          fi
           cp "$app_apk" dist/KaoriosToolbox-release.apk
           cp "$framework_apk" dist/KaoriosFramework-release.apk
           unzip -p "$framework_apk" classes.dex > dist/classes.dex
