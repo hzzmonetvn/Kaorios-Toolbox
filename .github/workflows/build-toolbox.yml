@@ -539,8 +539,8 @@ jobs:
           uploaded=0
           while IFS= read -r -d '' file; do
             fname=${file#dist/}
-            # The extensionless binary is distributed inside its tar archive.
-            if [[ "$fname" == "kaorios-toolbox" ]]; then
+            # Extensionless outputs have equivalent tar or .txt downloads.
+            if [[ "$fname" == "kaorios-toolbox" || "$fname" == "SHA256SUMS" ]]; then
               continue
             fi
             expected=$((expected + 1))
