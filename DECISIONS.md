@@ -4,6 +4,35 @@ This document records the architectural, design, and verification decisions gove
 
 ---
 
+## ADR-012: Unreachable Signing Gate & `libkaoripif.so` Name Collision
+
+- **Date:** 2026-11-09
+- **Status:** Accepted & Enforced
+- **Context:**
+  Two defects surfaced while producing a build from private source commit `a52106d` (`551d65b`–`a52106d` port the PIF installer into `libkaoripif`).
+
+  1. Public run `42650406829` failed in "Prepare APKs and extract full framework DEX" with `DOES NOT VERIFY / ERROR: Missing META-INF/MANIFEST.MF`, roughly twelve minutes in. The same workflow passed the day before. Diffing the runner-expanded scripts proved the difference was the dispatch input, not the code: the passing run logged `if [[ "true" == "true" ]]`, the failing run `if [[ "false" == "true" ]]`.
+  2. The guard that should have caught this — `refusing to package an unsigned release APK` — sat in the "Remove boot framework helper classes" step *after* an early exit. When the Toolbox APK carried no framework helper classes the step printed `Toolbox APK đã sạch` and returned `0` immediately, so the guard was unreachable by construction. A release dispatch without a keystore therefore failed late, in a step whose error message names neither signing nor configuration.
+
+  Separately, the newly built framework JNI library shares the file name `libkaoripif.so` with the prebuilt reference binary in `bin/lib/`. `readelf` shows they are unrelated: the `bin/lib/` copy carries `SONAME libntpif.so` and exports `shadowhook_interceptor_glue`; the installer exports `JNI_OnLoad` and `Java_android_security_kaorios_KaoriosPifInstaller_nativeInstallPif`. They are deployed to different partitions (`/system` vs `/system_ext`) and loaded by different mechanisms.
+
+- **Chosen Architecture & Implementation:**
+  1. **Fail Fast on Signing:** Moved the keystore/`unsigned_test` decision into "Verify source and mask signing properties", which runs before the SDK/NDK download. A dispatch with no credentials and `unsigned_test=false` now stops in seconds with an actionable message instead of failing twelve minutes later at `apksigner`.
+  2. **Preserved Release Semantics:** Kept `unsigned_test` defaulting to `false`. The intent that a release build must be verifiable is unchanged; only the detection point moved.
+  3. **Documented the Name Collision:** Added section 1.1 to `bin/lib/README.md` comparing both libraries by `SONAME`, exported symbols, deploy path and loader, with `readelf` commands to tell them apart.
+  4. **Documented `/system_ext` Deployment:** Added Method 3 covering partition-specific SELinux labelling, since `install.sh` hard-codes `u:object_r:system_lib_file:s0` and targets `/system` only.
+
+- **Alternatives Considered & Rejected:**
+  - *Relaxing the verification branch so an unsigned APK passes:* Rejected; this contradicts ADR-007 §1 and would let unusable artifacts reach users under a release name.
+  - *Deleting the unreachable guard in the helper-removal step:* Rejected; the guard is correct, it was simply misplaced. It stays as defence in depth for the path where helper classes are present.
+  - *Renaming the framework library to avoid the collision:* Rejected for this change; the load path `/system_ext/lib64/libkaoripif.so` is part of the ported loader chain, so renaming is a behaviour change requiring its own verification, not a documentation fix.
+  - *Making `unsigned_test` default to `true`:* Rejected; it would make the unsafe mode the default for operators who do have credentials.
+
+- **Evidence Boundary:**
+  Dispatch-input difference proven from the workflow runner's expanded script echo, not from the API (the `actions/runs` payload omits `workflow_dispatch` inputs). Run `42653057781` — dispatch with `unsigned_test=true` at public `11002cf`, private source `a52106d` — completed green: all 19 steps passed and the produced artifacts verify against their manifest (`sha256sum -c`, 6/6, including `kaorios-toolbox` extracted from the tarball). The name-collision claims are static: `readelf --dyn-syms` and `readelf -d` on both files. No on-device execution was performed.
+
+---
+
 ## ADR-011: Comprehensive Public Documentation Overhaul, Link Remediation & Verification Gates
 
 - **Date:** 2026-11-08
