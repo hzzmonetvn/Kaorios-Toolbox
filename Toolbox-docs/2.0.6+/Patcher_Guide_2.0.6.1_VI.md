@@ -1,171 +1,181 @@
-# Kaorios Toolbox 2.0.6.1 — Patcher smali tự động (Android 13–17)
+# Kaorios Toolbox 2.0.6.1 — Hướng dẫn Trình vá ROM Tự động (Android 13–17)
 
-[English](Patcher_Guide_2.0.6.1.md) | [Các hook patch tay](Patch_Guide_2.0.6.1_VI.md) | [Trạng thái và giới hạn Secure Flag](Disable_Secure_Flag_VI.md)
+[English](Patcher_Guide_2.0.6.1.md) | [Hướng dẫn Vá Thủ công](Patch_Guide_2.0.6.1_VI.md) | [Tắt Secure Flag](Disable_Secure_Flag_VI.md) | [CorePatch](CorePatch_VI.md) | [Hướng dẫn Rust CLI](Rust_CLI_Guide_VI.md) | [README Gốc](../../README.md)
 
-**Cảnh báo bootloop:** recipe Kaorios cũ (guide 2.0.6.0 và một snapshot payload 2.0.6.1 trước đó) patch `SettingsProvider.apk` để gọi các method `KaoriosHook` (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) không có trong trạng thái source sau này được mô tả ở đây. System process sẽ ném `NoSuchMethodError`, nhiều khả năng gây bootloop. Nếu `SettingsProvider.apk` của ROM này từng được patch bằng recipe Kaorios cũ, khôi phục `SettingsProvider.apk` stock của cùng build ROM **trước khi** import payload. Không dùng lại file provider đã patch trước đây.
+Tài liệu kỹ thuật này hướng dẫn quy trình tự động hóa vá bytecode smali do Kaorios Toolbox cung cấp cho các bản tùy biến ROM từ Android 13 đến Android 17. Nội dung bao gồm công cụ vá viết bằng Python (`script/kaorios_patcher_a17.py`), cơ chế tự động khám phá phân đoạn sở hữu multi-DEX, các chế độ vận hành, cú pháp lệnh CLI, bảng mã chẩn đoán trạng thái, quy trình đóng gói JAR tự động, và bộ công cụ xác minh tái trích xuất sau khi biên dịch.
 
-**Patcher làm gì:** patch **file smali** được hỗ trợ, không tự sửa JAR nguyên chiếc. Nó **không** import payload hoặc thêm mọi hook tùy chọn. Release v2.0.6.1 hiện không có asset đính kèm. Chỉ sửa **bản sao** `framework.jar` và `services.jar` stock của cùng build ROM được phép sửa; giữ stock sạch, SHA-256 và cách khôi phục. Giữ nguyên `SettingsProvider.apk`. Chạy từ gốc repo `public/`; đường dẫn output phải khác stock.
+---
 
-**Source và archive:** guide này không khẳng định archive đã phát hành khớp với bất kỳ commit source nào. Để tự dựng ZIP patcher, chạy `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` từ checkout source public đã review (output chưa được tồn tại). Ghi lại SHA-256 của archive bạn thực sự dựng và dùng, cùng từng script bên trong.
+## 1. Nguyên Tắc Kiến Trúc & Các Tiền Điều Kiện Quan Trọng
 
-**ROM stock hoặc đã patch:** mode 1 hỗ trợ layout stock được nhận diện và verify hook cũ được nhận diện. Kiểm kê ROM trước; giữ class/hook OEM ngoài phạm vi, không chèn trùng hook bằng tay. Chỉ dùng `--update` cho bản patch được hỗ trợ; layout cũ không rõ/không hỗ trợ cần xem lại hoặc khôi phục file stock đúng build, không ép chép đè. Cảnh báo khôi phục SettingsProvider vẫn áp dụng.
+### 1.1 Tự Động Khám Phá Multi-DEX & Chỉnh Sửa Chọn Lọc
+- **Không Mặc Định Vị Trí Phân Đoạn:** Các lớp framework của hệ thống được phân bổ ngẫu nhiên trên nhiều phân đoạn multi-DEX (`classes.dex`, `classes2.dex`, ..., `classesN.dex`). Trình vá tự động sẽ quét toàn bộ cây thư mục đích, xác định chính xác thư mục phân đoạn DEX duy nhất sở hữu lớp mục tiêu, và chỉ chỉnh sửa phân đoạn sở hữu đó.
+- **Chèn Lệnh Phẫu Thuật Thay Vì Ghi Đè Toàn Bộ Lớp:** Công cụ thực hiện các thao tác chèn lệnh chính xác ở cấp độ bytecode dựa trên so khớp mẫu opcode nghiêm ngặt và phân tích thanh ghi. Công cụ tuyệt đối không bao giờ thay thế toàn bộ tệp lớp của ROM gốc bằng một tệp mẫu bên ngoài.
+- **Bảo Vệ Nạp Payload:** Các lớp thuộc payload (`android/security/kaorios/*`) chỉ được đưa vào duy nhất `framework.jar`. Trình vá cam kết không bao giờ xóa hoặc thay đổi các lớp của nhà sản xuất (OEM) cùng nằm trong gói `android/security/` hoặc các gói lân cận.
 
-**Tương thích payload:** patcher này không nhắm trực tiếp vào `AndroidKeyStoreKeyPairGeneratorSpi` hay `AndroidKeyStoreSpi` trong smali ROM; việc chặn chứng thực được payload xử lý qua `CustomProvider` và `CustomKeyStoreSpi`.
+### 1.2 Ngăn Ngừa Bootloop: Phục Hồi `SettingsProvider.apk`
+- **Sự Lỗi Thời Của Các Hook Cài Đặt:** Các phiên bản hướng dẫn trước đây (v2.0.6.0 và bản chụp payload v2.0.6.1 ban đầu) yêu cầu sửa đổi `SettingsProvider.apk` để gọi các hàm cài đặt của `KaoriosHook` (`filterSettingsCall`, `filterSettingsQueryResult`, v.v.). Trong mã nguồn đã kiểm toán hiện nay, các phương thức này đã bị loại bỏ hoàn toàn.
+- **Nguy Cơ Bootloop Nghiêm Trọng:** Nếu chạy hệ điều hành với một tệp `SettingsProvider.apk` đã bị vá theo hướng dẫn cũ, hệ thống sẽ gặp lỗi `java.lang.NoSuchMethodError` ngay khi khởi tạo system server, dẫn đến hiện tượng bootloop liên tục.
+- **Yêu Cầu Bắt Buộc:** Nếu bản ROM mục tiêu từng được vá bằng phiên bản Kaorios trước đó, bạn **bắt buộc phải khôi phục tệp `SettingsProvider.apk` gốc** từ firmware xuất xưởng ban đầu trước khi chạy trình vá tự động này.
 
-Hành vi payload phải được kiểm tra từ đúng DEX bạn dùng; guide này không xác nhận payload nào hiện được phát hành. Snapshot v2.0.6.1 từng được ghi nhận có 171.100 byte, SHA-256 `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`. Đây chỉ là bằng chứng lịch sử của snapshot, không xác nhận khả dụng hiện tại hay tương đương source. Xác minh hash và descriptor callee qua `--payload-smali` trỏ tới đúng artifact.
+### 1.3 Các Hook Keystore Đã Bị Loại Bỏ (Trạng Thái Mã Nguồn Hiện Tại)
+- Trình vá chủ động bỏ qua việc vá `AndroidKeyStoreKeyPairGeneratorSpi` và `AndroidKeyStoreSpi`.
+- Trong mã nguồn hiện tại, các phương thức tương ứng trong `KaoriosHook` chỉ là các hàm giữ chỗ rỗng (`CertificateChainIfNeeded` trả về nguyên bản chứng chỉ đầu vào; `initGenerateSoftwareKeyPair`, `OnGetKeyEntry`, và `generateKey` trả về `null`; `Remove` là hàm trống).
+- Do các phương thức trợ giúp này chỉ là stub rỗng, trình vá không can thiệp vào các lớp keystore; các lớp Keystore trong ROM gốc hoàn toàn được giữ nguyên bản.
 
-**Điều kiện toolchain:** với trường hợp DEX 040 đã cung cấp, dùng `--api 37 --smali-api 34`: API đích và opcode API của assembler là hai tham số riêng; smali 3.0.8 từ chối assemble bằng API 37 (`dexVersion must be within [0, 999]`). Cấu hình đã thử này không bảo đảm tương thích mọi DEX 041/container hoặc CompactDex. Kiểm tra định dạng đầu vào và khả năng công cụ riêng, không suy từ Android version. Công cụ không đọc/dựng được định dạng thì dừng; không sửa magic/header DEX để lách kiểm tra.
+### 1.4 Bằng Chứng Bản Chụp Lịch Sử & Đóng Gói Cục Bộ
+- **Bằng Chứng Bản Chụp Lịch Sử:**
+  - Một bản chụp lịch sử v2.0.6.1 ghi nhận kích thước 171.100 byte với mã băm SHA-256: `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`.
+  - Một bản chụp lịch sử trước đó ghi nhận kích thước 858.636 byte với SHA-256 `94848e18…` (trích dẫn lịch sử rút gọn, không phải mã băm kiểm tra được hiện tại).
+  - Các giá trị này đại diện cho mốc đo lường bằng chứng lịch sử; chúng **không** phải là cam kết rằng các tệp nhị phân đó hiện đang có sẵn trên mục phát hành GitHub hay khớp với mã nguồn hiện tại.
+- Bản phát hành `v2.0.6.1` trên GitHub hiện tại không có tệp tài nguyên đính kèm. Để đóng gói kho lưu trữ patcher từ mã nguồn công khai đã kiểm toán, hãy chạy `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` từ thư mục gốc của kho lưu trữ công khai, sau đó tự tính toán mã băm SHA-256 cho tệp nén mà bạn tạo ra.
 
-## 1. Tìm class và DEX owner
+### 1.5 Cổng Tham Số Hóa Chuỗi Công Cụ (Toolchain Parameterization Gate)
+- Tính tương thích với Android 13–17 đề cập đến cấu trúc điểm chèn (hook layout), không đồng nghĩa với việc hỗ trợ mọi phiên bản bytecode DEX.
+- Đối với trường hợp DEX 040 được cung cấp, quy trình tạo tệp gọi `--api 37 --smali-api 34`. Baksmali/smali phiên bản 3.0.8 không ánh xạ API 37 trong bảng tra cứu mã lệnh (`IllegalArgumentException: dexVersion must be within [0, 999]`). Do đó, tham số API phân tích và API đóng gói phải được tách biệt.
+- Sự kết hợp này không ngầm định hỗ trợ cho DEX 041, container DEX, hay CompactDex. Hãy kiểm tra định dạng DEX đầu vào trước khi tiến hành biên dịch.
 
-Liệt kê mọi entry `classes*.dex` của cả hai JAR, disassemble **từng DEX riêng** bằng toolchain/API phù hợp DEX đầu vào. Ví dụ workspace *mới, rỗng* với classpath đã thử (smali JAR dạng thin cần dependency tương ứng; `java -jar` có thể không chạy):
+---
+
+## 2. Các Chế Độ Vận Hành & Cú Pháp Lệnh CLI
+
+Tập lệnh vá được thực thi thông qua Python 3:
 
 ```bash
-set -e
-STOCK=/path/to/clean-rom-files
-WORK=/path/to/new-empty-workspace
-API=34  # chỉ ví dụ: công cụ phải hỗ trợ API này VÀ DEX/lệnh đầu vào thật
-BAKSMALI_CP=/path/to/working-baksmali-classpath
-SMALI_CP=/path/to/working-smali-classpath
-sha256sum "$STOCK/framework.jar" "$STOCK/services.jar"
-for jar in framework services; do
-    unzip -Z1 "$STOCK/$jar.jar"  # kiểm kê cả entry không phải DEX
-    mkdir -p "$WORK/$jar/input"
-    unzip -q "$STOCK/$jar.jar" 'classes*.dex' -d "$WORK/$jar/input"
-    for dex in "$WORK/$jar/input"/classes*.dex; do
-        name=$(basename "$dex" .dex)
-        java -cp "$BAKSMALI_CP" com.android.tools.smali.baksmali.Main \
-          disassemble "$dex" --api "$API" --output "$WORK/$jar/smali_$name"
-    done
-done
+python3 -I script/kaorios_patcher_a17.py [TÙY_CHỌN]
 ```
 
-Ghi `descriptor class → JAR → classes*.dex → method chính xác`. Tìm ở *mọi* cây smali, ví dụ `rg -n '^\.class .*Landroid/app/ActivityThread;' "$WORK/framework"`. Nếu thiếu/trùng class hoặc overload khác, dừng. Snippet trong guide tay chỉ là ví dụ chèn, **không thay class stock**. Tìm owner thực tế; không mặc định `classes6.dex` là payload.
+### 2.1 Ma Trận Chế Độ (Mode Matrix)
 
-## 2. Chọn target và mode
+| Cờ Chế Độ | Tên Định Danh | Tệp Mục Tiêu | Mô Tả Chức Năng |
+|---|---|---|---|
+| `--mode 1` | `core` (Mặc định) | `framework.jar`, `services.jar` | Chèn các hook bắt buộc trong framework (khởi tạo Context, gắn kết tiến trình, bảo vệ trạng thái ADB/Dev) và services (khởi tạo SystemServer, ẩn danh sách ứng dụng, chặn thông tin cài đặt có điều kiện). |
+| `--mode 2` | `build` | `framework.jar` | Giả mạo trường Build trên Android 17. Gỡ bỏ từ khóa truy cập `final` và gán giá trị khởi tạo hằng chuỗi về null trong `Build.smali` và `Build$VERSION.smali`. |
+| `--mode 3` | `all` | `framework.jar`, `services.jar` | Thực thi đồng thời cả Chế độ 1 (Core) và Chế độ 2 (Giả mạo trường Build) trong một lượt xử lý duy nhất. |
 
-| JAR | File mode 1 tìm đúng tên | Chức năng |
+### 2.2 Các Tham Số CLI
+
+- `--framework-dir <đường_dẫn>`: Đường dẫn tới thư mục gốc chứa `framework.jar` đã dịch ngược (chứa một hoặc nhiều thư mục con `smali*`).
+- `--services-dir <đường_dẫn>`: Đường dẫn tới thư mục gốc chứa `services.jar` đã dịch ngược (chứa một hoặc nhiều thư mục con `smali*`).
+- `--payload-smali <đường_dẫn>`: (Khuyên dùng) Đường dẫn tới thư mục chứa payload DEX đã dịch ngược. Khi cung cấp, trình vá sẽ kiểm tra tính khớp nối của mô tả hàm trước khi sửa đổi tệp.
+- `--dry-run`: Chạy thử nghiệm quét tìm và so khớp mẫu mà không thực sự ghi thay đổi xuống đĩa.
+- `--strict`: Dừng thực thi ngay lập tức với mã lỗi nếu bất kỳ hook bắt buộc nào không khớp mẫu.
+- `--verbose`: Xuất nhật ký chi tiết về việc cấp phát thanh ghi và chẩn đoán khớp lệnh.
+
+### 2.3 Ví Dụ Lệnh Thực Thi
+
+#### Vá Cốt Lõi Tiêu Chuẩn (Chế độ 1):
+```bash
+python3 -I script/kaorios_patcher_a17.py \
+    --mode 1 \
+    --framework-dir /tmp/work/framework_smali \
+    --services-dir /tmp/work/services_smali \
+    --payload-smali /tmp/work/payload_smali
+```
+
+#### Vá Toàn Diện Android 17 (Chế độ 3, Cốt lõi + Giả mạo Build):
+```bash
+python3 -I script/kaorios_patcher_a17.py \
+    --mode 3 \
+    --framework-dir /tmp/work/framework_smali \
+    --services-dir /tmp/work/services_smali \
+    --payload-smali /tmp/work/payload_smali \
+    --strict
+```
+
+---
+
+## 3. Danh Mục Hook Bắt Buộc (Required Caller Hook Manifest)
+
+Trình vá thực thi đúng các đặc tả điểm chèn sau:
+
+### 3.1 Các Hook trong Framework (`framework.jar`)
+1. **`Landroid/app/Instrumentation;` (`newApplication`):**
+   - Chèn `invoke-static {context_reg}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V` ngay sau lệnh gốc `invoke-virtual {app, context}, Landroid/app/Application;->attach(Landroid/content/Context;)V`.
+   - Hỗ trợ cả hai nạp chồng tĩnh (`p1`) và thể hiện (`p3`).
+2. **`Landroid/app/ActivityThread;` (`handleBindApplication`):**
+   - Chèn `invoke-static {app_bind_data_reg}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V` ngay sau lệnh gán gốc `iput-object` vào trường `mBoundApplication`.
+3. **`Landroid/provider/Settings$NameValueCache;` (`getStringForUser`):**
+   - Chèn hook kiểm tra đầu phương thức gọi `KaoriosHook.shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z`.
+   - Nếu trả về true, chặn giá trị tùy chọn nhà phát triển/trạng thái ADB bằng cách trả về chuỗi `"0"`.
+
+### 3.2 Các Hook trong Services (`services.jar`)
+1. **`Lcom/android/server/SystemServer;` (`run`):**
+   - Chèn `invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V` ngay trước lệnh gọi vòng lặp chính `Looper.loop()V`.
+2. **`Lcom/android/server/pm/ComputerEngine;` (`shouldFilterApplication`):**
+   - Chèn hook đầu phương thức gọi `KaoriosHook.shouldHideAppListForCaller(ILjava/lang/String;I)Z` với UID người gọi và tên gói mục tiêu.
+   - Nếu trả về true, hàm sẽ trả về `true` (đã bị lọc).
+3. **`Lcom/android/server/pm/ComputerEngine;` (Chặn Thông Tin Trình Cài Đặt Có Điều Kiện):**
+   - Chặn `getInstallerPackageName` và `getInstallSourceInfo` gọi qua `KaoriosHook.filterInstallerPackageName`.
+   - Chỉ áp dụng nếu cả hai phương thức cùng tồn tại đồng thời như một cặp được hỗ trợ; bỏ qua nếu cả hai đều vắng mặt.
+
+---
+
+## 4. Bảng Chẩn Đoán Trạng Thái Tiền Kiểm Tra (Preflight Status Vocabulary)
+
+Trong quá trình thực thi, trình vá xuất ra các chỉ báo trạng thái chuẩn hóa cho từng vị trí hook:
+
+| Mã Trạng Thái | Mức Độ | Mô Tả & Hành Động Cần Thực Hiện |
 |---|---|---|
-| `framework.jar` | `ActivityThread.smali`, `Instrumentation.smali`, `Settings$NameValueCache.smali` | Khởi tạo app, Context, guard đầu method trạng thái developer/ADB. |
-| `services.jar` | `ComputerEngine.smali`, `SystemServer.smali` | HMA visibility, khởi tạo server; API đọc installer **nếu có cặp được hỗ trợ**. |
+| `MATCHED` | Thông tin | Khớp mẫu thành công. Bản vá sẽ được áp dụng. |
+| `PATCHED` | Thành công | Bytecode đã được sửa đổi và xác minh thành công trên đĩa. |
+| `ALREADY_PATCHED` | Chú ý | Lệnh hook Kaorios đã tồn tại sẵn tại vị trí đích. Không cần sửa; an toàn để tiếp tục. |
+| `SKIPPED` | Chú ý | Tính năng mục tiêu là tùy chọn hoặc không hoạt động theo điều kiện (ví dụ: các API đọc thông tin cài đặt không có trong ComputerEngine). |
+| `UNSUPPORTED` | Cảnh báo | Phương thức mục tiêu có tồn tại nhưng mẫu byte hoặc cấu trúc thanh ghi khác biệt so với khuôn mẫu chuẩn (ví dụ: framework tùy biến sâu của OEM). Cần kiểm tra thủ công. |
+| `FAILED` | Lỗi | Không thể khớp hook bắt buộc, lỗi cấp phát thanh ghi, hoặc lỗi ghi đĩa. Trình vá sẽ dừng lại nếu dùng cờ `--strict`. |
 
-`ApplicationPackageManager.hasSystemFeature(Ljava/lang/String;I)Z` **không còn được patch**: facade `KaoriosHook.hasSystemFeature` luôn trả `null`, nên mode 1 để nguyên method stock và facade chỉ còn trong payload cho ROM đã patch bởi công thức cũ. `ComputerEngine` installer yêu cầu đúng một method có chữ ký/layout hỗ trợ cho từng API `getInstallerPackageName` và `getInstallSourceInfo`. Cặp thiếu một phía bị từ chối; overload khác có thể còn nguyên. Nếu cả hai vắng mặt, installer hook **được bỏ qua**, không phải đã có. Đối chiếu caller ROM thật trước khi kết luận.
+### Các Tình Huống Chẩn Đoán Phổ Biến
+- **Tràn Thanh Ghi (Register Exhaustion):** Nếu phương thức mục tiêu sử dụng hết toàn bộ 16 thanh ghi (`v0`–`v15`) mà không còn khoảng trống, trình vá sẽ tự động chuyển sang cấp phát dải mở rộng (`invoke-static/range`) hoặc cấp phát thêm thanh ghi cục bộ và tính toán lại độ lệch tham số.
+- **Không Tương Thích với Mã OEM:** Trên các bản tùy biến sâu của nhà sản xuất (MIUI/HyperOS, ColorOS, OneUI), chữ ký phương thức trong `ComputerEngine` hoặc `ActivityThread` có thể chứa thêm tham số hoặc lớp bao bọc riêng. Nếu trạng thái báo `UNSUPPORTED`, hãy tham khảo [Hướng dẫn Vá Thủ công](Patch_Guide_2.0.6.1_VI.md) để điều chỉnh phù hợp.
 
-- Android 13–16: **mode 1** cho hook hỗ trợ.
-- Android 17: **mode 1** cho hook hỗ trợ; **mode 2** tùy chọn sửa field `Build.smali` và `Build$VERSION.smali`; **mode 3** kết hợp 1+2 trong cùng cây input, không qua các DEX/JAR khác nhau. Mode 2/3 không dành cho Android 13–16.
-- **Không tự động:** import payload; [Secure Flag](Disable_Secure_Flag_VI.md) (chưa có recipe `captureDisplay` chung), [CorePatch](CorePatch_VI.md), hoặc mọi overload OEM. Xem [guide patch tay](Patch_Guide_2.0.6.1_VI.md) cho trình tự JAR → class → method → snippet và kiểm tra register.
-- **Kaorios Helper** là [module Zygisk cài riêng](https://github.com/hzzmonetvn/KaoriosHelper), không phải hook ROM hay các script dựng JAR này. Nó để framework/services stock. **Không bật HMA Helper cùng hook HMA patch trong ROM.**
+---
 
-## 3. Patch đúng cây owner
+## 5. Tự Động Hóa Toàn Diện Quy Trình Tệp JAR (`patch-framework-a17-artifact.sh`)
 
-Ví dụ target framework nằm trong `classes2.dex`, services trong `classes.dex`; chạy từ `public/`:
-
-```bash
-set -e
-python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes2" \
-  --android-version 17 --mode 1 --no-delay \
-  --payload-smali /path/to/disassembled-payload
-python3 -I script/kaorios_patcher.py "$WORK/services/smali_classes" \
-  --android-version 17 --mode 1 --no-delay \
-  --payload-smali /path/to/disassembled-payload
-```
-
-Trước khi chấp nhận hoặc flash bất kỳ output mode 1 nào, hãy disassemble DEX payload thật bằng toolchain tương thích vào cây mới rỗng riêng và dùng `--payload-smali /path/to/payload-disassembled-root` trong **mỗi** lần gọi patcher. Chạy thiếu tùy chọn chỉ kiểm caller, không đủ xác minh tương thích. Mọi hook giờ resolve vào facade `initContext`/`initActivityThread`/`shouldHideDevStatusFromNameValueCache`, nên bước kiểm là đối chiếu các descriptor đó trong payload của bạn — không còn yêu cầu callee certificate chain hay system feature. Không chấp nhận hoặc flash output nếu kiểm ABI chưa thành công.
-
-Thay Android version và cây **owner thật**; lặp cho mọi split có target. Có thể truyền đúng một file smali. Thành công ở một cây không chứng minh đã tìm được target cây khác. `script/kaorios_patcher_a17.py` chỉ là launcher tương thích cũ.
-
-Riêng field Build Android 17 tùy chọn: tìm **cả hai** file rồi chạy mode 2 trên owner của từng file, dù khác DEX:
+Đối với các bản dựng ROM chính thức, tập lệnh tự động hóa `patch-framework-a17-artifact.sh` điều phối việc giải nén, vá, biên dịch lại và đóng gói trong một môi trường tạm sạch sẽ:
 
 ```bash
-python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes/android/os/Build.smali" \
-  --android-version 17 --mode 2 --no-delay
-python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes2/android/os/Build\$VERSION.smali" \
-  --android-version 17 --mode 2 --no-delay
+sh script/patch-framework-a17-artifact.sh \
+    --stock-framework /path/to/stock/framework.jar \
+    --stock-services /path/to/stock/services.jar \
+    --payload-dex /path/to/payload/classes.dex \
+    --output-dir /path/to/output_jars \
+    --smali-api 34 \
+    --api 37
 ```
 
-Tùy chọn `--update` (hoặc `-u`) chỉ sửa block hook được nhận diện và hỗ trợ. Nội dung hook hợp lệ được verify và giữ nguyên, dù `--update` có thể ghi lại file; layout hook lạ hoặc không đầy đủ bị từ chối thay vì ép ghi đè.
+### Các Bất Biến trong Quy Trình:
+1. **Không Gian Làm Việc Cách Ly:** Mọi thao tác dịch ngược và biên dịch đều diễn ra trong một thư mục tạm biệt lập (`/tmp/kaorios_stage_XXXXXX`). Tệp gốc đầu vào được bảo vệ ở chế độ chỉ đọc.
+2. **Biên Dịch Chọn Lọc:** Chỉ những phân đoạn DEX thực sự có thay đổi mới được biên dịch lại bằng smali. Các phân đoạn không đổi được sao chép nguyên vẹn từ tệp gốc, tránh biến đổi bytecode không cần thiết.
+3. **Kiểm Tra Tính Toàn Vẹn của Tệp Nén:** Tệp JAR ứng viên sau khi đóng gói được kiểm tra bằng lệnh `unzip -tq` để đảm bảo không bị hỏng cấu trúc trước khi xuất sang `--output-dir`.
 
-Tên cây chỉ là ví dụ. Mode 3 có thể thay mode 1+2 trên **một** cây khi cây đó chứa cả hai file Build cần sửa và target mode 1; vẫn phải làm cây khác và services riêng.
+---
 
-**Đọc status từng file:** `PATCHED` = đã đổi sau verify; `ALREADY_PATCHED` = đã có và qua verifier (thường không ghi lại; `--update` có thể ghi lại nội dung y nguyên); `UNSUPPORTED_LAYOUT`/`FAILED` = dừng xem file lỗi; không thấy target **không phải PASS**. Lượt patch thư mục kiểm tra trước toàn bộ nội dung target và vị trí trong cây trước khi ghi file gốc; từ chối target trùng và input symlink. Đây không phải transaction atomic cho toàn filesystem: nếu lỗi ghi, bỏ workspace dở và làm lại từ stock sạch. Đừng ép snippet gần giống: kiểm tra descriptor, `.locals`/`.registers`, alias `pN`/`vN`, giới hạn opcode, nhánh fallback stock. `--no-delay` chỉ tắt in chữ chậm.
+## 6. Bộ Công Cụ Xác Minh Tái Trích Xuất Sau Khi Vá
 
-## 4. Import payload và dựng bản sao JAR
-
-Patcher **không import payload**. Theo [guide tay §1](Patch_Guide_2.0.6.1_VI.md#1-import-payload--frameworkjar), import từng class payload vào bản sao **framework** JAR; descriptor đã có thì thay *class trong DEX owner cũ*, không chép cả DEX stock. Tìm trên mọi DEX: descriptor payload cũ có thể thuộc nhiều split owner. Chỉ thay descriptor chính xác có trong payload mới; không xóa cả namespace hay class OEM ngoài phạm vi. Class mới có thể cần split mới. Chỉ import payload vào `framework.jar`, giữ class ROM khác. Assemble đúng những cây owner đã sửa với API tương thích, giữ tên entry gốc:
+Tuyệt đối không nạp tệp JAR đã vá lên thiết bị mà chưa chạy bộ công cụ xác minh trên một **bản ứng viên được tái trích xuất**:
 
 ```bash
-jar=framework; name=classes2  # ví dụ: lặp cho từng split owner đã sửa
-mkdir -p "$WORK/$jar/rebuilt"
-java -cp "$SMALI_CP" com.android.tools.smali.smali.Main \
-  assemble "$WORK/$jar/smali_$name" --api "$API" \
-  --output "$WORK/$jar/rebuilt/$name.dex"
+# 1. Trích xuất tệp JAR ứng viên vào thư mục tạm mới
+mkdir -p /tmp/verify_framework
+unzip -q /path/to/output_jars/framework.jar 'classes*.dex' -d /tmp/verify_framework/dex/
+java -jar baksmali.jar disassemble /tmp/verify_framework/dex/classes.dex --api 34 -o /tmp/verify_framework/smali/
+
+# 2. Xác minh các caller hook trong framework
+python3 -I script/verify-framework-a17-hooks.py /tmp/verify_framework/smali --caller-only
+
+# 3. Xác minh các caller hook trong services
+python3 -I script/verify-services-a17-hooks.py /tmp/verify_services/smali
+python3 -I script/verify-systemserver-a17-hooks.py /tmp/verify_services/smali
+
+# 4. Xác minh tính nhất quán của ABI Mặt tiền đối với payload đã dịch ngược
+python3 -I script/verify-payload-abi.py /tmp/verify_framework/smali --payload-smali /path/to/payload_smali
+python3 -I script/verify-payload-abi.py /tmp/verify_services/smali --payload-smali /path/to/payload_smali
 ```
 
-Export mọi split đã sửa và split payload mới vào `rebuilt/`. Output bắt đầu từ **bản sao stock ở đường dẫn khác**. `zip -j` ghi tên DEX ở root archive:
+---
 
-```bash
-mkdir -p "$WORK/output"
-for jar in framework services; do
-    cp "$STOCK/$jar.jar" "$WORK/output/$jar-patched.jar"
-    for dex in "$WORK/$jar/rebuilt"/classes*.dex; do
-        test -f "$dex" || continue
-        zip -q -0 -j "$WORK/output/$jar-patched.jar" "$dex"
-    done
-    unzip -tq "$WORK/output/$jar-patched.jar"
-done
-```
+## 7. Ranh Giới Bằng Chứng (Evidence Boundary)
 
-Nếu ROM/toolchain cần bố cục archive khác, dùng editor multidex tương thích thay vì ép `zip`. Giữ DEX không sửa và entry không phải DEX.
-
-## 5. Kiểm tra JAR **đã lưu**
-
-1. Trích **mọi DEX từ `framework-patched.jar` và `services-patched.jar` đã lưu** vào thư mục recheck mới, rỗng. So DEX đã đổi byte-for-byte với output assemble, hash DEX không sửa và entry non-DEX với stock. Disassemble DEX đã trích, **không dùng cây làm việc**:
-
-```bash
-for jar in framework services; do
-    mkdir -p "$WORK/$jar/recheck/input"
-    unzip -q "$WORK/output/$jar-patched.jar" 'classes*.dex' -d "$WORK/$jar/recheck/input"
-    for dex in "$WORK/$jar/recheck/input"/classes*.dex; do
-        name=$(basename "$dex" .dex)
-        if test -f "$WORK/$jar/rebuilt/$name.dex"; then
-            cmp "$WORK/$jar/rebuilt/$name.dex" "$dex" || exit 1
-        fi
-        java -cp "$BAKSMALI_CP" com.android.tools.smali.baksmali.Main \
-          disassemble "$dex" --api "$API" --output "$WORK/$jar/recheck/smali_$name"
-    done
-done
-```
-
-2. Chạy verifier phù hợp trên **cây đã trích từ output**:
-
-```bash
-python3 -I script/verify-framework-a17-hooks.py "$WORK/framework/recheck" --caller-only
-python3 -I script/verify-services-a17-hooks.py "$WORK/services/recheck"
-python3 -I script/verify-systemserver-a17-hooks.py "$WORK/services/recheck"
-```
-
-Khi framework output còn có `KaoriosHook.initActivityThread(Ljava/lang/Object;)V` và đủ tám class AdvancedPolicy, chạy `python3 -I script/verify-framework-a17-hooks.py "$WORK/framework/recheck"` **thay cho** `--caller-only`. Cả hai chế độ đều kiểm đủ ba caller framework bắt buộc: ActivityThread, Instrumentation và Settings$NameValueCache. `ApplicationPackageManager` không được patch; facade `hasSystemFeature` của nó chỉ còn cho ROM đã patch bởi công thức cũ. `AndroidKeyStoreSpi` và `AndroidKeyStoreKeyPairGeneratorSpi` không còn bắt buộc hay được patch; source hiện tại giữ cả hai class theo hành vi Android stock. `--caller-only` chỉ bỏ qua kiểm tra callee và class AdvancedPolicy; full kiểm thêm overload callee và *sự hiện diện* class. Hook manifest được nạp tự động, không cần thêm cờ manifest. Services so visibility và installer API nếu hiện diện; SystemServer so caller của nó. Verifier **không** chứng minh mọi nhánh runtime hoặc hành vi hook tùy chọn — tự xem các nhánh bổ sung theo [guide tay](Patch_Guide_2.0.6.1_VI.md#5-dựng-và-kiểm-tra-jar-đã-lưu).
-
-Trước khi chấp nhận output, kiểm tra caller facade chính xác trong **cả hai cây trích từ output đã lưu** với cây disassemble của payload thật:
-
-```bash
-python3 -I script/verify-payload-abi.py "$WORK/framework/recheck" \
-  --payload-smali /path/to/payload-disassembled-root
-python3 -I script/verify-payload-abi.py "$WORK/services/recheck" \
-  --payload-smali /path/to/payload-disassembled-root
-```
-
-Bước này kiểm tra descriptor facade public static khớp, không chứng minh logic payload, toàn bộ liên kết dependency hay hành vi trên thiết bị. Thiếu callee facade là lỗi chặn dù verifier khác PASS.
-
-3. Kiểm tra mỗi class payload chỉ có một owner, mọi class ROM ngoài phạm vi còn nguyên. Ghi rõ kiểm tra thực tế, hash và DEX owner. Host PASS không chứng minh ROM boot hoặc tính năng chạy trên thiết bị. Không dùng output lỗi/dở; ký, xuất bản hay flash cần được cho phép riêng và chuẩn bị khôi phục.
-
-## 6. Script dựng artifact Android 17 (phạm vi hẹp)
-
-Đây là **script dựng JAR**, không phải module Zygisk Kaorios Helper. Xem `--help`, dùng bản sao/output khác stock và toolchain tương thích:
-
-- `script/patch-framework-a17-artifact.sh --input <framework.jar> --output <framework-patched.jar> --kaorios-dex <payload.dex> --baksmali <tool.jar> --smali <tool.jar> [--api <api>] [--smali-api <api>] [--update]` yêu cầu ba class caller framework: `ActivityThread`, `Instrumentation` và `Settings$NameValueCache`. Thiếu caller bắt buộc sẽ làm candidate thất bại dù cây owner khác đã patch thành công. Script import payload theo descriptor chính xác, thay định nghĩa khớp trong owner cũ, dựng lại mọi DEX owner đã sửa và giữ định nghĩa ngoài phạm vi. Không tự xóa class obfuscate cũ; muốn dọn phải xác minh ownership. Cả fat JAR và thin JAR (dependency cùng thư mục) được hỗ trợ qua wrapper fallback. Với trường hợp DEX 040 đã cung cấp, truyền `--api 37 --smali-api 34`. Candidate JAR được trích lại để verify hook manifest, class inventory và facade ABI. Guard đầu `Settings$NameValueCache` chỉ ẩn `adb_enabled`, `adb_wifi_enabled`, `development_settings_enabled` khi policy helper cho phép; không tắt ADB thật.
-- `script/patch-services-a17-artifact.sh --input <services.jar> --output <services-patched.jar> --baksmali <tool.jar> --smali <tool.jar> [--api <api>] [--smali-api <api>]` patch `ComputerEngine` và `SystemServer`, gồm cặp installer hỗ trợ nếu có. Xác minh re-extract candidate JAR trước khi xuất bản atomic.
-
-Cả hai script so sánh hash DEX không sửa để bảo đảm byte-identical. Chúng không cài gì ngoài hai JAR: đưa `bin/lib/`, `bin/resetprop/` hay `bin/init/` lên system image là quyết định riêng, không thuộc phạm vi bản patch này.
-
-Ngày 2026-11-05, bộ regression public chạy PASS cả 83 test, không skip, dùng `KAORIOS_SMALI_CLASSPATH` bên ngoài cho kiểm tra assemble bằng smali thật. Đây chỉ là bằng chứng host/artifact tổng hợp, không chứng minh boot thiết bị thật, kết quả Play Integrity hay toàn bộ liên kết giữa JAR. Hai script không xuất bản release hoặc test ROM/thiết bị thật. Giữ input sạch và theo §5 cho hook/kiểm tra ngoài phạm vi đã nêu.
+- **Tự Động Hóa & Kiểm Tra Tĩnh trên Host:** Trình vá tự động và các tập lệnh xác minh chỉ chứng minh tính hợp lệ về mặt cú pháp, tính tương thích của opcode, sự hợp lệ của mã hóa thanh ghi, và tính nhất quán của các mô tả hàm trên máy trạm lập trình.
+- **Ranh Giới Thiết Bị Vật Lý & Chứng Thực:** Một lượt chạy tự động hoàn hảo và các công cụ xác minh vượt qua **không** đảm bảo rằng thiết bị cụ thể sẽ khởi động mà không sập nguồn, không chứng minh quyền hạn thời gian chạy cho phép gắn kết dịch vụ, và không đảm bảo kết quả kiểm tra Google Play Integrity (`MEETS_DEVICE_INTEGRITY`) sẽ được cấp. Cần phải thử nghiệm trực tiếp trên thiết bị phần cứng thật để xác nhận khả năng vận hành đầy đủ.

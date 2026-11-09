@@ -1,106 +1,86 @@
-# Kaorios Toolbox — Hướng dẫn tắt Secure Flag
+# Kaorios Toolbox — Hướng Dẫn Tắt Secure Flag
 
-[English](Disable_Secure_Flag.md)
+[English](Disable_Secure_Flag.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.1_VI.md) | [Root README](../../README.md)
 
-Tính năng Secure Flag cần Framework DEX 2.0.3+.
+Tài liệu này hướng dẫn chi tiết cách patch smali tĩnh vào `services.jar` để gỡ bỏ hạn chế chụp ảnh màn hình và quay video màn hình trong các ứng dụng có kích hoạt cờ bảo mật `FLAG_SECURE` (`WindowManager.LayoutParams.FLAG_SECURE`).
 
-## `services.jar`
+> [!NOTE]
+> **Yêu Cầu Về Framework:**
+> Lời gọi hook `KaoriosHook.isSecureFlag()` yêu cầu payload DEX của Kaorios Framework (phiên bản 2.0.3 trở lên) đã được import vào `framework.jar`. Nếu không có payload DEX, việc gọi `KaoriosHook` sẽ gây ra ngoại lệ `NoClassDefFoundError` và làm crash tiến trình `system_server`.
 
-### 1. Cho phép screen capture theo Device Policy
+---
 
-**Class:**
+## 1. Hook Device Policy Cache
 
-```smali
-Lcom/android/server/devicepolicy/DevicePolicyCacheImpl;
-```
+Cho phép các truy vấn kiểm tra quyền chụp màn hình do Device Policy quản lý luôn trả về trạng thái được phép chụp.
 
-**Smali mẫu:** [`DevicePolicyCacheImpl.smali`](../Template/Template_V2060/service/DevicePolicyCacheImpl.smali)
+- **Class mục tiêu:** `Lcom/android/server/devicepolicy/DevicePolicyCacheImpl;`
+- **File mục tiêu:** `DevicePolicyCacheImpl.smali`
+- **Method mục tiêu:** `isScreenCaptureAllowed(I)Z`
 
-**Method:**
-
-```smali
-isScreenCaptureAllowed(I)Z
-```
-
-Thêm đoạn mã sau ngay sau `.registers X`/`.locals` và phần metadata `.param`/`.annotation` (nếu có), trước label hoặc instruction gốc đầu tiên:
+Chèn đoạn mã hook sau ngay sau khai báo `.registers X` / `.locals Y` và các metadata `.param` hoặc `.annotation` (nếu có), trước lệnh hoặc nhãn stock đầu tiên:
 
 ```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
-
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
     move-result v0
-
     if-eqz v0, :cond_kaorios
-
     const/4 v0, 0x1
-
     return v0
-
     :cond_kaorios
 ```
 
-### 2. Bỏ cờ Secure ở Window Manager
+Đảm bảo register `v0` là register local khả dụng trong method này. Nếu `v0` đang được dùng làm alias cho tham số, hãy tăng `.locals` một cách an toàn trước khi chèn.
 
-**Class:**
+---
 
-```smali
-Lcom/android/server/wm/WindowState;
-```
+## 2. Bỏ Cờ Secure Ở Window Manager
 
-**Hoặc class:**
+Xóa trạng thái cờ cửa sổ bảo mật khi Window Manager đánh giá hoặc cập nhật trạng thái hiển thị của cửa sổ.
 
-```smali
-Lcom/android/server/wm/WindowStateAnimator;
-```
+- **Class mục tiêu:** `Lcom/android/server/wm/WindowState;` (hoặc trên một số bản ROM OEM là `Lcom/android/server/wm/WindowStateAnimator;`)
+- **File mục tiêu:** `WindowState.smali` (hoặc `WindowStateAnimator.smali`)
 
-Một số ROM giữ `isSecureLocked`/`setSecureLocked` trong `WindowStateAnimator`; template đã lưu không chứa hai method này ở class đó, nên hãy kiểm tra bản build của bạn trước khi patch.
+> [!WARNING]
+> Một số bản ROM chuyển `isSecureLocked` và `setSecureLocked` sang class `WindowStateAnimator` thay vì `WindowState`. Hãy kiểm tra các file smali đã disassemble của `services.jar` trên ROM đích để xác định chính xác class chứa các method này trước khi patch.
 
-**Smali mẫu:** [`WindowState.smali`](../Template/Template_V2060/service/WindowState.smali)
+### Method: `isSecureLocked()Z`
 
-**Method:**
+Chèn đoạn mã hook ngay sau phần khai báo local/parameter và trước lệnh stock đầu tiên:
 
 ```smali
-isSecureLocked()Z
-```
-
-Thêm đoạn mã sau ngay sau `.registers X`/`.locals` và phần metadata `.param`/`.annotation` (nếu có), trước label hoặc instruction gốc đầu tiên:
-
-```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
-
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
     move-result v0
-
     if-eqz v0, :cond_kaorios
-
     const/4 v0, 0x0
-
     return v0
-
     :cond_kaorios
 ```
 
-**Method:**
+Khi `KaoriosHook.isSecureFlag()` trả về `true`, `isSecureLocked()` sẽ trả về `0` (`false`), báo hiệu rằng cửa sổ không phải là cửa sổ bảo mật.
+
+### Method: `setSecureLocked(Z)V`
+
+Chèn đoạn mã hook ngay sau phần khai báo local/parameter và trước lệnh stock đầu tiên:
 
 ```smali
-setSecureLocked(Z)V
-```
-
-Thêm đoạn mã sau ngay sau `.registers X`/`.locals` và phần metadata `.param`/`.annotation` (nếu có), trước label hoặc instruction gốc đầu tiên:
-
-```smali
-invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
-
+    invoke-static {}, Landroid/security/kaorios/KaoriosHook;->isSecureFlag()Z
     move-result v0
-
     if-eqz v0, :cond_kaorios
-
     return-void
-
     :cond_kaorios
 ```
 
-### 3. Đường chụp display tùy chọn — chưa có công thức patch chung
+Khi `KaoriosHook.isSecureFlag()` trả về `true`, method sẽ thoát ngay lập tức (`return-void`), ngăn cản việc ghi nhận trạng thái bảo mật của cửa sổ.
 
-Không áp dụng ví dụ chèn vào `captureDisplay` trước đây. Descriptor của method không khớp với template được dẫn, và ví dụ ghi `v0` trong khi nhánh chặn của template kiểm tra `v5`. Template không chứng minh ROM của bạn có cùng callsite hay register.
+---
 
-Trước khi đề xuất patch cho đường tùy chọn này, kiểm tra bản sao được phép sửa của đúng build ROM và ghi lại JAR sở hữu, DEX split, descriptor method chính xác, callsite chặn chụp màn hình, register chứa kết quả, luồng điều khiển và fallback stock. Nếu không xác định được các yếu tố đó, bỏ qua đường này; không đoán điểm chèn thay thế. Mọi bản patch riêng cho ROM phải được build vào JAR đầu ra đã lưu và kiểm tra bằng cách disassemble lại DEX trích từ artifact đó. Template hoặc kiểm tra trên host không xác minh artifact ROM cuối hay hành vi trên thiết bị.
+## 3. Đường Dẫn Chụp Display Tùy Chọn — Phạm Vi & Giới Hạn
 
+Không áp dụng các công thức chèn tùy tiện vào `captureDisplay` khi chưa kiểm chứng trên bản ROM thực tế. Từ Android 13 đến 17, việc kiểm tra chụp màn hình được triển khai khác nhau giữa SurfaceFlinger, WindowManagerService và DisplayContent.
+
+Trước khi đề xuất patch cho bất kỳ đường dẫn chụp display cụ thể nào:
+1. Kiểm tra bản sao hợp lệ của đúng bản ROM đích.
+2. Ghi lại chính xác JAR và DEX split sở hữu, descriptor method, vị trí lệnh chặn chụp màn hình, register chứa kết quả và luồng fallback mặc định.
+3. Nếu không chứng minh được các điều kiện trên một cách chắc chắn, hãy bỏ qua đường dẫn tùy chọn này; không tự ý đoán điểm chèn thay thế.
+4. Mọi bản patch dành riêng cho ROM phải được assemble vào file JAR xuất ra, giải nén lại và kiểm tra lại qua smali đã disassemble.
+5. **Ranh Giới Bằng Chứng (Evidence Boundary):** Việc xác minh tĩnh trên máy host chỉ chứng minh cú pháp bytecode và vị trí chèn hook. Việc này không chứng minh rằng thiết bị sẽ khởi động thành công hoặc có thể chụp được các luồng video bảo vệ bởi phần cứng DRM (như Widevine L1 / secure display pipelines).

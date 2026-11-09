@@ -366,7 +366,7 @@ def patch_app_pkg_manager(content: str, update: bool = False) -> tuple[str, bool
 
 NAME_VALUE_METHOD = 'getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;'
 NAME_VALUE_HOOK = ('Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache'
-                   '(Landroid/content/ContentResolver;Ljava/lang/String;I)Z')
+                   '(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;')
 
 
 def _name_value_entry(content: str) -> tuple[str, re.Match, int, int]:
@@ -393,9 +393,8 @@ def patch_name_value_cache(content: str, update: bool = False) -> tuple[str, boo
         return content, False
     label = _unique_label(':cond_kaorios_settings_stock', body)
     inject = (f'\n    invoke-static/range {{p1 .. p3}}, {NAME_VALUE_HOOK}\n'
-              f'    move-result v0\n'
+              f'    move-result-object v0\n'
               f'    if-eqz v0, {label}\n'
-              f'    const-string v0, "0"\n'
               f'    return-object v0\n\n'
               f'    {label}\n')
     patched = body[:entry] + inject + body[entry:]
@@ -555,8 +554,8 @@ def verify_target_content(filename: str, content: str) -> None:
         body, _, _, entry = _name_value_entry(content)
         sequence = re.match(
             r'\s*invoke-static/range \{p1 \.\. p3\}, ' + re.escape(NAME_VALUE_HOOK) +
-            r'\s+move-result v0\s+if-eqz v0, (?P<label>:[\w$]+)'
-            r'\s+const-string v0, "0"\s+return-object v0\s+(?P=label)\s*', body[entry:])
+            r'\s+move-result-object v0\s+if-eqz v0, (?P<label>:[\w$]+)'
+            r'\s+return-object v0\s+(?P=label)\s*', body[entry:])
         if sequence is None or body.count('KaoriosHook;') != 1:
             raise ValueError('NameValueCache: invalid entry hook or incomplete hook coverage')
         label = sequence['label']

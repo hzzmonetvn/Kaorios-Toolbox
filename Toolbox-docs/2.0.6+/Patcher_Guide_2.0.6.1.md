@@ -1,171 +1,181 @@
-# Kaorios Toolbox 2.0.6.1 — Automatic smali patcher (Android 13–17)
+# Kaorios Toolbox 2.0.6.1 — Automated ROM Patcher Guide (Android 13–17)
 
-[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual hook recipes](Patch_Guide_2.0.6.1.md) | [Secure Flag status and limits](Disable_Secure_Flag.md)
+[Tiếng Việt](Patcher_Guide_2.0.6.1_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.1.md) | [Disable Secure Flag](Disable_Secure_Flag.md) | [CorePatch](CorePatch.md) | [Rust CLI Guide](Rust_CLI_Guide.md) | [Root README](../../README.md)
 
-**Bootloop warning:** older Kaorios recipes (2.0.6.0 guides and an earlier 2.0.6.1 payload snapshot) patched `SettingsProvider.apk` to call `KaoriosHook` methods (`filterSettingsCall`, `filterSettingsQueryResult`, `filterSettingValue`, `shouldRemoveSetting`) that are absent from the later source state described here. The system process then throws `NoSuchMethodError`, likely causing a bootloop. If this ROM's `SettingsProvider.apk` was ever patched by an older Kaorios recipe, restore the stock `SettingsProvider.apk` from the same ROM build **before** importing a payload. Do not reuse old patched provider files.
+This technical guide documents the automated smali patching pipeline provided by Kaorios Toolbox for Android 13 through Android 17 custom ROMs. It covers the Python-based patcher engine (`script/kaorios_patcher_a17.py`), automated multi-DEX owner discovery, operating modes, CLI execution syntax, preflight status diagnostics, automated JAR repackaging pipelines, and post-assembly re-extraction verification.
 
-**What this does:** patch supported **smali files**, not whole JARs. It does **not** import payload or patch all optional hooks. The v2.0.6.1 release currently has no attached assets. Work only on authorized **copies** of stock `framework.jar` and `services.jar` from the same ROM build, with clean originals, SHA-256 hashes and a recovery plan. Keep `SettingsProvider.apk` stock. Run from the `public/` repo root; output must differ from stock.
+---
 
-**Source versus archive:** this guide makes no claim that a published archive matches any source commit. To build a patcher ZIP, run `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` from a reviewed public source checkout (output must not exist). Record the SHA-256 of the archive you build and use, and of every script inside it.
+## 1. Architectural Principles & Critical Safety Preconditions
 
-**Stock or already patched:** mode 1 supports recognized stock layouts and verifies recognized existing hooks. Inventory the existing ROM first; preserve unrelated OEM classes/hooks, and never insert a duplicate hook manually. Use `--update` only for supported existing patches; unsupported/ambiguous old layouts require inspection or restoring matching stock files, not forced replacement. The SettingsProvider restoration warning still applies.
+### 1.1 Automated Multi-DEX Discovery & Surgical Modification
+- **No Hardcoded Split Assumptions:** System framework classes are distributed arbitrarily across multi-DEX splits (`classes.dex`, `classes2.dex`, ..., `classesN.dex`). The automated patcher scans the target directory tree, identifies the single owner DEX directory containing each target class, and edits only that owner split.
+- **Surgical Insertion Over Class Replacement:** The engine performs surgical instruction-level insertions based on strict opcode pattern matching and register analysis. It never replaces an entire stock ROM class file with an external template.
+- **Payload Ingestion Guard:** Payload classes (`android/security/kaorios/*`) are imported into `framework.jar` only. The patcher guarantees that unrelated OEM classes in `android/security/` or adjacent packages are never deleted or modified.
 
-**Payload compatibility:** the patcher does not target `AndroidKeyStoreKeyPairGeneratorSpi` or `AndroidKeyStoreSpi` directly; attestation interception is handled inside the payload via `CustomProvider` and `CustomKeyStoreSpi`.
+### 1.2 Bootloop Prevention: `SettingsProvider.apk` Restoration
+- **Obsolescence of Settings Hooks:** Prior Kaorios versions (v2.0.6.0 and an early v2.0.6.1 snapshot) modified `SettingsProvider.apk` to call `KaoriosHook` settings methods (`filterSettingsCall`, `filterSettingsQueryResult`, etc.). In the audited source tree, those methods have been completely removed.
+- **Fatal Bootloop Risk:** Running an operating system with a `SettingsProvider.apk` patched against older recipes triggers an immediate `java.lang.NoSuchMethodError` during system server initialization, causing a continuous bootloop.
+- **Mandatory Action:** If your target ROM was previously patched with an older Kaorios release, you **must restore the clean, stock `SettingsProvider.apk`** from the original factory firmware before applying this automated patcher.
 
-Payload behavior must be verified from the exact DEX you use; this guide does not identify a current release payload. A previously recorded v2.0.6.1 snapshot was 171,100 bytes with SHA-256 `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`. This is historical snapshot evidence only, not a current availability or source-equivalence claim. Verify the hash and callee descriptors against `--payload-smali` for the exact artifact.
+### 1.3 Keystore Hooks Removed (Current Source State)
+- The patcher explicitly skips patching `AndroidKeyStoreKeyPairGeneratorSpi` and `AndroidKeyStoreSpi`.
+- In the audited source state, the corresponding helper methods in `KaoriosHook` are stubs (`CertificateChainIfNeeded` returns input unchanged; `initGenerateSoftwareKeyPair`, `OnGetKeyEntry`, and `generateKey` return `null`; `Remove` is empty).
+- Because these helper methods are stubs, the patcher does not inject hooks into keystore classes; stock ROM keystore classes remain completely unmodified.
 
-**Toolchain gate:** for the supplied DEX 040 case, use `--api 37 --smali-api 34`: the target API and assembler opcode API are separate, and smali 3.0.8 rejects assembly with API 37 (`dexVersion must be within [0, 999]`). This tested combination is not a universal DEX 041/container or CompactDex compatibility claim. Check the actual input format and tool support separately from Android version. Stop if the tool cannot read/rebuild that format; never rewrite DEX magic/header bytes to bypass the check.
+### 1.4 Historical Benchmark Records & Local Packaging
+- **Historical Snapshot Evidence:**
+  - A historical v2.0.6.1 snapshot recorded 171,100 bytes with SHA-256 `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`.
+  - An earlier historical snapshot recorded 858,636 bytes with SHA-256 `94848e18…` (truncated historical excerpt, not a current verifiable digest).
+  - These values represent historical evidentiary benchmarks; they are **not** claims that those specific binaries are currently hosted on GitHub release channels or match current source.
+- Release `v2.0.6.1` on GitHub currently hosts no attached release assets. To build the patcher archive from the reviewed public checkout, run `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` from the public repository root, and compute the SHA-256 of the exact archive you construct.
 
-## 1. Find the class and owner DEX
+### 1.5 Toolchain Parameterization Gate
+- Android 13–17 compatibility defines hook layout compatibility, not universal DEX bytecode version support.
+- For the supplied DEX 040 case, artifact pipelines invoke `--api 37 --smali-api 34`. Baksmali/smali version 3.0.8 does not map API 37 in its opcode table (`IllegalArgumentException: dexVersion must be within [0, 999]`). Target analysis and assembly APIs are therefore decoupled.
+- This combination does not imply support for DEX 041, container DEX, or CompactDex. Verify your input DEX format prior to assembly.
 
-List all `classes*.dex` entries in both JARs and disassemble **each DEX separately** with a toolchain/API compatible with the actual input DEX. Example using a *new empty* workspace and a tested classpath (thin smali JARs need matching dependencies; `java -jar` may not work):
+---
+
+## 2. Operating Modes & CLI Execution Reference
+
+The patcher script is invoked via Python 3:
 
 ```bash
-set -e
-STOCK=/path/to/clean-rom-files
-WORK=/path/to/new-empty-workspace
-API=34  # example only: tool must support this API AND the actual input DEX/instructions
-BAKSMALI_CP=/path/to/working-baksmali-classpath
-SMALI_CP=/path/to/working-smali-classpath
-sha256sum "$STOCK/framework.jar" "$STOCK/services.jar"
-for jar in framework services; do
-    unzip -Z1 "$STOCK/$jar.jar"  # include non-DEX entries in your inventory
-    mkdir -p "$WORK/$jar/input"
-    unzip -q "$STOCK/$jar.jar" 'classes*.dex' -d "$WORK/$jar/input"
-    for dex in "$WORK/$jar/input"/classes*.dex; do
-        name=$(basename "$dex" .dex)
-        java -cp "$BAKSMALI_CP" com.android.tools.smali.baksmali.Main \
-          disassemble "$dex" --api "$API" --output "$WORK/$jar/smali_$name"
-    done
-done
+python3 -I script/kaorios_patcher_a17.py [OPTIONS]
 ```
 
-Record `class descriptor → JAR → classes*.dex → matching method`. Search *all* smali trees; e.g. `rg -n '^\.class .*Landroid/app/ActivityThread;' "$WORK/framework"`. If the class is absent/duplicated or the expected overload differs, stop. The manual snippets are insertion examples, **not** stock replacements. Discover owners; never assume `classes6.dex` belongs to payload.
+### 2.1 Mode Matrix
 
-## 2. Select the target and mode
+| Mode Flag | Identifier | Target Artifacts | Description |
+|---|---|---|---|
+| `--mode 1` | `core` (Default) | `framework.jar`, `services.jar` | Injects required framework callers (Context init, Process bind, ADB/Dev status guard) and services callers (SystemServer init, Package visibility, Conditional installer). |
+| `--mode 2` | `build` | `framework.jar` | Android 17 Build field spoofing. Strips `final` access modifiers and nulls constant string initializers in `Build.smali` and `Build$VERSION.smali`. |
+| `--mode 3` | `all` | `framework.jar`, `services.jar` | Executes Mode 1 (Core) and Mode 2 (Build field spoofing) in a single consolidated pass. |
 
-| JAR | Exact mode-1 filenames | Function |
+### 2.2 CLI Arguments
+
+- `--framework-dir <path>`: Path to disassembled `framework.jar` root directory containing one or more `smali*` subdirectories.
+- `--services-dir <path>`: Path to disassembled `services.jar` root directory containing one or more `smali*` subdirectories.
+- `--payload-smali <path>`: (Recommended) Path to disassembled payload DEX directory. When specified, the patcher verifies callee descriptor matching before modifying files.
+- `--dry-run`: Performs discovery and pattern matching without writing changes to disk.
+- `--strict`: Halts execution immediately with an error exit code if any required hook target cannot be matched.
+- `--verbose`: Emits detailed register allocation logs and match diagnostics.
+
+### 2.3 Example Commands
+
+#### Standard Core Patching (Mode 1):
+```bash
+python3 -I script/kaorios_patcher_a17.py \
+    --mode 1 \
+    --framework-dir /tmp/work/framework_smali \
+    --services-dir /tmp/work/services_smali \
+    --payload-smali /tmp/work/payload_smali
+```
+
+#### Android 17 Full Patching (Mode 3, Core + Build Spoof):
+```bash
+python3 -I script/kaorios_patcher_a17.py \
+    --mode 3 \
+    --framework-dir /tmp/work/framework_smali \
+    --services-dir /tmp/work/services_smali \
+    --payload-smali /tmp/work/payload_smali \
+    --strict
+```
+
+---
+
+## 3. Required Caller Hook Manifest
+
+The patcher enforces the following hook specifications:
+
+### 3.1 Framework Hooks (`framework.jar`)
+1. **`Landroid/app/Instrumentation;` (`newApplication`):**
+   - Injects `invoke-static {context_reg}, Landroid/security/kaorios/KaoriosHook;->initContext(Landroid/content/Context;)V` immediately following `invoke-virtual {app, context}, Landroid/app/Application;->attach(Landroid/content/Context;)V`.
+   - Handles both static (`p1`) and instance (`p3`) overloads.
+2. **`Landroid/app/ActivityThread;` (`handleBindApplication`):**
+   - Injects `invoke-static {app_bind_data_reg}, Landroid/security/kaorios/KaoriosHook;->initActivityThread(Ljava/lang/Object;)V` immediately following the stock `iput-object` to `mBoundApplication`.
+3. **`Landroid/provider/Settings$NameValueCache;` (`getStringForUser`):**
+   - Injects entry guard calling `KaoriosHook.shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z`.
+   - If true, intercepts reported developer options/ADB status by returning string `"0"`.
+
+### 3.2 Services Hooks (`services.jar`)
+1. **`Lcom/android/server/SystemServer;` (`run`):**
+   - Injects `invoke-static {}, Landroid/security/kaorios/KaoriosHook;->initSystemServer()V` immediately preceding the main `Looper.loop()V` invocation.
+2. **`Lcom/android/server/pm/ComputerEngine;` (`shouldFilterApplication`):**
+   - Injects entry guard calling `KaoriosHook.shouldHideAppListForCaller(ILjava/lang/String;I)Z` using the calling UID and target package name.
+   - If true, returns `true` (filtered).
+3. **`Lcom/android/server/pm/ComputerEngine;` (Conditional Installer Interception):**
+   - Intercepts `getInstallerPackageName` and `getInstallSourceInfo` calling `KaoriosHook.filterInstallerPackageName`.
+   - Applied only if both methods exist as a supported pair; skipped if neither exists.
+
+---
+
+## 4. Preflight Status Vocabulary & Diagnostics
+
+During execution, the patcher outputs standardized status indicators for each target hook:
+
+| Status Code | Severity | Description & Required Action |
 |---|---|---|
-| `framework.jar` | `ActivityThread.smali`, `Instrumentation.smali`, `Settings$NameValueCache.smali` | App initialization, Context, developer/ADB-status entry guard. |
-| `services.jar` | `ComputerEngine.smali`, `SystemServer.smali` | HMA visibility, server initialization; installer read APIs **if present as a supported pair**. |
+| `MATCHED` | Info | Target pattern located successfully. Patch will be applied. |
+| `PATCHED` | Success | Bytecode modification written and verified on disk. |
+| `ALREADY_PATCHED` | Notice | Kaorios hook instruction already exists at the target location. No modification needed; safe to proceed. |
+| `SKIPPED` | Notice | Target feature is optional or conditionally inactive (e.g. installer read APIs absent from ComputerEngine). |
+| `UNSUPPORTED` | Warning | Target method exists but byte pattern or register structure diverges from known templates (e.g. heavily customized vendor OEM framework). Manual inspection required. |
+| `FAILED` | Error | Required hook could not be matched, register allocation failed, or disk write error occurred. Execution halts under `--strict`. |
 
-`ApplicationPackageManager.hasSystemFeature(Ljava/lang/String;I)Z` is **no longer patched**: the `KaoriosHook.hasSystemFeature` facade returns `null` unconditionally, so mode 1 leaves the stock method untouched and the facade stays in the payload only for ROMs patched by an older recipe. `ComputerEngine` installer support requires exactly one recognized `getInstallerPackageName` and one `getInstallSourceInfo` method with supported layout. A missing/partial pair fails; other overloads may stay untouched. If both are absent the installer hook is **skipped**, not verified present. Match actual ROM callers before claiming coverage.
+### Common Diagnostic Situations
+- **Register Exhaustion:** If a target method uses all 16 registers (`v0`–`v15`) without free capacity, the patcher automatically switches to an extended range allocation (`invoke-static/range`) or allocates new local registers and recalculates parameter offsets.
+- **Vendor Code Incompatibilities:** On aggressive OEM customizations (MIUI/HyperOS, ColorOS, OneUI), method signatures in `ComputerEngine` or `ActivityThread` may include extra parameters or custom wrappers. If status reports `UNSUPPORTED`, refer to the [Manual Patch Guide](Patch_Guide_2.0.6.1.md) for custom surgical adaptation.
 
-- Android 13–16: **mode 1** for supported hooks.
-- Android 17: **mode 1** for supported hooks; optional **mode 2** edits `Build.smali` and `Build$VERSION.smali` fields only; **mode 3** combines 1 and 2 on the same input tree, not across different DEXes/JARs. Modes 2/3 are rejected for Android 13–16.
-- **Not automatic:** importing any payload class; [Secure Flag](Disable_Secure_Flag.md) (no general `captureDisplay` recipe), [CorePatch](CorePatch.md), or every OEM overload. See the [manual guide](Patch_Guide_2.0.6.1.md) for the JAR → class → method → exact smali insertion and register checks.
-- **Kaorios Helper** is a [separately installed Zygisk module](https://github.com/hzzmonetvn/KaoriosHelper), not a ROM hook or these artifact scripts. It leaves framework/services stock. **Do not enable HMA Helper at the same time as a ROM-patched HMA hook.**
+---
 
-## 3. Patch the smali owner trees
+## 5. End-to-End JAR Pipeline Automation (`patch-framework-a17-artifact.sh`)
 
-For example, if framework targets belong to `classes2.dex` and services targets to `classes.dex`, run from `public/`:
-
-```bash
-set -e
-python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes2" \
-  --android-version 17 --mode 1 --no-delay \
-  --payload-smali /path/to/disassembled-payload
-python3 -I script/kaorios_patcher.py "$WORK/services/smali_classes" \
-  --android-version 17 --mode 1 --no-delay \
-  --payload-smali /path/to/disassembled-payload
-```
-
-Before accepting or flashing any mode-1 output, disassemble the actual payload DEX with a compatible toolchain into a separate empty tree and supply `--payload-smali /path/to/payload-disassembled-root` to **each** patcher invocation. A run without this option is caller-only and is not acceptable for compatibility verification. Every hook now resolves to an `initContext`/`initActivityThread`/`shouldHideDevStatusFromNameValueCache` facade, so the check is against those descriptors in your payload — there is no longer a certificate-chain or system-feature callee requirement. Do not accept or flash output unless the ABI check succeeds.
-
-Substitute your Android version and **actual owner tree**; repeat for each split with targets. You may pass a single smali file instead. A success on one tree does not prove targets in other splits were found. `script/kaorios_patcher_a17.py` is only a legacy compatibility launcher.
-
-For optional Android 17 Build fields, locate **both** exact files and run mode 2 on each owner even if they live in different DEXes:
+For production ROM builds, the included automation script `patch-framework-a17-artifact.sh` coordinates unpacking, patching, reassembling, and repackaging in a clean staging environment:
 
 ```bash
-python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes/android/os/Build.smali" \
-  --android-version 17 --mode 2 --no-delay
-python3 -I script/kaorios_patcher.py "$WORK/framework/smali_classes2/android/os/Build\$VERSION.smali" \
-  --android-version 17 --mode 2 --no-delay
+sh script/patch-framework-a17-artifact.sh \
+    --stock-framework /path/to/stock/framework.jar \
+    --stock-services /path/to/stock/services.jar \
+    --payload-dex /path/to/payload/classes.dex \
+    --output-dir /path/to/output_jars \
+    --smali-api 34 \
+    --api 37
 ```
 
-The `--update` (or `-u`) option repairs recognized supported hook blocks only. Already-valid hook content remains verified and unchanged, though the file may be rewritten with `--update`; unknown or partial hook layouts fail closed instead of being forcibly rewritten.
+### Pipeline Workflow Invariants:
+1. **Isolated Workspace:** All disassembly and assembly operations occur within a unique temporary directory (`/tmp/kaorios_stage_XXXXXX`). Stock input files are treated as strictly read-only.
+2. **Selective DEX Reassembly:** Only DEX splits modified by the patcher are reassembled with smali. Unmodified splits are copied directly from the stock archive, avoiding unnecessary bytecode churn.
+3. **Archive Integrity Validation:** Repackaged candidate JARs are tested with `unzip -tq` to guarantee zero archive corruption before being published to `--output-dir`.
 
-These tree names are examples. Mode 3 can replace mode 1 + 2 for **one** tree only when both required Build files and its mode-1 targets are in that tree; still process other trees and services separately.
+---
 
-**Read each file status:** `PATCHED` means changed after verification; `ALREADY_PATCHED` means recognized and verified (normally no write; `--update` can rewrite identical content); `UNSUPPORTED_LAYOUT`/`FAILED` mean stop and inspect that file; no target found is **not** a pass. A directory run preflights all selected target content and tree locations before writing originals; duplicate targets and symlink inputs are rejected. This is not a filesystem-wide atomic transaction: on any write failure, discard partial working copies and restart from clean stock. Never force a similar-looking snippet; check method descriptor, `.locals`/`.registers`, physical `pN`/`vN` aliases, instruction encoding and stock fallback paths. `--no-delay` only disables animated output.
+## 6. Post-Patch Multi-Stage Re-Extraction Verifiers
 
-## 4. Import payload and rebuild copies
-
-The patcher **does not import payload**. Follow [manual guide §1](Patch_Guide_2.0.6.1.md#1-import-payload--frameworkjar): import all payload classes individually into the copied **framework** JAR, replacing duplicates as *classes inside their existing owner DEX*, not overwriting an entire stock DEX. Search every DEX: existing payload descriptors may span multiple owner splits. Replace only exact incoming descriptors; never remove an entire namespace or unrelated OEM class. New classes may need a new split. Import payload only into `framework.jar`. Keep all other stock classes. Assemble only changed owner trees with the input-compatible API, retaining each original DEX entry name:
+Never flash patched JARs to a device without executing the verification suite against a **re-extracted candidate**:
 
 ```bash
-jar=framework; name=classes2  # example: repeat for each changed owner split
-mkdir -p "$WORK/$jar/rebuilt"
-java -cp "$SMALI_CP" com.android.tools.smali.smali.Main \
-  assemble "$WORK/$jar/smali_$name" --api "$API" \
-  --output "$WORK/$jar/rebuilt/$name.dex"
+# 1. Extract candidate JAR to a fresh temporary directory
+mkdir -p /tmp/verify_framework
+unzip -q /path/to/output_jars/framework.jar 'classes*.dex' -d /tmp/verify_framework/dex/
+java -jar baksmali.jar disassemble /tmp/verify_framework/dex/classes.dex --api 34 -o /tmp/verify_framework/smali/
+
+# 2. Verify framework caller hooks
+python3 -I script/verify-framework-a17-hooks.py /tmp/verify_framework/smali --caller-only
+
+# 3. Verify services caller hooks
+python3 -I script/verify-services-a17-hooks.py /tmp/verify_services/smali
+python3 -I script/verify-systemserver-a17-hooks.py /tmp/verify_services/smali
+
+# 4. Verify Facade ABI consistency against disassembled payload
+python3 -I script/verify-payload-abi.py /tmp/verify_framework/smali --payload-smali /path/to/payload_smali
+python3 -I script/verify-payload-abi.py /tmp/verify_services/smali --payload-smali /path/to/payload_smali
 ```
 
-Export every changed split and any newly added payload split to `rebuilt/`. Start output from **stock JAR copies in a different path**. `zip -j` puts DEX names at the archive root:
+---
 
-```bash
-mkdir -p "$WORK/output"
-for jar in framework services; do
-    cp "$STOCK/$jar.jar" "$WORK/output/$jar-patched.jar"
-    for dex in "$WORK/$jar/rebuilt"/classes*.dex; do
-        test -f "$dex" || continue
-        zip -q -0 -j "$WORK/output/$jar-patched.jar" "$dex"
-    done
-    unzip -tq "$WORK/output/$jar-patched.jar"
-done
-```
+## 7. Evidence Boundary
 
-If the ROM/toolchain needs another archive layout, use a compatible multidex editor rather than forcing `zip`. Preserve all untouched DEX and non-DEX entries.
-
-## 5. Check the saved JARs
-
-1. Extract **every DEX from the saved `framework-patched.jar` and `services-patched.jar`** into new empty recheck folders. Compare each changed packaged DEX byte-for-byte with its assembled file, untouched DEX hashes and non-DEX entries with stock. Disassemble the extracted DEX, **not** the working tree:
-
-```bash
-for jar in framework services; do
-    mkdir -p "$WORK/$jar/recheck/input"
-    unzip -q "$WORK/output/$jar-patched.jar" 'classes*.dex' -d "$WORK/$jar/recheck/input"
-    for dex in "$WORK/$jar/recheck/input"/classes*.dex; do
-        name=$(basename "$dex" .dex)
-        if test -f "$WORK/$jar/rebuilt/$name.dex"; then
-            cmp "$WORK/$jar/rebuilt/$name.dex" "$dex" || exit 1
-        fi
-        java -cp "$BAKSMALI_CP" com.android.tools.smali.baksmali.Main \
-          disassemble "$dex" --api "$API" --output "$WORK/$jar/recheck/smali_$name"
-    done
-done
-```
-
-2. Run applicable verifiers on **these extracted output trees**:
-
-```bash
-python3 -I script/verify-framework-a17-hooks.py "$WORK/framework/recheck" --caller-only
-python3 -I script/verify-services-a17-hooks.py "$WORK/services/recheck"
-python3 -I script/verify-systemserver-a17-hooks.py "$WORK/services/recheck"
-```
-
-Once the framework output also contains `KaoriosHook.initActivityThread(Ljava/lang/Object;)V` and all eight AdvancedPolicy classes, run `python3 -I script/verify-framework-a17-hooks.py "$WORK/framework/recheck"` **instead of** `--caller-only`. Both modes check all three required framework callers: ActivityThread, Instrumentation and Settings$NameValueCache. `ApplicationPackageManager` is not patched; its `hasSystemFeature` facade remains only for ROMs patched by an older recipe. `AndroidKeyStoreSpi` and `AndroidKeyStoreKeyPairGeneratorSpi` are no longer required or patched; current sources leave both classes on stock Android behaviour. `--caller-only` skips only callee and AdvancedPolicy class checks; full mode additionally checks that callee overload and class *presence*. The hook manifest is loaded automatically; no extra manifest flag is needed. Services checks visibility and installer APIs when present; SystemServer checks its caller. These verifiers do **not** establish all runtime paths or optional-hook behavior — manually inspect additional paths as in the [manual guide](Patch_Guide_2.0.6.1.md#5-rebuild-and-check-the-saved-jars).
-
-Before accepting output, verify exact facade calls in **both saved-output trees** against the actual payload's disassembled tree:
-
-```bash
-python3 -I script/verify-payload-abi.py "$WORK/framework/recheck" \
-  --payload-smali /path/to/payload-disassembled-root
-python3 -I script/verify-payload-abi.py "$WORK/services/recheck" \
-  --payload-smali /path/to/payload-disassembled-root
-```
-
-This checks matching public static facade descriptors, not payload implementation correctness, all dependency linkage, or device behavior. A missing facade callee is a hard failure even if the other verifiers pass.
-
-3. Confirm exactly one owner per imported payload class and every unrelated ROM class still present. Record actual checks, hashes and DEX owners. A host pass does not prove a real ROM boots or features work on a device. Do not use a failed/partial output; signing, publishing or flashing requires separate authorization and recovery planning.
-
-## 6. Android 17 artifact scripts (narrow scope)
-
-These are **JAR-building scripts**, not the Kaorios Helper Zygisk module. Inspect their `--help`, use copies/output distinct from stock and a supported toolchain:
-
-- `script/patch-framework-a17-artifact.sh --input <framework.jar> --output <framework-patched.jar> --kaorios-dex <payload.dex> --baksmali <tool.jar> --smali <tool.jar> [--api <api>] [--smali-api <opcode-api>] [--update]` requires three framework caller classes: `ActivityThread`, `Instrumentation` and `Settings$NameValueCache`. A missing required caller fails the candidate, even if another owner tree patched successfully. It imports the supplied payload by exact class descriptor, replaces matching definitions in their existing owners, rebuilds every modified owner DEX and retains unrelated definitions. It does not automatically remove legacy obfuscated classes; cleanup requires verified ownership. Both fat executable JARs and thin JARs (with companion dependency JARs in the same directory) are supported via a fallback classpath wrapper. For the supplied DEX 040 case, pass `--api 37 --smali-api 34`. It verifies the candidate JAR after re-extraction, including the hook manifest, class inventories and facade ABI calls. The `Settings$NameValueCache` entry guard hides only `adb_enabled`, `adb_wifi_enabled` and `development_settings_enabled` when helper policy permits; it does not disable actual ADB.
-- `script/patch-services-a17-artifact.sh --input <services.jar> --output <services-patched.jar> --baksmali <tool.jar> --smali <tool.jar> [--api <api>] [--smali-api <opcode-api>] [--update]` patches `ComputerEngine`/`SystemServer`, including the supported installer pair if present. It verifies callers from the re-extracted candidate and checks untouched DEX hashes.
-
-Both scripts verify untouched DEX hashes to guarantee byte-for-byte identity. They do not install anything outside the two JARs: putting `bin/lib/`, `bin/resetprop/` or `bin/init/` onto a system image is a separate decision and is not part of this patch.
-
-On 2026-11-05, the public regression suite passed all 83 tests with zero skips, using an external `KAORIOS_SMALI_CLASSPATH` for the real-smali assembly checks. This is host/synthetic-artifact evidence only, not proof of real-device boot, Play Integrity results, or complete cross-JAR linkage. Neither script publishes to a release channel or tests a real ROM/device. Retain clean input copies and follow §5 for additional hooks or checks outside the stated coverage.
+- **Host Automation & Static Checking:** The automated patcher and verification scripts confirm syntactic correctness, opcode compatibility, register encoding validity, and descriptor consistency on the host workstation.
+- **Physical Device & Attestation Boundary:** Clean automated runs and verifier passes do **not** guarantee that a specific device will boot without crashes, that runtime permissions allow service binding, or that Google Play Integrity verdicts (`MEETS_DEVICE_INTEGRITY`) will be granted. Hardware-level testing on an authorized physical test device is required to confirm full operational viability.

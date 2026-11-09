@@ -100,14 +100,17 @@ class NameValueCacheTest(unittest.TestCase):
                 self.assertIn(directive, patched)
                 self.assertIn(instructions, patched)
                 self.assertIn('invoke-static/range {p1 .. p3}', patched)
+                self.assertIn('move-result-object v0', patched)
+                self.assertNotIn('const-string v0, "0"', patched)
+                self.assertTrue(patcher.NAME_VALUE_HOOK.endswith(')Ljava/lang/String;'))
                 self.assertLess(patched.index(patcher.NAME_VALUE_HOOK), patched.index(instructions))
                 patcher.verify_target_content(NAME, patched)
                 self.assertEqual((patched, False), patcher.patch_name_value_cache(patched, update=True))
 
     def test_partial_or_late_hook_and_missing_fallback_fail(self):
         patched, _ = patcher.patch_name_value_cache(stock())
-        for broken in (patched.replace('move-result v0', 'move-result v1'),
-                       patched.replace('const-string v0, "0"', 'const-string v0, "1"'),
+        for broken in (patched.replace('move-result-object v0', 'move-result-object v1'),
+                       patched.replace('if-eqz v0,', 'if-nez v0,'),
                        patched.replace('    .line 42', '    const/4 v0, 0x0\n    .line 42'),
                        patched.replace('move-object v0, p2\n    return-object v0', 'nop')):
             for update in (False, True):
