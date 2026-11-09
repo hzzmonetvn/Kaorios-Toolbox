@@ -96,8 +96,11 @@ jobs:
                   ;;
               esac
             done < KeySign/keystore.properties
+          elif [[ "${{ inputs.unsigned_test }}" == "true" ]]; then
+            echo "NOTICE: KeySign/keystore.properties not found in checkout; exporting an unsigned test APK for manual signing."
           else
-            echo "NOTICE: KeySign/keystore.properties not found in checkout; running in unsigned release mode."
+            echo "::error::No signing credentials in KeySign/keystore.properties and unsigned_test is false; refusing to build a release APK that cannot be signed and verified."
+            exit 1
           fi
 
       - name: Checkout public Toolbox-data
