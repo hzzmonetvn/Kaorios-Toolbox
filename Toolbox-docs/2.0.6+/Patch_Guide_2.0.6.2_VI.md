@@ -1,6 +1,6 @@
 # Kaorios Toolbox 2.0.6.2 — Hướng dẫn Vá Thủ công Smali cho ROM (Android 13–17)
 
-[English](Patch_Guide_2.0.6.2.md) | [Hướng dẫn Trình vá Tự động](Patcher_Guide_2.0.6.2_VI.md) | [Tắt Secure Flag](Disable_Secure_Flag_VI.md) | [CorePatch](CorePatch_VI.md)
+[English](Patch_Guide_2.0.6.2.md) | [Tắt Secure Flag](Disable_Secure_Flag_VI.md) | [CorePatch](CorePatch_VI.md)
 
 ---
 
@@ -10,7 +10,7 @@ Tải classes.dex mới nhất ở release, import vào dex cuối cùng, có th
 
 Danh mục framework caller bắt buộc bao gồm đúng ba lớp: `ActivityThread`, `Instrumentation`, và `Settings$NameValueCache`.
 
-### 3.1 Khởi Tạo Ngữ Cảnh Ứng Dụng — `Instrumentation`
+### 2.1 Khởi Tạo Ngữ Cảnh Ứng Dụng — `Instrumentation`
 - **Lớp:** `Landroid/app/Instrumentation;`
 - **Phương thức Mục tiêu:**
   - `newApplication(Ljava/lang/Class;Landroid/content/Context;)Landroid/app/Application;`
@@ -56,7 +56,7 @@ Danh mục framework caller bắt buộc bao gồm đúng ba lớp: `ActivityThr
 
 ---
 
-### 3.3 Bảo Vệ Tùy Chọn Nhà Phát Triển & Trạng Thái ADB — `Settings$NameValueCache`
+### 2.3 Bảo Vệ Tùy Chọn Nhà Phát Triển & Trạng Thái ADB — `Settings$NameValueCache`
 - **Lớp:** `Landroid/provider/Settings$NameValueCache;`
 - **Phương thức Mục tiêu:** `getStringForUser(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;`
 - **Tham số:** `p1` = `ContentResolver`, `p2` = `String name` (khóa cài đặt), `p3` = `int userHandle`.
@@ -81,7 +81,7 @@ Danh mục framework caller bắt buộc bao gồm đúng ba lớp: `ActivityThr
 
 ## 3. Triển Khai Hook trong `services.jar`
 
-### 4.1 Khởi Tạo Máy Chủ Hệ Thống — `SystemServer`
+### 3.1 Khởi Tạo Máy Chủ Hệ Thống — `SystemServer`
 - **Lớp:** `Lcom/android/server/SystemServer;`
 - **Phương thức Mục tiêu:** `run()V`
 - **Vị trí Đặt:** Ngay trước lệnh gọi vòng lặp chính `Looper.loop()V` cuối cùng tại đoạn kết thúc khởi tạo dịch vụ hệ thống.
@@ -163,7 +163,7 @@ Xác định vị trí khởi tạo đối tượng `InstallSourceInfo` (`invoke
 
 ---
 
-## 5. Giả Mạo Trường Build Tùy Chọn trên Android 17 (Chế độ 2)
+## 4. Giả Mạo Trường Build Tùy Chọn trên Android 17 (Chế độ 2)
 
 Trên các bản ROM Android 17, các trường thông tin `Build` có thể được cấu hình để cho phép giả mạo động trong thời gian chạy bằng cách gỡ bỏ từ khóa truy cập `final` và gán giá trị khởi tạo hằng chuỗi về null:
 
@@ -182,7 +182,9 @@ Trên các bản ROM Android 17, các trường thông tin `Build` có thể đ�
    - Giữ nguyên bản hoàn toàn trường `SDK_INT` và hàm khởi tạo tĩnh của lớp (`<clinit>`).
 
 ---
-# Xác minh khớp nối ABI Mặt tiền đối với payload đã dịch ngược
+## 5. Xác minh khớp nối ABI Mặt tiền đối với payload đã dịch ngược
+
+```bash
 python3 -I script/verify-payload-abi.py recheck/smali_framework --payload-smali /path/to/disassembled-payload
 python3 -I script/verify-payload-abi.py recheck/smali_services --payload-smali /path/to/disassembled-payload
 ```

@@ -51,8 +51,6 @@ Surgical smali bytecode patching applied to copies of `framework.jar` and `servi
 
 - **Manual Patch Guide:** Complete step-by-step instructions for class location, register allocation, hook placement, and payload DEX importation:
   - [English](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2.md)
-- **Automatic Patcher Guide:** Command-line usage for `kaorios_patcher.py`, modes 1–3, and toolchain constraints:
-  - [English](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.2.md)
 
 ### 2. Optional Framework Modifications
 
@@ -65,8 +63,6 @@ Surgical smali bytecode patching applied to copies of `framework.jar` and `servi
 
 Operate Play Integrity, Keybox profiles, and framework features in headless or shell environments without the Android application:
 
-- **Rust CLI & TUI Guide:**
-  - [English Guide](Toolbox-docs/2.0.6+/Rust_CLI_Guide.md)
 - **Binary Documentation & Deployment:**
   - [`bin/kaorios-toolbox/README.md`](bin/kaorios-toolbox/README.md)
 

@@ -1,6 +1,6 @@
 # Kaorios Toolbox — Patcher Engine & Tooling Reference (`script/`)
 
-[Manual Patch Guide](../Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2.md) | [Automatic Patcher Guide](../Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.2.md) | [Root README](../README.md)
+[Manual Patch Guide](../Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2.md) | [Root README](../README.md)
 
 This technical reference provides developer documentation for the Python and shell tooling located in `script/`. It explains the design principles, inter-script dependency graphs, bytecode mutation patterns, pipeline safety invariants, static verification passes, and the regression test suite.
 

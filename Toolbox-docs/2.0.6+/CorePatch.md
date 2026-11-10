@@ -1,22 +1,14 @@
-# CorePatch — Static Framework Smali Modification
+# CorePatch
 
 [Tiếng Việt](CorePatch_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.2.md) | [Root README](../../README.md)
 
-This reference documents **static framework smali patches** applied directly to Android system framework JARs (`framework.jar`, `services.jar`, and optional vendor libraries such as `miui-services.jar`).
-
-> [!NOTE]
-> **Static Smali Patching vs. Runtime Xposed/LSPosed Module:**
-> This guide is intended for **direct, offline smali modification** of decompiled framework binaries to disable package signature verification, signature mismatch enforcement, sharedUserId conflicts, and downgrade restrictions at the operating system level. It does **not** require an Xposed or LSPosed framework runtime. If you are using a runtime Xposed module (such as the LSPosed CorePatch module), do not apply these smali modifications directly to the system JARs.
-
 > [!WARNING]
 > **Register Allocation and OEM Variations:**
-> Register identifiers such as `v14`, `v12`, `v11`, and `v0` shown in the snippets below are reference examples taken from standard AOSP smali layouts. Live register allocations, parameter mappings (`pN`), and branching labels (`:cond_x`) vary significantly across Android versions and OEM ROMs (MIUI/HyperOS, OneUI, ColorOS, OxygenOS, etc.). Always inspect the disassembled method body on your specific target ROM build to resolve live registers before applying changes.
+> Register identifiers such as `v14`, `v12`, `v11`, and `v0` shown in the snippets below are reference examples taken from standard AOSP smali layouts. Live register allocations, parameter mappings (`pN`), and branching labels (`:cond_x`) vary significantly across Android versions and OEM ROMs.
 
 ---
 
 ## 1. `framework.jar`
-
-Disassemble each split (`classes.dex`, `classes2.dex`, etc.) of `framework.jar` and locate the specific owner DEX for each class before editing.
 
 ### `android.content.pm.PackageParser`
 
@@ -226,10 +218,3 @@ If the ROM includes `miui-services.jar`, apply the following modifications to al
 2. Method `canBeUpdate` -> modify the method body to return immediately (`return-void`).
 
 ---
-
-## 4. Reassembly & Verification
-
-1. **Reassemble modified splits:** Reassemble only the modified `classes*.dex` splits using a toolchain compatible with the input bytecode format.
-2. **Package without overwriting stock:** Create a new copy of the stock JAR and replace only the modified DEX splits (`zip -j -0 <target.jar> classes*.dex`).
-3. **Re-extract and verify:** Extract the packaged JAR into a fresh directory, re-disassemble the modified classes, and verify that the instruction sequences and registers match the planned modifications.
-4. **Evidence Boundary:** Static smali patching instructions represent host-side bytecode edits. They do not constitute proof of device boot, OS stability, or package manager security behavior across diverse Android OEM variants.
