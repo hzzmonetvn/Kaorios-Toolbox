@@ -16,10 +16,14 @@ This document records the architectural, design, and verification decisions gove
 - **Rejected:** Attaching legacy `bin/lib` binaries under the new installer's
   name, disabling R8 solely because a DEX is small, and relying on flattened
   individual downloads for a nested checksum manifest.
-- **Verification:** Public Python suite: 87 tests, 2 skipped; `actionlint`
+- **Verification:** Public Python suite: 88 tests, 2 skipped; `actionlint`
   passes on the workflow. The manifest now covers `UNSIGNED-TEST.txt` when it
-  is staged. Android NDK compilation and artifact publication require a new
-  run. No claim of ROM boot or platform-internal API compatibility is made.
+  is staged. tmpfiles.org rejects the `.sha256` extension, so the
+  `Kaorios-complete.tar.gz.sha256` sidecar is excluded from the tempfile upload
+  gate and its digest is printed in the run summary; every other discovered
+  artifact is still required to upload. Android NDK compilation and artifact
+  publication require a new run. No claim of ROM boot or platform-internal API
+  compatibility is made.
 
 ---
 

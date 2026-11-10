@@ -599,6 +599,12 @@ jobs:
             if [[ "$fname" == "kaorios-toolbox" || "$fname" == "SHA256SUMS" ]]; then
               continue
             fi
+            # tmpfiles.org rejects the .sha256 extension ("Invalid file
+            # extension"), so the digest is published in the summary instead.
+            if [[ "$fname" == *.sha256 ]]; then
+              echo "SHA-256 for \`${fname%.sha256}\`: \`$(cut -d' ' -f1 "$file")\`" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            fi
             expected=$((expected + 1))
             echo "Uploading $fname to tempfile..."
             if ! resp=$(curl --fail --silent --show-error -F "file=@$file" -F "expire=172800" https://tmpfiles.org/api/v1/upload); then
