@@ -7,7 +7,7 @@ This document records the architectural, design, and verification decisions gove
 ## ADR-014: 2.0.6.2 Release Refresh — Version Surfaces, Guides, Patcher Archive and Default PIF Template
 
 - **Date:** 2026-11-10
-- **Status:** Implemented; CI verification pending the dispatched run
+- **Status:** Implemented and released as `v2.0.6.2`; CI run `42774490332` green
 - **Context:**
   The native PIF installer, the R8 packaging gate and the signed-release workflow landed after the 2.0.6.1 tree was frozen, but every version surface still identified 2.0.6.1: both Gradle modules, `KaoriosFramework.FRAMEWORK_VERSION`, the Settings preview fixture, the four versioned guides, the patcher packaging names and the default PIF template. The guides also still told operators that the current release hosts no attached assets, and the default template carried the `cheetah` (Pixel 7 Pro) profile while the on-device Java field spoof observed on 2026-11-10 ran the catalogue's `panther` (Pixel 7) entry.
 - **Decision:**
@@ -21,7 +21,11 @@ This document records the architectural, design, and verification decisions gove
   - *Bumping only the app module:* Rejected; the app and boot framework would disagree and the UI would report a mismatch.
   - *Leaving the template on `cheetah`:* Rejected; the release evidence was gathered with the `panther` entry, so the shipped default now matches the tested profile.
 - **Evidence Boundary:**
-  Host-side only at this point: public Python suite `88 tests, 2 skipped` (OK), `test_package_patcher_v2062.py` 5 tests OK, `test_update_pif.py` 21 tests OK, `git diff --check` clean. The signed APK, framework DEX, native libraries and the release itself are produced by the dispatched `build-toolbox.yml` run; the run ID, asset list and per-asset digests are recorded on the release page, and this ADR is updated with them once the run completes. No device execution is claimed for the 2.0.6.2 artifacts themselves.
+  Host-side: public Python suite `88 tests, 2 skipped` (OK), `test_package_patcher_v2062.py` 5 tests OK, `test_update_pif.py` 21 tests OK, `git diff --check` clean, `actionlint` green on both workflow commits below.
+  CI: run `42774490332` (public workflow `4c363db`, private source `c729c29`, NDK 28.2.13676358) completed green and produced the signed APK, framework DEX, both native PIF ABIs, the CLI, the R8 reports and the path-preserving archive. Every downloaded artifact matched `SHA256SUMS.txt` (all 16 entries, including `kaorios-toolbox` extracted from `kaorios-toolbox-aarch64.tar.gz`). `apksigner verify --print-certs` reports APK Signature Scheme v2 with certificate `CN=Kousei`, SHA-256 `4f09c161b3bcd5536c25315595debd1492e2f5f4f869e2d674321a976f4b23e4`; the APK declares `versionCode 2062` / `versionName 2.0.6.2` and packages `drawable/ic_stat_payload` (`0x7f06006e`), which `dexdump` shows assigned to `Notification.icon` in both notification builders.
+  Release `v2.0.6.2` carries 19 assets: the CI outputs above (flat copies of the two `libkaoripif*.so` pairs are ABI-suffixed in the filenames, while `Kaorios-complete.tar.gz` keeps the `SHA256SUMS.txt` paths) plus `kaorios-patcher-2.0.6.2.zip` built from the public tooling (SHA-256 `3bd773bece473cdd0ea03d985124a2aab7635f85a94c3e58a771a724cbdd85bd`).
+  Two follow-up workflow commits were needed to make `private_ref` usable: `a49bf11` stopped passing the SHA as `actions/checkout`'s `ref` (which fetched `refs/heads/<sha>` and failed) and pins it after checkout instead; `4c363db` authenticates that fetch with a one-shot `http.extraheader` because the checkout runs with `persist-credentials: false`. Operationally, `tmpfiles.org/dl/<id>/<name>` now serves an HTML page rather than the file; the real link is the tokenised `class="download"` URL inside it.
+  No device execution is claimed for the 2.0.6.2 artifacts themselves.
 
 ---
 
