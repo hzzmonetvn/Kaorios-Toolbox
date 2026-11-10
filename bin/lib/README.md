@@ -14,13 +14,36 @@ Inspection of the prebuilt ELF binaries in `arm64-v8a/` and `armeabi-v7a/` shows
 | `libkaoriospif.so` | `arm64-v8a` / `armeabi-v7a` | ~290 KB / ~194 KB | Identical binary / alias copy of `libkaoripif.so` provided for runtime linker compatibility across diverse ROM configurations. |
 | `libshadowhook_kaorios.so` | `arm64-v8a` / `armeabi-v7a` | 1,424 / 1,028 bytes | **Prebuilt companion stub library.** Contains an empty dynamic symbol table (`.dynsym` with 0 defined exports). It is packaged as an ELF placeholder; runtime behavior cannot be inferred from symbol presence alone. |
 
+### Complete CI bundle
+
+The public build workflow now stages `libkaoripif.so` and
+`libkaoripif_diagnostic.so` under both `lib/arm64-v8a/` and
+`lib/armeabi-v7a/`, alongside the application native library. These are freshly
+built from the same private checkout as the framework payload, not copied from
+this directory. ELF architecture and defined JNI exports are checked before
+packaging.
+
+Use `Kaorios-complete.tar.gz` to preserve paths when downloading from a release:
+
+```sh
+sha256sum -c Kaorios-complete.tar.gz.sha256
+mkdir kaorios-complete
+tar -xzf Kaorios-complete.tar.gz -C kaorios-complete
+(cd kaorios-complete && sha256sum -c SHA256SUMS)
+```
+
+The bundle also includes `framework-r8/` reports and `BUILD-PROVENANCE.txt`.
+Use the mapping and removal reports to investigate optimized DEX contents;
+DEX size alone is not a completeness test. This workflow change does not update
+previously published releases or establish device runtime compatibility.
+
 ### 1.1 Do Not Confuse This `libkaoripif.so` With the Framework Installer
 
 Two unrelated shared objects can carry the file name `libkaoripif.so`. They are not interchangeable:
 
 | | This directory (`bin/lib/`) | Framework installer (not shipped here) |
 |---|---|---|
-| `SONAME` | `libntpif.so` | no `SONAME` set |
+| `SONAME` | `libntpif.so` | `libkaoripif.so` |
 | Exports | `shadowhook_interceptor_glue` | `JNI_OnLoad`, `Java_android_security_kaorios_KaoriosPifInstaller_nativeInstallPif` |
 | Loaded by | only if some external component injects it into a target process | `KaoriosPifInstaller`, which calls `System.load("/system_ext/lib64/libkaoripif.so")` |
 | Deploy path | `/system/lib64/` or `/system/lib/` via `install.sh` | `/system_ext/lib64/` or `/system_ext/lib/` |

@@ -4,6 +4,25 @@ This document records the architectural, design, and verification decisions gove
 
 ---
 
+## ADR-013: Complete Native Release Bundle and Shrinker Evidence
+
+- **Date:** 2026-11-09
+- **Status:** Implemented locally; runner verification pending
+- **Decision:** Build both native PIF targets for ARM64 and ARM32 in the public
+  APK workflow using the same private source checkout. Require defined JNI
+  exports and matching ELF machine types. Include both targets, application
+  native logic, APKs, DEX, CLI, source/run provenance and R8 reports in a
+  path-preserving archive, with checksums inside and outside the archive.
+- **Rejected:** Attaching legacy `bin/lib` binaries under the new installer's
+  name, disabling R8 solely because a DEX is small, and relying on flattened
+  individual downloads for a nested checksum manifest.
+- **Verification:** Public Python suite: 87 tests, 2 skipped; `actionlint`
+  passes on the workflow. The manifest now covers `UNSIGNED-TEST.txt` when it
+  is staged. Android NDK compilation and artifact publication require a new
+  run. No claim of ROM boot or platform-internal API compatibility is made.
+
+---
+
 ## ADR-012: Unreachable Signing Gate & `libkaoripif.so` Name Collision
 
 - **Date:** 2026-11-09
@@ -49,7 +68,7 @@ This document records the architectural, design, and verification decisions gove
 - **Alternatives Considered & Rejected:**
   - *Generating speculative template files:* Rejected; synthesizing dummy files to satisfy broken links would pollute the repository with unverified assets and violate zero-synthetic-artifact principles.
   - *Deleting undocumented optional guides (CorePatch, Secure Flag):* Rejected; these guides provide critical static bytecode references for advanced ROM builders and security researchers.
-  - *Committing or pushing changes during review:* Rejected; standing instructions mandate strictly keeping changes within the local working tree without committing or pushing.
+  - *Committing or pushing changes during review:* Rejected; the review was completed in the local working tree before any commit or push.
 
 - **Evidence Boundary:**
   All 18 tracked Markdown files verified with custom Python link validation tooling confirming 0 broken internal links. `git diff --check` passes with zero whitespace or line-ending errors. Zero product source files or binary assets modified.
