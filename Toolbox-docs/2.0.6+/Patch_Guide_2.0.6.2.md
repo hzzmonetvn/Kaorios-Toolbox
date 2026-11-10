@@ -131,21 +131,23 @@ Substitute `p3` in place of `p5` in the `invoke-static` instruction above.
 - **Applicability:** Required **only if** the ROM actively implements the installer read APIs `getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;` and `getInstallSourceInfo(Ljava/lang/String;I)Landroid/content/pm/InstallSourceInfo;`.
 
 #### Setup at Method Entry (Both Methods):
-Reserve five consecutive fresh local registers (e.g. `v10..v14`) representing `(ContentResolver resolver = null, int callingUid, int userId, String targetPackage, String installerPackage)`:
+Reserve five consecutive fresh local registers (e.g. `v14..v18`) representing `(ContentResolver resolver = null, int callingUid, int userId, String targetPackage, String installerPackage)`:
 ```smali
-    const/16 v10, 0x0
+    const/16 v14, 0x0
     invoke-static {}, Landroid/os/Binder;->getCallingUid()I
-    move-result v11
-    move/16 v12, p2
-    move-object/16 v13, p1
+    move-result v15
+    move/16 v16, p2
+    move-object/16 v17, p1
 ```
 *Calling UID Capture:* `getCallingUid()` must be captured **before** any invocation of `Binder.clearCallingIdentity()`.
+
+The register numbers are examples, not a fixed allocation. Reserve five locals unused by the entire stock method (at least `.locals 19` for `v14..v18`); preserve them until the hook. Before increasing `.locals`, convert stock physical parameter references to `pN` aliases and check instruction encoding. Keep this block separate from the constructor range `v4..v10`. In the constructor example, `v8` is the installer package argument; verify the actual descriptor and argument mapping on your ROM.
 
 #### Hook in `getInstallerPackageName`:
 Locate the stock return of the resolved installer package name (e.g. `return-object v2`). Replace only that return sequence with:
 ```smali
-    move-object/16 v14, v2
-    invoke-static/range {v10 .. v14}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    move-object/16 v18, v2
+    invoke-static/range {v14 .. v18}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
     move-result-object v2
     return-object v2
 ```
@@ -191,3 +193,17 @@ Run against the disassembled payload from the repository root:
 python3 -I script/verify-payload-abi.py recheck/smali_framework --payload-smali /path/to/disassembled-payload
 python3 -I script/verify-payload-abi.py recheck/smali_services --payload-smali /path/to/disassembled-payload
 ```
+
+## 6. Reassemble and Verify the Packaged JARs
+
+Keep stock JARs for rollback. Assemble every modified DEX split with a compatible smali toolchain, replace only those splits in a separate candidate JAR, and run `unzip -t` on the output. Extract the candidate into a new empty directory and disassemble every split into separate directories beneath `recheck/smali_framework` or `recheck/smali_services`. Check each class has exactly one owner and inspect all edited register flows. Run these checks on the extracted output, not the working smali:
+
+```bash
+python3 -I script/verify-framework-a17-hooks.py recheck/smali_framework --caller-only
+python3 -I script/verify-services-a17-hooks.py recheck/smali_services
+python3 -I script/verify-systemserver-a17-hooks.py recheck/smali_services
+python3 -I script/verify-payload-abi.py recheck/smali_framework --payload-smali /path/to/disassembled-payload
+python3 -I script/verify-payload-abi.py recheck/smali_services --payload-smali /path/to/disassembled-payload
+```
+
+These verifiers cover Kaorios caller hooks and ABI, not optional CorePatch or secure-flag edits. Assembly and host checks do not establish device boot or runtime behavior; verify those separately on the target ROM.

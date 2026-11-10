@@ -131,21 +131,23 @@ Thay thế `p3` vào vị trí của `p5` trong lệnh `invoke-static` ở trên
 - **Khả Năng Áp Dụng:** Chỉ bắt buộc **nếu** bản ROM thực sự triển khai đầy đủ cả hai API đọc trình cài đặt: `getInstallerPackageName(Ljava/lang/String;I)Ljava/lang/String;` và `getInstallSourceInfo(Ljava/lang/String;I)Landroid/content/pm/InstallSourceInfo;`.
 
 #### Thiết Lập Đầu Phương Thức (Áp dụng cho Cả Hai Phương Thức):
-Dành riêng năm thanh ghi cục bộ liên tiếp mới (ví dụ: `v10..v14`) đại diện cho `(ContentResolver resolver = null, int callingUid, int userId, String targetPackage, String installerPackage)`:
+Dành riêng năm thanh ghi cục bộ liên tiếp mới (ví dụ: `v14..v18`) đại diện cho `(ContentResolver resolver = null, int callingUid, int userId, String targetPackage, String installerPackage)`:
 ```smali
-    const/16 v10, 0x0
+    const/16 v14, 0x0
     invoke-static {}, Landroid/os/Binder;->getCallingUid()I
-    move-result v11
-    move/16 v12, p2
-    move-object/16 v13, p1
+    move-result v15
+    move/16 v16, p2
+    move-object/16 v17, p1
 ```
 *Lưu ý Thu thập UID:* `getCallingUid()` bắt buộc phải được thu thập **trước** bất kỳ lệnh gọi nào đến `Binder.clearCallingIdentity()`.
+
+Các số register chỉ là ví dụ. Dành năm local không bị method gốc sử dụng (ít nhất `.locals 19` cho `v14..v18`); giữ nguyên chúng cho tới lời gọi hook. Trước khi tăng `.locals`, đổi tham chiếu tham số dạng `vN` sang alias `pN` và kiểm tra giới hạn mã hóa lệnh. Tách vùng này khỏi dải constructor `v4..v10`. Trong ví dụ constructor, `v8` là đối số tên gói cài đặt; đối chiếu descriptor và ánh xạ đối số thực tế trên ROM.
 
 #### Hook trong `getInstallerPackageName`:
 Xác định vị trí trả về gốc của tên gói cài đặt đã phân giải (ví dụ: `return-object v2`). Chỉ thay thế duy nhất chuỗi trả về đó bằng:
 ```smali
-    move-object/16 v14, v2
-    invoke-static/range {v10 .. v14}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+    move-object/16 v18, v2
+    invoke-static/range {v14 .. v18}, Landroid/security/kaorios/KaoriosHook;->filterInstallerPackageName(Landroid/content/ContentResolver;IILjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
     move-result-object v2
     return-object v2
 ```
@@ -190,3 +192,17 @@ python3 -I script/verify-payload-abi.py recheck/smali_services --payload-smali /
 ```
 
 ---
+
+## 6. Assemble và xác minh JAR đã đóng gói
+
+Giữ JAR gốc để khôi phục. Assemble từng DEX đã sửa bằng toolchain smali tương thích, chỉ thay các split đó trong bản JAR đầu ra riêng và chạy `unzip -t`. Giải nén JAR đầu ra vào thư mục trống mới, disassemble từng split vào thư mục riêng bên dưới `recheck/smali_framework` hoặc `recheck/smali_services`. Kiểm tra mỗi class chỉ có một owner và rà luồng register đã sửa. Chạy kiểm tra trên đầu ra đã giải nén, không dùng cây smali đang chỉnh sửa:
+
+```bash
+python3 -I script/verify-framework-a17-hooks.py recheck/smali_framework --caller-only
+python3 -I script/verify-services-a17-hooks.py recheck/smali_services
+python3 -I script/verify-systemserver-a17-hooks.py recheck/smali_services
+python3 -I script/verify-payload-abi.py recheck/smali_framework --payload-smali /path/to/disassembled-payload
+python3 -I script/verify-payload-abi.py recheck/smali_services --payload-smali /path/to/disassembled-payload
+```
+
+Các verifier kiểm tra caller hook Kaorios và ABI, không kiểm tra patch CorePatch hoặc secure flag tùy chọn. Assemble và kiểm tra host chưa xác nhận thiết bị khởi động hay hành vi runtime; kiểm tra riêng trên ROM mục tiêu.

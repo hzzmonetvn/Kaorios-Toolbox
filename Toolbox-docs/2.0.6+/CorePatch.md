@@ -25,7 +25,7 @@
 
 2. Locate the check for the string `"<manifest> specifies bad sharedUserId name \""`. Immediately before the branch instruction (`if-nez v5, :cond_x` in the reference layout), force the condition register to bypass the check:
    ```smali
-   const/4 v14, 0x1
+   const/4 v5, 0x1
    ```
 
 ### `android.content.pm.PackageParser$PackageParserException`
@@ -190,9 +190,9 @@ Locate the call:
 ```smali
 invoke-interface {p1}, Lcom/android/server/pm/pkg/AndroidPackage;->isLeavingSharedUser()Z
 ```
-At the subsequent conditional branch (`if-eqz v12, :cond_x` in the reference smali), force the evaluation register to `1` using the appropriate free register for your ROM:
+At the subsequent conditional branch (`if-eqz v12, :cond_x` in the reference smali), force the evaluation register to `1` using the same result register tested by that branch on your ROM:
 ```smali
-const/4 v0, 0x1
+const/4 v12, 0x1
 ```
 
 ### `com.android.server.pm.ReconcilePackageUtils`
@@ -218,3 +218,5 @@ If the ROM includes `miui-services.jar`, apply the following modifications to al
 2. Method `canBeUpdate` -> modify the method body to return immediately (`return-void`).
 
 ---
+
+For both branch edits, identify the result assignment and branch in the actual method; place the constant after the result assignment and immediately before the branch, so it is not overwritten. Match the branch operand rather than copying example register numbers. Use `const/16` instead of `const/4` if the destination physical register exceeds 15. Reassemble and verify the packaged output as described in [Manual Patch Guide](Patch_Guide_2.0.6.2.md#6-reassemble-and-verify-the-packaged-jars).

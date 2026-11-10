@@ -26,7 +26,7 @@
 
 2. Tìm đoạn kiểm tra chuỗi `"<manifest> specifies bad sharedUserId name \""`. Ngay trước lệnh rẽ nhánh (`if-nez v5, :cond_x` trong mã mẫu), ép giá trị điều kiện để bỏ qua kiểm tra:
    ```smali
-   const/4 v14, 0x1
+   const/4 v5, 0x1
    ```
 
 ### `android.content.pm.PackageParser$PackageParserException`
@@ -191,9 +191,9 @@ Tìm lời gọi:
 ```smali
 invoke-interface {p1}, Lcom/android/server/pm/pkg/AndroidPackage;->isLeavingSharedUser()Z
 ```
-Tại lệnh rẽ nhánh điều kiện ngay sau phần này (`if-eqz v12, :cond_x` trong smali tham chiếu), ép register đánh giá thành `1` bằng register trống thích hợp trên ROM của bạn:
+Tại lệnh rẽ nhánh điều kiện ngay sau phần này (`if-eqz v12, :cond_x` trong smali tham chiếu), ép register đánh giá thành `1` bằng đúng register kết quả mà nhánh đó kiểm tra trên ROM của bạn:
 ```smali
-const/4 v0, 0x1
+const/4 v12, 0x1
 ```
 
 ### `com.android.server.pm.ReconcilePackageUtils`
@@ -219,3 +219,5 @@ Nếu bản ROM có chứa file `miui-services.jar`, áp dụng các chỉnh s�
 2. Method `canBeUpdate` -> sửa thân method để trả về ngay (`return-void`).
 
 ---
+
+Với hai chỉnh sửa nhánh trên, xác định lệnh nhận kết quả và nhánh trong method thực tế; đặt hằng sau lệnh nhận kết quả và ngay trước nhánh để tránh bị ghi đè. Dùng đúng toán hạng của nhánh, không sao chép số register mẫu. Dùng `const/16` thay `const/4` nếu register vật lý đích lớn hơn 15. Assemble và kiểm tra đầu ra theo [Hướng dẫn vá thủ công](Patch_Guide_2.0.6.2_VI.md).
