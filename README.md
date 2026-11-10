@@ -22,7 +22,6 @@ For **version 2.0.4.0 and below**, see the legacy repository:
 - ☁️ **Google Photos Unlimited Backup:** Device spoofing for unlimited original-quality photo backup.
 - 🎮 **High-FPS Game Profiles:** Unlock 90/120 FPS modes in supported game titles.
 - 🦀 **Standalone Native Rust Engine:** Pure-Rust `kaorios-toolbox` CLI and interactive TUI dashboard.
-- ⚡ **Early Boot Property Override:** `init.kaorios.rc` service configuration and `kaorihelper` (`resetprop-rs`) integration.
 - 🧰 **Payload Dumper Integration:** Inspect and dump OTA `payload.bin` partitions directly on-device.
 
 ---
@@ -52,23 +51,15 @@ Surgical smali bytecode patching applied to copies of `framework.jar` and `servi
 
 - **Manual Patch Guide:** Complete step-by-step instructions for class location, register allocation, hook placement, and payload DEX importation:
   - [English](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2.md)
-  - [Tiếng Việt](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2_VI.md)
 - **Automatic Patcher Guide:** Command-line usage for `kaorios_patcher.py`, modes 1–3, and toolchain constraints:
   - [English](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.2.md)
-  - [Tiếng Việt](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.2_VI.md)
-- **Developer Tooling Reference:** Architecture, sibling dependency graph, CLI options, invariants, and test suite:
-  - [`script/README.md`](script/README.md)
 
 ### 2. Optional Framework Modifications
 
 - **CorePatch (Signature & Downgrade Verification Bypass):**
-  Disable package signature checking, sharedUserId mismatch, and version downgrade locks:
   - [English Guide](Toolbox-docs/2.0.6+/CorePatch.md)
-  - [Hướng Dẫn Tiếng Việt](Toolbox-docs/2.0.6+/CorePatch_VI.md)
 - **Disable Secure Flag:**
-  Unblock screenshot capture and screen recording in apps enforcing `FLAG_SECURE`:
   - [English Guide](Toolbox-docs/2.0.6+/Disable_Secure_Flag.md)
-  - [Hướng Dẫn Tiếng Việt](Toolbox-docs/2.0.6+/Disable_Secure_Flag_VI.md)
 
 ### 3. Standalone Native Rust CLI & TUI Dashboard
 
@@ -76,7 +67,6 @@ Operate Play Integrity, Keybox profiles, and framework features in headless or s
 
 - **Rust CLI & TUI Guide:**
   - [English Guide](Toolbox-docs/2.0.6+/Rust_CLI_Guide.md)
-  - [Hướng Dẫn Tiếng Việt](Toolbox-docs/2.0.6+/Rust_CLI_Guide_VI.md)
 - **Binary Documentation & Deployment:**
   - [`bin/kaorios-toolbox/README.md`](bin/kaorios-toolbox/README.md)
 
@@ -96,13 +86,6 @@ For rooted users who prefer not to modify ROM system JARs, the companion Zygisk 
 
 > [!WARNING]
 > Do not enable the KaoriosHelper Zygisk module simultaneously with ROM-patched framework/services hooks for the same features.
-
----
-
-## 🔒 Scope & Evidence Boundaries
-
-- **Host-Side Verification:** Regression tests, smali verification scripts, and packaging checks operate strictly on the development host. Passing host checks confirms bytecode syntax, descriptor matching, and file structure; it does not constitute proof that a modified ROM will boot or that Play Integrity verdicts will pass on physical hardware.
-- **Historical Asset Identifiers:** Release hashes and file sizes referenced in documentation (e.g. historical v2.0.6.1 payload snapshots) serve as historical evidentiary benchmarks, not guarantees of current availability on GitHub release endpoints. Always compute and verify SHA-256 digests for local artifacts.
 
 ---
 
