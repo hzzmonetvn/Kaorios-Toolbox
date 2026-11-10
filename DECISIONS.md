@@ -7,7 +7,7 @@ This document records the architectural, design, and verification decisions gove
 ## ADR-013: Complete Native Release Bundle and Shrinker Evidence
 
 - **Date:** 2026-11-09
-- **Status:** Implemented locally; runner verification pending
+- **Status:** Implemented and verified in CI
 - **Decision:** Build both native PIF targets for ARM64 and ARM32 in the public
   APK workflow using the same private source checkout. Require defined JNI
   exports and matching ELF machine types. Include both targets, application
@@ -21,9 +21,11 @@ This document records the architectural, design, and verification decisions gove
   is staged. tmpfiles.org rejects the `.sha256` extension, so the
   `Kaorios-complete.tar.gz.sha256` sidecar is excluded from the tempfile upload
   gate and its digest is printed in the run summary; every other discovered
-  artifact is still required to upload. Android NDK compilation and artifact
-  publication require a new run. No claim of ROM boot or platform-internal API
-  compatibility is made.
+  artifact is still required to upload. Run `42764090511` (public `4d1112a`,
+  private source `b1c66b3`, 2026-11-10) completed green: Android NDK
+  compilation, packaging and the tempfile upload gate all passed, with the
+  sidecar digest summarized instead of uploaded. No claim of ROM boot or
+  platform-internal API compatibility is made.
 
 ---
 
