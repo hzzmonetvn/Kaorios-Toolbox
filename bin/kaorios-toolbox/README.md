@@ -15,51 +15,15 @@ It allows power users, custom ROM developers, and automated system scripts to in
 - **Default System Path:** `/system/bin/kaorios-toolbox`
 - **File Permissions:** `0755` (`rwxr-xr-x`), owner `root:shell` (`0:2000`), SELinux context `u:object_r:system_file:s0`
 
----
+## 2. Features
 
-## 2. Installation Procedures
-
-### Method 1: Custom ROM Image Integration
-
-Deploy `kaorios-toolbox` directly into an extracted ROM build tree:
-
-```sh
-./install.sh /path/to/extracted/rom/system/bin
-```
-
-The script sets `0755` permissions, assigns `root:shell` ownership, and applies the `system_file` SELinux context label.
-
-### Method 2: On-Device Deployment via Root Shell (`su` / Termux)
-
-```sh
-# Push binary to device temporary directory
-adb push kaorios-toolbox /data/local/tmp/
-adb shell
-
-# In device root shell
-su
-mount -o remount,rw /system
-cp /data/local/tmp/kaorios-toolbox /system/bin/kaorios-toolbox
-chmod 0755 /system/bin/kaorios-toolbox
-chown 0:2000 /system/bin/kaorios-toolbox
-chcon u:object_r:system_file:s0 /system/bin/kaorios-toolbox
-```
-
----
-
-## 3. Command Line Interface (CLI) & Terminal UI (TUI)
-
-Detailed user guides in English and Vietnamese are available in the documentation directory:
-- [English Guide](../../Toolbox-docs/2.0.6+/Rust_CLI_Guide.md)
-- [Hướng Dẫn Tiếng Việt](../../Toolbox-docs/2.0.6+/Rust_CLI_Guide_VI.md)
-
-### 3.1 System Diagnostics
+### 2.1 System Diagnostics
 ```sh
 kaorios-toolbox doctor
 ```
 Checks root authorization status, SELinux enforcement mode, framework hook presence, Settings.Global access, and Keybox data validity.
 
-### 3.2 Interactive Terminal Dashboard (TUI)
+### 2.2 Interactive Terminal Dashboard (TUI)
 ```sh
 kaorios-toolbox tui
 # or
@@ -67,7 +31,7 @@ kaorios-toolbox menu
 ```
 Launches an interactive ANSI terminal menu providing real-time status monitors, one-touch profile toggles, and diagnostic overviews.
 
-### 3.3 Play Integrity Fix (PIF) Properties
+### 2.3 Play Integrity Fix (PIF) Properties
 ```sh
 # Inspect current PIF properties JSON
 kaorios-toolbox pif get
@@ -88,7 +52,7 @@ kaorios-toolbox pif export /sdcard/pif.json
 kaorios-toolbox pif import /sdcard/pif.json
 ```
 
-### 3.4 Keybox Profile & Attestation Management
+### 2.4 Keybox Profile & Attestation Management
 ```sh
 # Check active profile (Hardware OEM vs Remote Provisioned) and XML status
 kaorios-toolbox keybox status
@@ -105,7 +69,7 @@ kaorios-toolbox keybox mode leaf
 kaorios-toolbox keybox import /sdcard/Keybox.xml
 ```
 
-### 3.5 Application & Package Management
+### 2.5 Application & Package Management
 ```sh
 # Package counts
 kaorios-toolbox apps count
@@ -117,7 +81,7 @@ kaorios-toolbox apps list
 kaorios-toolbox apps search google
 ```
 
-### 3.6 Root Framework & Plugin Status
+### 2.6 Root Framework & Plugin Status
 ```sh
 # Detect active root manager (KernelSU, Magisk, APatch)
 kaorios-toolbox plugins status
@@ -126,7 +90,7 @@ kaorios-toolbox plugins status
 kaorios-toolbox plugins list
 ```
 
-### 3.7 Low-Level Framework Feature Toggles
+### 2.7 Low-Level Framework Feature Toggles
 ```sh
 # Toggle FLAG_SECURE unblocking (allow screenshots in protected apps)
 kaorios-toolbox features secure-flag toggle
@@ -137,7 +101,7 @@ kaorios-toolbox features secure-flag off
 kaorios-toolbox features always-strong toggle
 ```
 
-### 3.8 Device Spoofing
+### 2.8 Device Spoofing
 ```sh
 # Google Photos unlimited original quality backup
 kaorios-toolbox spoof photos enable
@@ -146,7 +110,7 @@ kaorios-toolbox spoof photos enable
 kaorios-toolbox spoof games enable
 ```
 
-### 3.9 Streaming OTA Payload Extraction
+### 2.9 Streaming OTA Payload Extraction
 ```sh
 # Inspect partitions inside payload.bin without extracting the entire archive
 kaorios-toolbox payload info /sdcard/payload.bin
@@ -158,6 +122,3 @@ kaorios-toolbox payload dump /sdcard/payload.bin init_boot /sdcard/init_boot.img
 
 ---
 
-## 4. Scope & Evidence Boundary
-
-`kaorios-toolbox` is a prebuilt native executable. Static analysis on the development host confirms ELF formatting and CLI command dispatching. Feature operation on an Android device depends on proper root credentials, SELinux policies, and compatibility with the target Android version. Host testing does not guarantee device attestation passes or hardware compatibility.
