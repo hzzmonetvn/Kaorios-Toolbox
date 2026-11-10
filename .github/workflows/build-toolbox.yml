@@ -75,10 +75,22 @@ jobs:
         with:
           repository: hzzmonetvn/KaoriosToolbox-Frameowrk
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          ref: ${{ inputs.private_ref != '' && inputs.private_ref || inputs.private_branch }}
+          # actions/checkout hiểu input `ref` là tên ref, không phải commit SHA
+          # (SHA sẽ bị fetch thành refs/heads/<sha> và fail), nên luôn clone
+          # theo nhánh rồi pin commit ở step dưới.
+          ref: ${{ inputs.private_branch }}
           path: private-src
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Pin private source to commit
+        if: inputs.private_ref != ''
+        env:
+          PINNED_REF: ${{ inputs.private_ref }}
+        run: |
+          git fetch --depth=1 origin "$PINNED_REF"
+          git checkout --detach FETCH_HEAD
+          echo "Pinned to $(git rev-parse HEAD)"
 
       - name: Verify source and mask signing properties
         run: |
