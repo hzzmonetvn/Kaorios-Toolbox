@@ -1,22 +1,15 @@
-# CorePatch — Hướng Dẫn Patch Smali Tĩnh Cho Framework
+# CorePatch
 
 [English](CorePatch.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.2_VI.md) | [Root README](../../README.md)
 
-Tài liệu này hướng dẫn chi tiết các bước **patch smali tĩnh** áp dụng trực tiếp cho các file JAR hệ thống của Android (`framework.jar`, `services.jar`, và các thư viện vendor tùy chọn như `miui-services.jar`).
-
-> [!NOTE]
-> **Patch Smali Tĩnh So Với Module Xposed/LSPosed Runtime:**
-> Hướng dẫn này dành cho việc **chỉnh sửa smali trực tiếp, offline** trên các file JAR hệ thống đã decompile nhằm vô hiệu hóa kiểm tra chữ ký APK, lỗi sai chữ ký khi cập nhật, xung đột sharedUserId và giới hạn hạ cấp phiên bản (downgrade) ở cấp độ hệ điều hành. Cách làm này **không** yêu cầu runtime Xposed hay LSPosed. Nếu bạn đang sử dụng module Xposed runtime (như CorePatch trên LSPosed), không áp dụng các chỉnh sửa smali này trực tiếp vào file hệ thống.
 
 > [!WARNING]
 > **Khác Biệt Về Register Và ROM Của Từng Nhà Sản Xuất:**
-> Các tên register như `v14`, `v12`, `v11`, và `v0` trong các đoạn mã mẫu dưới đây là ví dụ tham chiếu từ mã nguồn AOSP chuẩn. Cách phân bổ register thực tế, ánh xạ tham số (`pN`), và các nhãn rẽ nhánh (`:cond_x`) có thể khác biệt lớn giữa các phiên bản Android và bản ROM tùy biến của nhà sản xuất (MIUI/HyperOS, OneUI, ColorOS, OxygenOS, v.v.). Luôn disassemble file smali thực tế trên bản ROM của bạn để xác định chính xác register trước khi sửa đổi.
+> Các tên register như `v14`, `v12`, `v11`, và `v0` trong các đoạn mã mẫu dưới đây là ví dụ tham chiếu từ mã nguồn AOSP chuẩn. Cách phân bổ register thực tế, ánh xạ tham số (`pN`), và các nhãn rẽ nhánh (`:cond_x`) có thể khác biệt lớn giữa các phiên bản Android và bản ROM tùy biến của nhà sản xuất.
 
 ---
 
 ## 1. `framework.jar`
-
-Disassemble từng split (`classes.dex`, `classes2.dex`, v.v.) của `framework.jar` và tìm đúng DEX owner của từng class trước khi thực hiện chỉnh sửa.
 
 ### `android.content.pm.PackageParser`
 
@@ -226,10 +219,3 @@ Nếu bản ROM có chứa file `miui-services.jar`, áp dụng các chỉnh s�
 2. Method `canBeUpdate` -> sửa thân method để trả về ngay (`return-void`).
 
 ---
-
-## 4. Dựng Lại & Xác Minh
-
-1. **Assemble các split đã sửa:** Chỉ assemble lại những split `classes*.dex` đã được chỉnh sửa bằng toolchain tương thích với định dạng bytecode đầu vào.
-2. **Đóng gói không ghi đè stock:** Tạo bản sao mới từ file JAR stock gốc và chỉ thay thế các split DEX đã chỉnh sửa (`zip -j -0 <target.jar> classes*.dex`).
-3. **Trích xuất và kiểm tra lại:** Giải nén file JAR đã đóng gói vào một thư mục mới, disassemble lại các class đã sửa và đối chiếu xem chuỗi lệnh và register có khớp với thiết kế ban đầu hay không.
-4. **Ranh Giới Bằng Chứng (Evidence Boundary):** Hướng dẫn patch smali tĩnh mô tả các thao tác chỉnh sửa bytecode trên môi trường host. Các bước này không thay thế việc kiểm thử thực tế trên thiết bị để xác nhận khả năng khởi động ROM, độ ổn định của hệ điều hành, hay hành vi thực tế của Package Manager trên các biến thể ROM OEM khác nhau.
