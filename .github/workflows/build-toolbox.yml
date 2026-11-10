@@ -87,8 +87,11 @@ jobs:
         if: inputs.private_ref != ''
         env:
           PINNED_REF: ${{ inputs.private_ref }}
+          TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
         run: |
-          git fetch --depth=1 origin "$PINNED_REF"
+          # Token chỉ gắn cho đúng một lệnh fetch, không ghi vào git config.
+          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
+          git -c http.extraheader="$auth" fetch --depth=1 origin "$PINNED_REF"
           git checkout --detach FETCH_HEAD
           echo "Pinned to $(git rev-parse HEAD)"
 
