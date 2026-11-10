@@ -22,7 +22,7 @@ on:
         required: true
         default: "Toolbox-Framework"
       private_ref:
-        description: "Commit SHA cụ thể (để trống = HEAD của nhánh trên)"
+        description: "Commit SHA đầy đủ 40 ký tự (để trống = HEAD của nhánh trên)"
         required: false
         default: ""
       unsigned_test:
@@ -89,6 +89,12 @@ jobs:
           PINNED_REF: ${{ inputs.private_ref }}
           TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
         run: |
+          # `git fetch origin <ref>` không nhận SHA viết tắt; báo lỗi rõ thay vì
+          # "couldn't find remote ref" khó hiểu.
+          if ! printf '%s' "$PINNED_REF" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::private_ref phải là SHA đầy đủ 40 ký tự (nhận: $PINNED_REF)."
+            exit 1
+          fi
           # Token chỉ gắn cho đúng một lệnh fetch, không ghi vào git config.
           auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)"
           git -c http.extraheader="$auth" fetch --depth=1 origin "$PINNED_REF"
