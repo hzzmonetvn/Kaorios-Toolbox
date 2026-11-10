@@ -41,4 +41,4 @@ jobs:
         shell: bash
         run: KAORIOS_SMALI_CLASSPATH="$RUNNER_TEMP/smali/*" python3 -m unittest discover -s script -v
       - name: Build deterministic patcher ZIP
-        run: python3 -I script/package_patcher_v2061.py "$RUNNER_TEMP/kaorios-patcher-2.0.6.1.zip"
+        run: python3 -I script/package_patcher_v2062.py "$RUNNER_TEMP/kaorios-patcher-2.0.6.2.zip"

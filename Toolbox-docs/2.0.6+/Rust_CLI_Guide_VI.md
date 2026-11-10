@@ -1,6 +1,6 @@
 # Hướng Dẫn Sử Dụng Kaorios Toolbox — Rust CLI & TUI Độc Lập
 
-[English](Rust_CLI_Guide.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.1_VI.md) | [Root README](../../README.md)
+[English](Rust_CLI_Guide.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.2_VI.md) | [Root README](../../README.md)
 
 `kaorios-toolbox` là công cụ thực thi nhị phân AArch64 độc lập, nhẹ và được viết hoàn toàn bằng Rust thuần. Công cụ cho phép người dùng nâng cao, nhà phát triển ROM và các môi trường không giao diện đồ họa (`adb shell`, Termux, chroot, và script khởi động hệ thống) kiểm tra, thiết lập và vận hành các tính năng giả lập Play Integrity, quản lý chứng chỉ Keybox và các tính năng của Kaorios framework mà không cần mở ứng dụng Android.
 

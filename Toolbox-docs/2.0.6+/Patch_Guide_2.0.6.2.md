@@ -1,6 +1,6 @@
-# Kaorios Toolbox 2.0.6.1 — Manual ROM Smali Patching Guide (Android 13–17)
+# Kaorios Toolbox 2.0.6.2 — Manual ROM Smali Patching Guide (Android 13–17)
 
-[Tiếng Việt](Patch_Guide_2.0.6.1_VI.md) | [Automatic Patcher Guide](Patcher_Guide_2.0.6.1.md) | [Disable Secure Flag](Disable_Secure_Flag.md) | [CorePatch](CorePatch.md) | [Rust CLI Guide](Rust_CLI_Guide.md) | [Root README](../../README.md)
+[Tiếng Việt](Patch_Guide_2.0.6.2_VI.md) | [Automatic Patcher Guide](Patcher_Guide_2.0.6.2.md) | [Disable Secure Flag](Disable_Secure_Flag.md) | [CorePatch](CorePatch.md) | [Rust CLI Guide](Rust_CLI_Guide.md) | [Root README](../../README.md)
 
 This technical reference provides the complete, authoritative manual smali patching procedure for integrating Kaorios Toolbox into Android 13 through Android 17 custom ROMs. It documents bytecode-level insertion points, register allocation rules, multi-DEX class mapping, payload DEX importation, and post-assembly re-extraction verification.
 
@@ -44,7 +44,7 @@ Before inserting any instruction snippet into a target method:
   - A historical v2.0.6.1 snapshot recorded 171,100 bytes with SHA-256 `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`.
   - An earlier historical snapshot recorded 858,636 bytes with SHA-256 `94848e18…` (truncated historical excerpt, not a current verifiable digest).
   - These values represent historical evidentiary benchmarks; they are **not** claims that those specific binaries are currently hosted on GitHub release channels or match current source.
-- Release `v2.0.6.1` on GitHub currently hosts no attached release assets. To build the patcher archive from the reviewed public checkout, run `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` from the public repository root, and compute the SHA-256 of the exact archive you construct.
+- Release `v2.0.6.2` is produced by the public `build-toolbox.yml` workflow from the `Toolbox-Framework` branch and attaches the signed `KaoriosToolbox-release.apk`, `KaoriosFramework-release.apk`, `classes.dex`, the native `libkaoripif` libraries and a `SHA256SUMS` manifest. Verify the tag, asset list and checksums on the release page before flashing. To build the patcher archive from the reviewed public checkout, run `python3 -I script/package_patcher_v2062.py /path/to/new-patcher.zip` from the public repository root, and compute the SHA-256 of the exact archive you construct.
 
 ### 1.7 Toolchain Parameterization Gate
 - Android 13–17 defines hook layout compatibility, not universal DEX bytecode version support.

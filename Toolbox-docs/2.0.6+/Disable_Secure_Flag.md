@@ -1,6 +1,6 @@
 # Kaorios Toolbox — Disable Secure Flag Guide
 
-[Tiếng Việt](Disable_Secure_Flag_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.1.md) | [Root README](../../README.md)
+[Tiếng Việt](Disable_Secure_Flag_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.2.md) | [Root README](../../README.md)
 
 This reference documents static smali modifications to system services (`services.jar`) to allow screenshot capture and screen recording in applications protected by `FLAG_SECURE` (`WindowManager.LayoutParams.FLAG_SECURE`).
 

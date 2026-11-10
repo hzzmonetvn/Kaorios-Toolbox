@@ -1,6 +1,6 @@
 # Kaorios Toolbox — Patcher Engine & Tooling Reference (`script/`)
 
-[Manual Patch Guide](../Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1.md) | [Automatic Patcher Guide](../Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1.md) | [Root README](../README.md)
+[Manual Patch Guide](../Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2.md) | [Automatic Patcher Guide](../Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.2.md) | [Root README](../README.md)
 
 This technical reference provides developer documentation for the Python and shell tooling located in `script/`. It explains the design principles, inter-script dependency graphs, bytecode mutation patterns, pipeline safety invariants, static verification passes, and the regression test suite.
 
@@ -32,7 +32,7 @@ The utilities in `script/` are partitioned into six distinct functional layers:
 | **Single-Class Smali Patchers** | `patch-activitythread-a17.py`, `patch-services-a17.py`, `patch-systemserver-a17.py`, `patch-installer-source.py` | Python 3.9+ |
 | **End-to-End JAR Pipelines** | `patch-framework-a17-artifact.sh`, `patch-services-a17-artifact.sh`, `patch-framework-a17-plan.py`, `patch-framework-a17-smali.py`, `patch-dex-artifact-plan.py` | `java`, baksmali, smali, `zip`, `unzip`, `realpath`, `mktemp` |
 | **Static Verifiers** | `verify-framework-a17-hooks.py`, `verify-services-a17-hooks.py`, `verify-systemserver-a17-hooks.py`, `verify-payload-abi.py` | Python 3.9+ |
-| **Packaging & Release Helpers** | `package_patcher_v2061.py`, `publish-verified-artifact.py` | Python 3.9+ |
+| **Packaging & Release Helpers** | `package_patcher_v2062.py`, `publish-verified-artifact.py` | Python 3.9+ |
 | **Standalone Diagnostic Utilities** | `validate_keybox.py`, `check-advanced-policy-sepolicy.py` (+ `.sh`), `bionic_fakelock_patcher.py` | `keystone-engine` (for `bionic_fakelock_patcher.py`) |
 
 **Python Version Floor:** Python 3.9 or newer. The syntax relies on built-in collection type hinting (`tuple[str, bool]`) and `str.removesuffix`. Invocation with `python3 -I` (isolated mode) is recommended across documentation and workflows to prevent ambient `sys.path` tampering.
@@ -164,7 +164,7 @@ python3 -I script/verify-payload-abi.py <smali-root> --payload-smali <payload-ro
 
 ## 7. Standalone Diagnostic Utilities
 
-- **`package_patcher_v2061.py`:** Generates reproducible release ZIP archives from the public repository tree. Normalizes timestamps to `1980-01-01`, sorts entries lexicographically, stores entries uncompressed, and rejects symlinks, path traversals, and duplicate members.
+- **`package_patcher_v2062.py`:** Generates reproducible release ZIP archives from the public repository tree. Normalizes timestamps to `1980-01-01`, sorts entries lexicographically, stores entries uncompressed, and rejects symlinks, path traversals, and duplicate members.
 - **`publish-verified-artifact.py`:** Atomic file replacement utility. Stages files locally within the destination directory, enforces `0644` permissions, calls `fsync`, and performs `os.replace`.
 - **`validate_keybox.py`:** Structural validator for `Keybox.xml` attestation files. Enforces 16 MiB size limits, validates XML well-formedness, rejects external entity injection (XXE), and verifies PEM block balance without loading cryptography engines or logging key material.
 - **`check-advanced-policy-sepolicy.py`:** Read-only SELinux policy inspector. Analyzes `.te` and `.cil` policy statements for service context mappings and domain permissions.
@@ -191,7 +191,7 @@ KAORIOS_SMALI_CLASSPATH="/path/to/smali.jar:/path/to/baksmali.jar" python3 -m un
 | `test_framework_artifact_plan.py` | 20 | Path aliasing protection (symlinks, hard links, `..`), safe append vs. replace, OEM class preservation, duplicate class rejection, strict DEX parsing, untouched split hash verification. |
 | `test_patcher_register_encoding.py` | 33 | Register alias normalization, `.registers`/`.locals` math, wide/narrow operand handling, `/range` vs standard invoke selection, round-trip bytecode assembly (when smali classpath is provided). |
 | `test_name_value_cache_hooks.py` | 9 | Whole-tree patch idempotence, failure rollback preservation, duplicate caller rejection, unsupported layout detection. |
-| `test_package_patcher_v2061.py` | 5 | Deterministic archive byte-reproducibility, member sorting, traversal rejection, standalone patcher execution. |
+| `test_package_patcher_v2062.py` | 5 | Deterministic archive byte-reproducibility, member sorting, traversal rejection, standalone patcher execution. |
 | `test_patcher_instrumentation_hooks.py` | 4 | `--update` repair workflows, comment-only hook detection. |
 | `test_payload_abi.py` | 5 | Callee modifier verification (`public static`), comment/string exclusion, abstract/native method rejection. |
 | `test_build_toolbox_packaging.py` | 7 | GitHub Actions CI packaging workflows, relative checksum paths, clean distribution directories, unsigned APK rejection. |

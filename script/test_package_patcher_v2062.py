@@ -9,7 +9,7 @@ import tempfile
 import unittest
 import zipfile
 
-spec = importlib.util.spec_from_file_location('packager', Path(__file__).with_name('package_patcher_v2061.py'))
+spec = importlib.util.spec_from_file_location('packager', Path(__file__).with_name('package_patcher_v2062.py'))
 packager = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(packager)
 SOURCE_ROOT = Path(__file__).resolve().parent.parent

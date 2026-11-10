@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Build the 2.0.6.1 patcher ZIP from current public sources."""
+"""Build the 2.0.6.2 patcher ZIP from current public sources."""
 import argparse
 from pathlib import Path
 import stat
 import zipfile
 
-README_SOURCE = 'script/patcher_v2061_README.txt'
+README_SOURCE = 'script/patcher_v2062_README.txt'
 
 # Public patcher members and framework/register regression tests.
 MEMBERS = (

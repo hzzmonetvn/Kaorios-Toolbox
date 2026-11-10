@@ -1,6 +1,6 @@
 # CorePatch — Static Framework Smali Modification
 
-[Tiếng Việt](CorePatch_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.1.md) | [Root README](../../README.md)
+[Tiếng Việt](CorePatch_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.2.md) | [Root README](../../README.md)
 
 This reference documents **static framework smali patches** applied directly to Android system framework JARs (`framework.jar`, `services.jar`, and optional vendor libraries such as `miui-services.jar`).
 

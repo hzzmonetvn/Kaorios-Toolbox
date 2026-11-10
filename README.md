@@ -51,11 +51,11 @@ For **version 2.0.4.0 and below**, see the legacy repository:
 Surgical smali bytecode patching applied to copies of `framework.jar` and `services.jar`:
 
 - **Manual Patch Guide:** Complete step-by-step instructions for class location, register allocation, hook placement, and payload DEX importation:
-  - [English](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1.md)
-  - [Tiếng Việt](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.1_VI.md)
+  - [English](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2.md)
+  - [Tiếng Việt](Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2_VI.md)
 - **Automatic Patcher Guide:** Command-line usage for `kaorios_patcher.py`, modes 1–3, and toolchain constraints:
-  - [English](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1.md)
-  - [Tiếng Việt](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.1_VI.md)
+  - [English](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.2.md)
+  - [Tiếng Việt](Toolbox-docs/2.0.6+/Patcher_Guide_2.0.6.2_VI.md)
 - **Developer Tooling Reference:** Architecture, sibling dependency graph, CLI options, invariants, and test suite:
   - [`script/README.md`](script/README.md)
 

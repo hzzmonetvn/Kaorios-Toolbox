@@ -1,4 +1,4 @@
-Kaorios Toolbox patcher 2.0.6.1
+Kaorios Toolbox patcher 2.0.6.2
 
 From the extracted archive root or current public source checkout, run:
 python3 -I script/kaorios_patcher.py <decompiled-smali-tree> --android-version 17 --mode 1 --no-delay --payload-smali /path/to/disassembled-payload
@@ -7,7 +7,7 @@ Select Android 13, 14, 15, 16 or 17 to match the ROM. Mode 1 targets five suppor
 
 Use authorized copies of framework.jar and services.jar, keep originals/hashes and a recovery plan. Inventory all classes*.dex and discover each class owner; never assume classes6.dex is payload. Keep SettingsProvider.apk stock. If an older patch calls removed KaoriosHook settings methods, restore SettingsProvider.apk from the exact matching stock ROM first.
 
-PAYLOAD COMPATIBILITY: The patcher does not target AndroidKeyStoreKeyPairGeneratorSpi or AndroidKeyStoreSpi directly. Payload compatibility must be checked against the exact DEX you intend to import; this guide does not identify a current release payload. A previously recorded v2.0.6.1 snapshot was 171100 bytes with SHA-256 953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9. This is a historical identifier only, not a current-source or downloadable-artifact claim. Disassemble your exact payload and verify its hash and callee descriptors before use.
+PAYLOAD COMPATIBILITY: The patcher does not target AndroidKeyStoreKeyPairGeneratorSpi or AndroidKeyStoreSpi directly. Payload compatibility must be checked against the exact DEX you intend to import; this guide does not identify a current release payload. A previously recorded v2.0.6.1 snapshot was 171100 bytes with SHA-256 953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9. This is a historical identifier only, not a current-source or downloadable-artifact claim. The v2.0.6.2 release attaches a classes.dex payload and a SHA256SUMS manifest; hash the exact file you download against that manifest, then disassemble it and verify its callee descriptors before use.
 
 Disassemble the actual payload into a separate empty tree with a compatible toolchain. Add --payload-smali /path/to/payload-disassembled-root to each patcher invocation for exact facade ABI validation before writes. Without it, smali patching is caller-only. Also check the saved-output disassembled trees before accepting them:
 python3 -I script/verify-payload-abi.py <saved-output-smali-root> --payload-smali <payload-disassembled-root>
@@ -17,8 +17,8 @@ The smali patcher does not import payload. Import every payload class into frame
 
 Choose an API and DEX format actually supported by the installed smali toolchain. Android version alone does not determine DEX version. DEX 041/container needs explicit tool support; stop on unsupported input and never rewrite DEX magic/header bytes. This is not a universal DEX 041 bootloop claim.
 
-The v2.0.6.1 release currently has no attached assets, so this file is not currently downloadable from that release. To build a patcher archive from a reviewed public checkout:
-python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip
+The v2.0.6.2 release is produced by the public build-toolbox.yml workflow and attaches the signed APKs, classes.dex, native PIF libraries and SHA256SUMS. To build a patcher archive from a reviewed public checkout:
+python3 -I script/package_patcher_v2062.py /path/to/new-patcher.zip
 The output must not exist. Record the SHA-256 of the archive you actually use and of every script inside it; a checksum of another build does not describe yours.
 
 Manual and automatic guides are separate English/Vietnamese files under Toolbox-docs/2.0.6+ in the public repository. Artifact scripts have narrower coverage than the main smali patcher; see the automatic guide and each script's --help. Kaorios Helper is a separate Zygisk module: https://github.com/hzzmonetvn/KaoriosHelper

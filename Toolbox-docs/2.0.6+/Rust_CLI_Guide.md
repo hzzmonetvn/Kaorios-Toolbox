@@ -1,6 +1,6 @@
 # Kaorios Toolbox — Standalone Native Rust CLI & TUI Guide
 
-[Tiếng Việt](Rust_CLI_Guide_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.1.md) | [Root README](../../README.md)
+[Tiếng Việt](Rust_CLI_Guide_VI.md) | [Manual Patch Guide](Patch_Guide_2.0.6.2.md) | [Root README](../../README.md)
 
 `kaorios-toolbox` is a standalone, lightweight, native AArch64 executable written in pure Rust. It allows power users, ROM developers, and headless environments (`adb shell`, Termux, chroot, and early boot scripts) to inspect, configure, and operate Play Integrity spoofing, Keybox certificate management, and Kaorios framework features without opening the Android graphical interface.
 

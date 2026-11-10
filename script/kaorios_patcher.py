@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Kaorios Android 13-17 Auto-Patcher (v2.0.6.1, fail-closed).
+"""Kaorios Android 13-17 Auto-Patcher (v2.0.6.2, fail-closed).
 
 Canonical cross-version entry point for Android 13, 14, 15, 16 and 17 smali.
 Hook patching is selected by verified class/method layout rather than by blindly

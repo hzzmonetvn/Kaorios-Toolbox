@@ -1,6 +1,6 @@
-# Kaorios Toolbox 2.0.6.1 — Hướng dẫn Vá Thủ công Smali cho ROM (Android 13–17)
+# Kaorios Toolbox 2.0.6.2 — Hướng dẫn Vá Thủ công Smali cho ROM (Android 13–17)
 
-[English](Patch_Guide_2.0.6.1.md) | [Hướng dẫn Trình vá Tự động](Patcher_Guide_2.0.6.1_VI.md) | [Tắt Secure Flag](Disable_Secure_Flag_VI.md) | [CorePatch](CorePatch_VI.md) | [Hướng dẫn Rust CLI](Rust_CLI_Guide_VI.md) | [README Gốc](../../README.md)
+[English](Patch_Guide_2.0.6.2.md) | [Hướng dẫn Trình vá Tự động](Patcher_Guide_2.0.6.2_VI.md) | [Tắt Secure Flag](Disable_Secure_Flag_VI.md) | [CorePatch](CorePatch_VI.md) | [Hướng dẫn Rust CLI](Rust_CLI_Guide_VI.md) | [README Gốc](../../README.md)
 
 Tài liệu kỹ thuật này cung cấp quy trình vá bytecode smali thủ công chuẩn xác và đầy đủ nhất nhằm tích hợp Kaorios Toolbox vào các bản tùy biến ROM từ Android 13 đến Android 17. Tài liệu bao gồm các điểm chèn bytecode, quy tắc cấp phát thanh ghi, ánh xạ lớp multi-DEX, quy trình nạp payload DEX, và xác minh tái trích xuất sau khi đóng gói.
 
@@ -44,7 +44,7 @@ Trước khi chèn bất kỳ đoạn lệnh nào vào một phương thức m�
   - Một bản chụp lịch sử v2.0.6.1 ghi nhận kích thước 171.100 byte với mã băm SHA-256: `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`.
   - Một bản chụp lịch sử trước đó ghi nhận kích thước 858.636 byte với SHA-256 `94848e18…` (trích dẫn lịch sử rút gọn, không phải mã băm kiểm tra được hiện tại).
   - Các giá trị này đóng vai trò mốc đo lường bằng chứng lịch sử; chúng **không** phải là cam kết rằng các tệp nhị phân đó hiện đang được lưu trữ trên mục phát hành GitHub hay khớp với mã nguồn mới nhất.
-- Bản phát hành `v2.0.6.1` trên GitHub hiện tại không đính kèm tệp tài nguyên dựng sẵn. Để đóng gói gói cài đặt patcher từ mã nguồn công khai đã kiểm toán, hãy thực thi `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` từ thư mục gốc của kho lưu trữ công khai, sau đó tự tính toán mã băm SHA-256 cho tệp nén bạn vừa tạo.
+- Bản phát hành `v2.0.6.2` được tạo bởi workflow công khai `build-toolbox.yml` từ nhánh `Toolbox-Framework`, đính kèm `KaoriosToolbox-release.apk` đã ký, `KaoriosFramework-release.apk`, `classes.dex`, các thư viện native `libkaoripif` và tệp `SHA256SUMS`. Hãy kiểm tra tag, danh sách tệp và mã băm trên trang phát hành trước khi flash. Để đóng gói gói cài đặt patcher từ mã nguồn công khai đã kiểm toán, hãy thực thi `python3 -I script/package_patcher_v2062.py /path/to/new-patcher.zip` từ thư mục gốc của kho lưu trữ công khai, sau đó tự tính toán mã băm SHA-256 cho tệp nén bạn vừa tạo.
 
 ### 1.7 Cổng Tham Số Hóa Chuỗi Công Cụ (Toolchain Parameterization Gate)
 - Khả năng tương thích Android 13–17 đề cập đến cấu trúc điểm chèn (hook layout), không đồng nghĩa với việc hỗ trợ mọi phiên bản bytecode DEX.

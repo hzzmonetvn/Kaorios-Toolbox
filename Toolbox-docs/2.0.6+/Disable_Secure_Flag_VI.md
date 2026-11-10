@@ -1,6 +1,6 @@
 # Kaorios Toolbox — Hướng Dẫn Tắt Secure Flag
 
-[English](Disable_Secure_Flag.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.1_VI.md) | [Root README](../../README.md)
+[English](Disable_Secure_Flag.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.2_VI.md) | [Root README](../../README.md)
 
 Tài liệu này hướng dẫn chi tiết cách patch smali tĩnh vào `services.jar` để gỡ bỏ hạn chế chụp ảnh màn hình và quay video màn hình trong các ứng dụng có kích hoạt cờ bảo mật `FLAG_SECURE` (`WindowManager.LayoutParams.FLAG_SECURE`).
 

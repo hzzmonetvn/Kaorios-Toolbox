@@ -1,6 +1,6 @@
 # CorePatch — Hướng Dẫn Patch Smali Tĩnh Cho Framework
 
-[English](CorePatch.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.1_VI.md) | [Root README](../../README.md)
+[English](CorePatch.md) | [Hướng Dẫn Patch Bằng Tay](Patch_Guide_2.0.6.2_VI.md) | [Root README](../../README.md)
 
 Tài liệu này hướng dẫn chi tiết các bước **patch smali tĩnh** áp dụng trực tiếp cho các file JAR hệ thống của Android (`framework.jar`, `services.jar`, và các thư viện vendor tùy chọn như `miui-services.jar`).
 

@@ -4,6 +4,27 @@ This document records the architectural, design, and verification decisions gove
 
 ---
 
+## ADR-014: 2.0.6.2 Release Refresh — Version Surfaces, Guides, Patcher Archive and Default PIF Template
+
+- **Date:** 2026-11-10
+- **Status:** Implemented; CI verification pending the dispatched run
+- **Context:**
+  The native PIF installer, the R8 packaging gate and the signed-release workflow landed after the 2.0.6.1 tree was frozen, but every version surface still identified 2.0.6.1: both Gradle modules, `KaoriosFramework.FRAMEWORK_VERSION`, the Settings preview fixture, the four versioned guides, the patcher packaging names and the default PIF template. The guides also still told operators that the current release hosts no attached assets, and the default template carried the `cheetah` (Pixel 7 Pro) profile while the on-device Java field spoof observed on 2026-11-10 ran the catalogue's `panther` (Pixel 7) entry.
+- **Decision:**
+  1. **Version surfaces:** `versionCode 2062` / `versionName "2.0.6.2"` in `app` and `framework`, `FRAMEWORK_VERSION = "2.0.6.2"`, and the Settings preview fixture. The app compares the installed boot framework against its own version, so the two modules must move together.
+  2. **Guides:** renamed `Patch_Guide_2.0.6.2.md`, `Patch_Guide_2.0.6.2_VI.md`, `Patcher_Guide_2.0.6.2.md`, `Patcher_Guide_2.0.6.2_VI.md`; cross-links in `README.md`, `script/README.md` and the sibling guides updated. The release-availability paragraph in each manual guide and the patcher README now describes the workflow-produced signed release and the renamed packaging command instead of asserting that no assets exist.
+  3. **Patcher archive:** `package_patcher_v2061.py`, `patcher_v2061_README.txt` and `test_package_patcher_v2061.py` renamed to `*_v2062`; `check-tools.yml` builds `kaorios-patcher-2.0.6.2.zip`; the patcher docstring version follows. Archive members are unchanged.
+  4. **Default PIF template:** `Toolbox-data/Pif-props.json` now carries the catalogue's `panther` entry (`MANUFACTURER`, `BRAND`, `MODEL`, `FINGERPRINT`, `PRODUCT`, `DEVICE`, `SECURITY_PATCH`, `DEVICE_INITIAL_SDK_INT`), matching the profile whose Java `PIF/Java:DG` fields were observed on the test device. `BRAND` is added so the template is a schema-compatible subset of `pif-devices.json`.
+- **Alternatives Considered & Rejected:**
+  - *Keeping the 2.0.6.1 filenames while changing their content to 2.0.6.2:* Rejected; every link would name a version the document no longer describes.
+  - *Embedding a payload SHA-256 in the guides before the artifact exists:* Rejected; the digest is only known after the workflow produces `classes.dex`, and a pre-written value would be fabricated.
+  - *Bumping only the app module:* Rejected; the app and boot framework would disagree and the UI would report a mismatch.
+  - *Leaving the template on `cheetah`:* Rejected; the release evidence was gathered with the `panther` entry, so the shipped default now matches the tested profile.
+- **Evidence Boundary:**
+  Host-side only at this point: public Python suite `88 tests, 2 skipped` (OK), `test_package_patcher_v2062.py` 5 tests OK, `test_update_pif.py` 21 tests OK, `git diff --check` clean. The signed APK, framework DEX, native libraries and the release itself are produced by the dispatched `build-toolbox.yml` run; the run ID, asset list and per-asset digests are recorded on the release page, and this ADR is updated with them once the run completes. No device execution is claimed for the 2.0.6.2 artifacts themselves.
+
+---
+
 ## ADR-013: Complete Native Release Bundle and Shrinker Evidence
 
 - **Date:** 2026-11-09

@@ -1,6 +1,6 @@
-# Kaorios Toolbox 2.0.6.1 — Hướng dẫn Trình vá ROM Tự động (Android 13–17)
+# Kaorios Toolbox 2.0.6.2 — Hướng dẫn Trình vá ROM Tự động (Android 13–17)
 
-[English](Patcher_Guide_2.0.6.1.md) | [Hướng dẫn Vá Thủ công](Patch_Guide_2.0.6.1_VI.md) | [Tắt Secure Flag](Disable_Secure_Flag_VI.md) | [CorePatch](CorePatch_VI.md) | [Hướng dẫn Rust CLI](Rust_CLI_Guide_VI.md) | [README Gốc](../../README.md)
+[English](Patcher_Guide_2.0.6.2.md) | [Hướng dẫn Vá Thủ công](Patch_Guide_2.0.6.2_VI.md) | [Tắt Secure Flag](Disable_Secure_Flag_VI.md) | [CorePatch](CorePatch_VI.md) | [Hướng dẫn Rust CLI](Rust_CLI_Guide_VI.md) | [README Gốc](../../README.md)
 
 Tài liệu kỹ thuật này hướng dẫn quy trình tự động hóa vá bytecode smali do Kaorios Toolbox cung cấp cho các bản tùy biến ROM từ Android 13 đến Android 17. Nội dung bao gồm công cụ vá viết bằng Python (`script/kaorios_patcher_a17.py`), cơ chế tự động khám phá phân đoạn sở hữu multi-DEX, các chế độ vận hành, cú pháp lệnh CLI, bảng mã chẩn đoán trạng thái, quy trình đóng gói JAR tự động, và bộ công cụ xác minh tái trích xuất sau khi biên dịch.
 
@@ -28,7 +28,7 @@ Tài liệu kỹ thuật này hướng dẫn quy trình tự động hóa vá by
   - Một bản chụp lịch sử v2.0.6.1 ghi nhận kích thước 171.100 byte với mã băm SHA-256: `953a25a2f7569eb11b107bda591bcbd0ad0d30e0c6d33def51799478ea1e93a9`.
   - Một bản chụp lịch sử trước đó ghi nhận kích thước 858.636 byte với SHA-256 `94848e18…` (trích dẫn lịch sử rút gọn, không phải mã băm kiểm tra được hiện tại).
   - Các giá trị này đại diện cho mốc đo lường bằng chứng lịch sử; chúng **không** phải là cam kết rằng các tệp nhị phân đó hiện đang có sẵn trên mục phát hành GitHub hay khớp với mã nguồn hiện tại.
-- Bản phát hành `v2.0.6.1` trên GitHub hiện tại không có tệp tài nguyên đính kèm. Để đóng gói kho lưu trữ patcher từ mã nguồn công khai đã kiểm toán, hãy chạy `python3 -I script/package_patcher_v2061.py /path/to/new-patcher.zip` từ thư mục gốc của kho lưu trữ công khai, sau đó tự tính toán mã băm SHA-256 cho tệp nén mà bạn tạo ra.
+- Bản phát hành `v2.0.6.2` được tạo bởi workflow công khai `build-toolbox.yml` từ nhánh `Toolbox-Framework`, đính kèm `KaoriosToolbox-release.apk` đã ký, `KaoriosFramework-release.apk`, `classes.dex`, các thư viện native `libkaoripif` và tệp `SHA256SUMS`. Hãy kiểm tra tag, danh sách tệp và mã băm trên trang phát hành trước khi flash. Để đóng gói kho lưu trữ patcher từ mã nguồn công khai đã kiểm toán, hãy chạy `python3 -I script/package_patcher_v2062.py /path/to/new-patcher.zip` từ thư mục gốc của kho lưu trữ công khai, sau đó tự tính toán mã băm SHA-256 cho tệp nén mà bạn tạo ra.
 
 ### 1.5 Cổng Tham Số Hóa Chuỗi Công Cụ (Toolchain Parameterization Gate)
 - Tính tương thích với Android 13–17 đề cập đến cấu trúc điểm chèn (hook layout), không đồng nghĩa với việc hỗ trợ mọi phiên bản bytecode DEX.
@@ -126,7 +126,7 @@ Trong quá trình thực thi, trình vá xuất ra các chỉ báo trạng thái
 
 ### Các Tình Huống Chẩn Đoán Phổ Biến
 - **Tràn Thanh Ghi (Register Exhaustion):** Nếu phương thức mục tiêu sử dụng hết toàn bộ 16 thanh ghi (`v0`–`v15`) mà không còn khoảng trống, trình vá sẽ tự động chuyển sang cấp phát dải mở rộng (`invoke-static/range`) hoặc cấp phát thêm thanh ghi cục bộ và tính toán lại độ lệch tham số.
-- **Không Tương Thích với Mã OEM:** Trên các bản tùy biến sâu của nhà sản xuất (MIUI/HyperOS, ColorOS, OneUI), chữ ký phương thức trong `ComputerEngine` hoặc `ActivityThread` có thể chứa thêm tham số hoặc lớp bao bọc riêng. Nếu trạng thái báo `UNSUPPORTED`, hãy tham khảo [Hướng dẫn Vá Thủ công](Patch_Guide_2.0.6.1_VI.md) để điều chỉnh phù hợp.
+- **Không Tương Thích với Mã OEM:** Trên các bản tùy biến sâu của nhà sản xuất (MIUI/HyperOS, ColorOS, OneUI), chữ ký phương thức trong `ComputerEngine` hoặc `ActivityThread` có thể chứa thêm tham số hoặc lớp bao bọc riêng. Nếu trạng thái báo `UNSUPPORTED`, hãy tham khảo [Hướng dẫn Vá Thủ công](Patch_Guide_2.0.6.2_VI.md) để điều chỉnh phù hợp.
 
 ---
 
