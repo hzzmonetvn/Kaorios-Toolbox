@@ -639,6 +639,15 @@
       "DEVICE": "NX769J",
       "PRODUCT": "NX769J",
       "FINGERPRINT": "nubia/NX769J/NX769J:14/UKQ1.230917.001/20240813.173312:user/release-keys"
+    },
+    {
+      "name": "Google Pixel XL",
+      "BRAND": "google",
+      "DEVICE": "marlin",
+      "MANUFACTURER": "Google",
+      "MODEL": "Pixel XL",
+      "FINGERPRINT": "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys",
+      "PRODUCT": "marlin"
     }
   ]
 }
