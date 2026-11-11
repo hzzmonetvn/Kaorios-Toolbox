@@ -614,5 +614,13 @@
     "MODEL": "NX789J",
     "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/RedMagicOS10.0.15_NX789J_GB:user/release-keys",
     "PRODUCT": "NX789J-UN"
+  },
+  "com.google.android.apps.photos": {
+    "BRAND": "google",
+    "DEVICE": "marlin",
+    "MANUFACTURER": "Google",
+    "MODEL": "Pixel XL",
+    "FINGERPRINT": "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys",
+    "PRODUCT": "marlin"
   }
 }
