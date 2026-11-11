@@ -37,10 +37,40 @@ def caller_tree(root):
             'Landroid/app/ActivityThread$AppBindData;\n    return-void\n.end method\n'),
         'android/app/Instrumentation.smali': load('test_patcher_instrumentation_hooks.py').instrumentation(),
         'android/provider/Settings$NameValueCache.smali': stock(),
+        'android/app/ApplicationPackageManager.smali': '''.method public hasSystemFeature(Ljava/lang/String;I)Z
+    .locals 1
+    const/4 v0, 0x0
+    return v0
+.end method
+''',
+        'android/security/keystore2/AndroidKeyStoreSpi.smali': '''.method public engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;
+    .locals 2
+    const/4 v0, 0x0
+    return-object v0
+.end method
+.method public engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    .locals 3
+    const/4 v0, 0x1
+    new-array v1, v0, [Ljava/security/cert/Certificate;
+    const/4 v0, 0x0
+    const/4 v2, 0x0
+    aput-object v2, v1, v0
+    return-object v1
+.end method
+''',
+        'android/security/keystore2/AndroidKeyStoreKeyPairGeneratorSpi.smali': '''.method public generateKeyPair()Ljava/security/KeyPair;
+    .registers 3
+    const/4 v0, 0x0
+    return-object v0
+.end method
+''',
     }
     for relative, text in fixtures.items():
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
+        if not text.startswith(".class"):
+            text = ".class public L" + relative[:-6] + ";\n.super Ljava/lang/Object;\n" + text
+            fixtures[relative] = text
         path.write_text(text)
     return {root / relative: text.encode() for relative, text in fixtures.items()}
 
@@ -149,8 +179,8 @@ class NameValueCacheTest(unittest.TestCase):
                 name = 'classes.dex' if index == 0 else f'classes{index + 1}.dex'
                 (root / name).write_bytes(dex([descriptor]))
             result = planner.plan_patch(root, require_all_callers=True)
-            self.assertEqual(3, len(result['caller_owners']))
-            self.assertEqual(4, len(result['modified_dexes']))
+            self.assertEqual(6, len(result['caller_owners']))
+            self.assertEqual(7, len(result['modified_dexes']))
             (root / 'classes3.dex').unlink()
             with self.assertRaisesRegex(ValueError, 'missing required framework caller'):
                 planner.plan_patch(root, require_all_callers=True)

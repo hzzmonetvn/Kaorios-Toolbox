@@ -8,7 +8,7 @@ Download the latest `classes.dex` from the release and import its classes into t
 
 ## 2. Hook Implementations in `framework.jar`
 
-The required framework caller manifest consists of exactly three classes: `ActivityThread`, `Instrumentation`, and `Settings$NameValueCache`.
+The required manifest covers six classes and eight methods: `ActivityThread`, `Instrumentation` (2), `ApplicationPackageManager`, `Settings$NameValueCache`, `AndroidKeyStoreSpi` (2), `AndroidKeyStoreKeyPairGeneratorSpi`.
 
 ### 2.1 Application Context Initialization — `Instrumentation`
 - **Class:** `Landroid/app/Instrumentation;`
@@ -64,18 +64,76 @@ The required framework caller manifest consists of exactly three classes: `Activ
 
 ```smali
     # Kaorios Developer / ADB Status Interception
-    if-eqz p2, :kaorios_dev_stock
-    invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
-    move-result v0
+    invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;
+    move-result-object v0
     if-eqz v0, :kaorios_dev_stock
-    const-string v0, "0"
     return-object v0
 
     :kaorios_dev_stock
     # Method execution continues to original stock instructions...
 ```
 
-*Notes:* If `p2` is null or `shouldHideDevStatusFromNameValueCache` returns `false`, execution branches to `:kaorios_dev_stock` and proceeds with standard system logic. The helper policy hides only `adb_enabled`, `adb_wifi_enabled`, and `development_settings_enabled`. This alters reported values only; it does **not** terminate active ADB daemon connections.
+`null` continues stock logic; a non-null String is returned unchanged. The payload handles null keys and policy checks; do not hardcode "0" in the caller.
+
+---
+
+### 2.4 Remaining required hooks
+
+#### `ApplicationPackageManager.hasSystemFeature(Ljava/lang/String;I)Z`
+
+At method entry (after register/parameter metadata), reserve a dedicated local `vN`:
+
+```smali
+    invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    move-result-object vN
+    if-eqz vN, :kaorios_feature_stock
+    invoke-virtual/range {vN .. vN}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result vN
+    return vN
+    :kaorios_feature_stock
+```
+
+#### `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair()Ljava/security/KeyPair;`
+
+At method entry, reserve a dedicated local `vN`; retain the complete stock fallback:
+
+```smali
+    invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    move-result-object vN
+    if-eqz vN, :kaorios_generate_stock
+    return-object vN
+    :kaorios_generate_stock
+```
+
+#### `AndroidKeyStoreSpi.engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;`
+
+Immediately before the populated certificate-array return, after the final leaf insertion, filter the actual array register (`v3` is only an example). Preserve stock null-return paths:
+
+```smali
+    invoke-static {p0, p1, v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+    move-result-object v3
+    return-object v3
+```
+
+Do not hook an earlier loop insertion or discard the returned array. All three physical arguments must fit v0–v15 for this non-range example; unsupported layouts must stop rather than emit invalid bytecode.
+
+#### `AndroidKeyStoreSpi.engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;`
+
+If stock does not already delegate to `engineGetCertificateChain`, insert this entry block with two existing locals, retaining stock instructions after the label:
+
+```smali
+    invoke-virtual/range {p0 .. p1}, Landroid/security/keystore2/AndroidKeyStoreSpi;->engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    move-result-object v0
+    if-eqz v0, :kaorios_certificate_stock
+    array-length v1, v0
+    if-eqz v1, :kaorios_certificate_stock
+    const/4 v1, 0x0
+    aget-object v0, v0, v1
+    return-object v0
+    :kaorios_certificate_stock
+```
+
+`vN` is a placeholder, not valid smali. Use a fresh local (index ≤255 for result/branch instructions), normalize physical parameter aliases before increasing register counts, and choose unique labels. Do not duplicate existing hooks. These methods have live implementations in the current payload, not unconditional stubs.
 
 ---
 
@@ -207,3 +265,7 @@ python3 -I script/verify-payload-abi.py recheck/smali_services --payload-smali /
 ```
 
 These verifiers cover Kaorios caller hooks and ABI, not optional CorePatch or secure-flag edits. Assembly and host checks do not establish device boot or runtime behavior; verify those separately on the target ROM.
+
+### Compatibility boundary
+
+Use caller hooks and payload from the same version. Legacy `KeyStore2` hooks `OnGetKeyEntry`, `Remove`, and `generateKey` are currently no-op/null facade entries, not additional required callers. Do not restore the retired SettingsProvider hook. Optional CorePatch and secure-flag recipes are separate from the required caller manifest.

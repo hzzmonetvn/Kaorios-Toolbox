@@ -8,7 +8,7 @@
 Tải classes.dex mới nhất ở release, import vào dex cuối cùng, có thể càn phân chia lại dex.
 ## 2. Triển Khai Hook trong `framework.jar`
 
-Danh mục framework caller bắt buộc bao gồm đúng ba lớp: `ActivityThread`, `Instrumentation`, và `Settings$NameValueCache`.
+Danh mục bắt buộc gồm sáu lớp, tám method: `ActivityThread`, `Instrumentation` (2), `ApplicationPackageManager`, `Settings$NameValueCache`, `AndroidKeyStoreSpi` (2), `AndroidKeyStoreKeyPairGeneratorSpi`.
 
 ### 2.1 Khởi Tạo Ngữ Cảnh Ứng Dụng — `Instrumentation`
 - **Lớp:** `Landroid/app/Instrumentation;`
@@ -64,18 +64,76 @@ Danh mục framework caller bắt buộc bao gồm đúng ba lớp: `ActivityThr
 
 ```smali
     # Cơ chế chặn trạng thái Developer / ADB của Kaorios
-    if-eqz p2, :kaorios_dev_stock
-    invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Z
-    move-result v0
+    invoke-static/range {p1 .. p3}, Landroid/security/kaorios/KaoriosHook;->shouldHideDevStatusFromNameValueCache(Landroid/content/ContentResolver;Ljava/lang/String;I)Ljava/lang/String;
+    move-result-object v0
     if-eqz v0, :kaorios_dev_stock
-    const-string v0, "0"
     return-object v0
 
     :kaorios_dev_stock
     # Tiếp tục thực thi các lệnh gốc của phương thức...
 ```
 
-*Lưu ý:* Nếu `p2` là null hoặc hàm `shouldHideDevStatusFromNameValueCache` trả về `false`, luồng thực thi sẽ nhảy tới `:kaorios_dev_stock` và xử lý theo logic hệ thống thông thường. Chính sách trợ giúp chỉ ẩn các khóa `adb_enabled`, `adb_wifi_enabled`, và `development_settings_enabled`. Điều này chỉ thay đổi giá trị báo cáo; nó **không** ngắt kết nối các tiến trình daemon ADB đang chạy.
+`null` tiếp tục logic gốc; chuỗi khác null được trả nguyên vẹn. Payload tự kiểm tra khóa null và chính sách; không hardcode "0" ở caller.
+
+---
+
+### 2.4 Các hook còn lại bắt buộc
+
+#### `ApplicationPackageManager.hasSystemFeature(Ljava/lang/String;I)Z`
+
+Ở đầu method, sau metadata register/parameter, dành local riêng `vN`:
+
+```smali
+    invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
+    move-result-object vN
+    if-eqz vN, :kaorios_feature_stock
+    invoke-virtual/range {vN .. vN}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result vN
+    return vN
+    :kaorios_feature_stock
+```
+
+#### `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair()Ljava/security/KeyPair;`
+
+Ở đầu method, dành local riêng `vN`; giữ nguyên nhánh xử lý gốc:
+
+```smali
+    invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
+    move-result-object vN
+    if-eqz vN, :kaorios_generate_stock
+    return-object vN
+    :kaorios_generate_stock
+```
+
+#### `AndroidKeyStoreSpi.engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;`
+
+Ngay trước lệnh trả mảng chứng chỉ đã điền, sau lần chèn leaf cuối, lọc đúng register mảng (`v3` chỉ là ví dụ). Giữ nguyên nhánh trả null:
+
+```smali
+    invoke-static {p0, p1, v3}, Landroid/security/kaorios/KaoriosHook;->CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;
+    move-result-object v3
+    return-object v3
+```
+
+Không chèn ở vòng lặp trước đó hoặc bỏ kết quả hook. Ba đối số vật lý phải nằm trong v0–v15 với ví dụ này; dừng khi layout không được hỗ trợ.
+
+#### `AndroidKeyStoreSpi.engineGetCertificate(Ljava/lang/String;)Ljava/security/cert/Certificate;`
+
+Nếu method gốc chưa gọi `engineGetCertificateChain`, chèn block đầu method với hai local có sẵn; giữ lệnh gốc sau label:
+
+```smali
+    invoke-virtual/range {p0 .. p1}, Landroid/security/keystore2/AndroidKeyStoreSpi;->engineGetCertificateChain(Ljava/lang/String;)[Ljava/security/cert/Certificate;
+    move-result-object v0
+    if-eqz v0, :kaorios_certificate_stock
+    array-length v1, v0
+    if-eqz v1, :kaorios_certificate_stock
+    const/4 v1, 0x0
+    aget-object v0, v0, v1
+    return-object v0
+    :kaorios_certificate_stock
+```
+
+`vN` là placeholder, phải thay bằng local thật (chỉ số ≤255 cho result/branch). Chuẩn hóa alias tham số trước khi tăng register và dùng label riêng. Không nhân đôi hook. Payload hiện tại có implementation thật, không phải stub trả cố định.
 
 ---
 
@@ -206,3 +264,7 @@ python3 -I script/verify-payload-abi.py recheck/smali_services --payload-smali /
 ```
 
 Các verifier kiểm tra caller hook Kaorios và ABI, không kiểm tra patch CorePatch hoặc secure flag tùy chọn. Assemble và kiểm tra host chưa xác nhận thiết bị khởi động hay hành vi runtime; kiểm tra riêng trên ROM mục tiêu.
+
+### Ranh giới tương thích
+
+Dùng caller và payload cùng phiên bản. Các entry facade cũ `OnGetKeyEntry`, `Remove`, `generateKey` của `KeyStore2` hiện trả null hoặc không làm gì, không phải caller bắt buộc bổ sung. Không khôi phục hook SettingsProvider đã bỏ. CorePatch và secure flag tùy chọn tách biệt với manifest caller bắt buộc.
