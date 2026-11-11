@@ -81,27 +81,27 @@ The required manifest covers six classes and eight methods: `ActivityThread`, `I
 
 #### `ApplicationPackageManager.hasSystemFeature(Ljava/lang/String;I)Z`
 
-At method entry (after register/parameter metadata), reserve a dedicated local `vN`:
+At method entry (after register/parameter metadata), reserve a dedicated local `v2`:
 
 ```smali
     invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-    move-result-object vN
-    if-eqz vN, :kaorios_feature_stock
-    invoke-virtual/range {vN .. vN}, Ljava/lang/Boolean;->booleanValue()Z
-    move-result vN
-    return vN
+    move-result-object v2
+    if-eqz v2, :kaorios_feature_stock
+    invoke-virtual/range {vN .. v2}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result v2
+    return v2
     :kaorios_feature_stock
 ```
 
 #### `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair()Ljava/security/KeyPair;`
 
-At method entry, reserve a dedicated local `vN`; retain the complete stock fallback:
+At method entry, reserve a dedicated local `v2`; retain the complete stock fallback:
 
 ```smali
     invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-    move-result-object vN
-    if-eqz vN, :kaorios_generate_stock
-    return-object vN
+    move-result-object v2
+    if-eqz v2, :kaorios_generate_stock
+    return-object v2
     :kaorios_generate_stock
 ```
 
@@ -133,7 +133,7 @@ If stock does not already delegate to `engineGetCertificateChain`, insert this e
     :kaorios_certificate_stock
 ```
 
-`vN` is a placeholder, not valid smali. Use a fresh local (index ≤255 for result/branch instructions), normalize physical parameter aliases before increasing register counts, and choose unique labels. Do not duplicate existing hooks. These methods have live implementations in the current payload, not unconditional stubs.
+The first two templates assume stock `.locals 2`: increase it to `.locals 3`, making `v2` the new local. For other allocations, substitute the actual fresh local (index ≤255 for result/branch instructions); never overwrite a stock local. With `.registers`, subtract parameter words to calculate the local count before allocation. Then normalize physical parameter aliases before increasing register counts, and choose unique labels. Do not duplicate existing hooks. These methods have live implementations in the current payload, not unconditional stubs.
 
 ---
 

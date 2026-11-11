@@ -81,27 +81,27 @@ Danh mục bắt buộc gồm sáu lớp, tám method: `ActivityThread`, `Instru
 
 #### `ApplicationPackageManager.hasSystemFeature(Ljava/lang/String;I)Z`
 
-Ở đầu method, sau metadata register/parameter, dành local riêng `vN`:
+Ở đầu method, sau metadata register/parameter, dành local riêng `v2`:
 
 ```smali
     invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
-    move-result-object vN
-    if-eqz vN, :kaorios_feature_stock
-    invoke-virtual/range {vN .. vN}, Ljava/lang/Boolean;->booleanValue()Z
-    move-result vN
-    return vN
+    move-result-object v2
+    if-eqz v2, :kaorios_feature_stock
+    invoke-virtual/range {vN .. v2}, Ljava/lang/Boolean;->booleanValue()Z
+    move-result v2
+    return v2
     :kaorios_feature_stock
 ```
 
 #### `AndroidKeyStoreKeyPairGeneratorSpi.generateKeyPair()Ljava/security/KeyPair;`
 
-Ở đầu method, dành local riêng `vN`; giữ nguyên nhánh xử lý gốc:
+Ở đầu method, dành local riêng `v2`; giữ nguyên nhánh xử lý gốc:
 
 ```smali
     invoke-static/range {p0 .. p0}, Landroid/security/kaorios/KaoriosHook;->initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;
-    move-result-object vN
-    if-eqz vN, :kaorios_generate_stock
-    return-object vN
+    move-result-object v2
+    if-eqz v2, :kaorios_generate_stock
+    return-object v2
     :kaorios_generate_stock
 ```
 
@@ -133,7 +133,7 @@ Nếu method gốc chưa gọi `engineGetCertificateChain`, chèn block đầu m
     :kaorios_certificate_stock
 ```
 
-`vN` là placeholder, phải thay bằng local thật (chỉ số ≤255 cho result/branch). Chuẩn hóa alias tham số trước khi tăng register và dùng label riêng. Không nhân đôi hook. Payload hiện tại có implementation thật, không phải stub trả cố định.
+Hai template đầu minh họa method gốc có `.locals 2`: tăng thành `.locals 3`, local mới là `v2`. Nếu method gốc có số local khác, dùng local mới tương ứng (chỉ số ≤255 cho result/branch), không ghi đè local gốc. Với `.registers`, trừ số word tham số để tính số local trước khi cấp phát. Chuẩn hóa alias tham số trước khi tăng register và dùng label riêng. Không nhân đôi hook. Payload hiện tại có implementation thật, không phải stub trả cố định.
 
 ---
 
