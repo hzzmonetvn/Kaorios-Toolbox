@@ -15,7 +15,13 @@ class GuideHookContractTest(unittest.TestCase):
         signatures = []
         for suffix in ('', '_VI'):
             text = (docs / f'Patch_Guide_2.0.6.2{suffix}.md').read_text()
+            self.assertNotIn('vN', text)
+            self.assertNotIn('recheck/smali_framework --caller-only', text)
+            self.assertIn('invoke-virtual/range {v2 .. v2}, Ljava/lang/Boolean;->booleanValue()Z', text)
             calls = set(re.findall(r'KaoriosHook;->([^\s]+)', text))
+            for name in ('initContext', 'initActivityThread', 'initSystemServer',
+                         'shouldHideAppListForCaller', 'filterInstallerPackageName'):
+                self.assertTrue(any(call.startswith(name + '(') for call in calls), name)
             self.assertIn('hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;', calls)
             self.assertIn('initGenerateSoftwareKeyPair(Ljava/lang/Object;)Ljava/security/KeyPair;', calls)
             self.assertIn('CertificateChainIfNeeded(Ljava/lang/Object;Ljava/lang/String;[Ljava/security/cert/Certificate;)[Ljava/security/cert/Certificate;', calls)

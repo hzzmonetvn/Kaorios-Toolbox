@@ -45,7 +45,7 @@ Ngay sau phép gán `mBoundApplication`; truyền đúng AppBindData (`v9` trong
     invoke-static/range {p1 .. p2}, Landroid/security/kaorios/KaoriosHook;->hasSystemFeature(Ljava/lang/String;I)Ljava/lang/Boolean;
     move-result-object v2
     if-eqz v2, :kaorios_feature_stock
-    invoke-virtual/range {vN .. v2}, Ljava/lang/Boolean;->booleanValue()Z
+    invoke-virtual/range {v2 .. v2}, Ljava/lang/Boolean;->booleanValue()Z
     move-result v2
     return v2
     :kaorios_feature_stock
@@ -154,7 +154,7 @@ Nếu register vượt 15, chuyển đối số sang local liên tiếp và dùn
 Giữ JAR gốc để rollback. Assemble DEX đã sửa, đóng gói JAR riêng, chạy `unzip -t`, rồi disassemble lại đầu ra vào `recheck`. Chạy từ repo:
 
 ```bash
-python3 -I script/verify-framework-a17-hooks.py recheck/smali_framework --caller-only
+python3 -I script/verify-framework-a17-hooks.py recheck/smali_framework
 python3 -I script/verify-services-a17-hooks.py recheck/smali_services
 python3 -I script/verify-systemserver-a17-hooks.py recheck/smali_services
 python3 -I script/verify-payload-abi.py recheck/smali_framework --payload-smali /path/to/payload-smali
