@@ -1,10 +1,10 @@
 {
   "MANUFACTURER": "Google",
   "BRAND": "google",
-  "MODEL": "Pixel 7",
-  "FINGERPRINT": "google/panther_beta/panther:CANARY/ZP11.260918.007/16484274:user/release-keys",
-  "PRODUCT": "panther_beta",
-  "DEVICE": "panther",
+  "MODEL": "Pixel 6a",
+  "FINGERPRINT": "google/bluejay_beta/bluejay:CANARY/ZP11.260918.007/16484274:user/release-keys",
+  "PRODUCT": "bluejay_beta",
+  "DEVICE": "bluejay",
   "SECURITY_PATCH": "2026-10-05",
-  "DEVICE_INITIAL_SDK_INT": "33"
+  "DEVICE_INITIAL_SDK_INT": "32"
 }
