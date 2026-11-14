@@ -6,11 +6,13 @@ on:
     branches: [main]
     paths:
       - 'script/**'
+      - 'Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2*.md'
       - '.github/workflows/check-tools.yml'
       - '.github/workflows/build-toolbox.yml'
   pull_request:
     paths:
       - 'script/**'
+      - 'Toolbox-docs/2.0.6+/Patch_Guide_2.0.6.2*.md'
       - '.github/workflows/check-tools.yml'
       - '.github/workflows/build-toolbox.yml'
 
@@ -34,9 +36,14 @@ jobs:
           for artifact in smali smali-baksmali smali-dexlib2 smali-util; do
             curl -fsSL --retry 3 "https://dl.google.com/dl/android/maven2/com/android/tools/smali/$artifact/3.0.8/$artifact-3.0.8.jar" -o "$RUNNER_TEMP/smali/$artifact.jar"
           done
-          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/org/antlr/antlr-runtime/3.5.2/antlr-runtime-3.5.2.jar -o "$RUNNER_TEMP/smali/antlr.jar"
-          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/com/beust/jcommander/1.82/jcommander-1.82.jar -o "$RUNNER_TEMP/smali/jcommander.jar"
+          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/org/antlr/antlr-runtime/3.5.2/antlr-runtime-3.5.2.jar -o "$RUNNER_TEMP/smali/antlr-runtime.jar"
+          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/com/beust/jcommander/1.64/jcommander-1.64.jar -o "$RUNNER_TEMP/smali/jcommander.jar"
           curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/com/google/guava/guava/31.1-android/guava-31.1-android.jar -o "$RUNNER_TEMP/smali/guava.jar"
+      - name: Verify smali dependency compatibility
+        shell: bash
+        run: |
+          java -cp "$RUNNER_TEMP/smali/*" com.android.tools.smali.smali.Main help assemble
+          java -cp "$RUNNER_TEMP/smali/*" com.android.tools.smali.baksmali.Main help disassemble
       - name: Verify patcher planning and assemble register boundaries
         shell: bash
         run: KAORIOS_SMALI_CLASSPATH="$RUNNER_TEMP/smali/*" python3 -m unittest discover -s script -v

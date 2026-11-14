@@ -111,7 +111,7 @@ Performs abstract register provenance tracing over the bytecode of `getInstaller
 - Models register states using a formal lattice: `receiver`, `target`, `uid`, `user`, `source`, `installer`, `info`, `null`, `unknown`.
 - Uses a worklist iteration algorithm with fixed-point union merging at join points.
 - Enforces strict safety gates: immediately aborts on `.catch` exception blocks, `packed-switch`/`sparse-switch`, `fill-array-data`, non-unique return sites, mixed `v`/`p` register naming within a range, or calls to `Binder.clearCallingIdentity()` prior to UID capture.
-- If installer methods are absent, the patcher gracefully skips this component without error.
+- If both installer APIs are absent, the component is skipped. Otherwise the current contract requires exactly one `getInstallerPackageName` and one `getInstallSourceInfo` method, each with a supported String-only or String/user signature. A partial API pair or additional overloads is an unsupported layout, not a complete verified patch.
 
 ---
 
@@ -126,14 +126,15 @@ The shell pipelines `patch-framework-a17-artifact.sh` and `patch-services-a17-ar
 4. **Selective Ingestion & Caller Patching:**
    - For `framework.jar`: imports payload classes using exact descriptor mapping into an available split, then invokes `patch-framework-a17-smali.py` to patch callers.
    - For `services.jar`: invokes `patch-services-a17.py` and `patch-systemserver-a17.py` on the resolved owner splits.
-5. **Reassembly & Plan Verification:** Reassembles modified splits with smali using `--smali-api 34`. Executes `verify-plan` to confirm that class inventories match expectations and untouched DEX splits remain byte-identical.
+5. **Reassembly & Plan Verification:** Reassembles modified splits using the selected smali opcode API. Executes `verify-plan` to confirm that class inventories match expectations and untouched DEX splits remain byte-identical.
 6. **Candidate Repackaging & Re-Extraction Verification:** Builds a candidate output JAR, re-extracts all DEX splits to an independent directory, re-disassembles them, and runs the complete verifier suite against the re-extracted candidate.
 7. **Atomic Publication:** Invokes `publish-verified-artifact.py` to move the verified candidate to the final output destination using an atomic rename.
 
 ### Toolchain Parameterization: `--api` vs. `--smali-api`
-- Smali 3.0.8 does not recognize API 37 in its opcode table (`dexVersion must be within [0, 999]`).
-- The pipeline decouples `--api` (target ROM metadata label, defaults to 37) from `--smali-api` (assembler opcode compatibility version, set to 34 for DEX 040 cases).
-- Only `--smali-api` is passed to the underlying baksmali/smali binaries.
+- The pipeline decouples `--api` (target ROM metadata label, defaults to 37) from `--smali-api` (the opcode API passed to baksmali/smali). When omitted, `--smali-api` defaults to `--api`; there is no implicit downgrade.
+- The guide explicitly selects `--smali-api 34` for its DEX 040-compatible example. This is not a general conversion recipe for newer DEX formats/opcodes; use a toolchain that actually supports the input.
+- Assembly regressions use smali/baksmali 3.0.8 with their runtime dependencies, including the POM-pinned jcommander 1.64. Loading 1.82 can pass assembly but break `help assemble` / `help disassemble` with `NoSuchMethodError: ...getMainParameter()`.
+- The artifact scripts' thin-JAR fallback requires sibling files named `smali-dexlib2.jar`, `smali-util.jar`, `antlr-runtime.jar`, `jcommander.jar` and `guava.jar`. A wildcard classpath used by tests also needs the complete dependencies, not just two tool JARs.
 
 ---
 
@@ -177,24 +178,27 @@ python3 -I script/verify-payload-abi.py <smali-root> --payload-smali <payload-ro
 The test suite is executed using Python's standard `unittest` framework:
 
 ```bash
-# Standard host-only run (83 tests: 81 passing, 2 skips)
-python3 -m unittest discover -s script
+# Host run; assembly tests skip when no real smali classpath is supplied
+python3 -m unittest discover -s script -v
 
-# Full run with smali assembly round-trip enabled
-KAORIOS_SMALI_CLASSPATH="/path/to/smali.jar:/path/to/baksmali.jar" python3 -m unittest discover -s script -v
+# Full run: directory contains matching tools AND their runtime dependencies
+KAORIOS_SMALI_CLASSPATH='/path/to/smali-3.0.8/*' python3 -m unittest discover -s script -v
 ```
 
-### Test Coverage Matrix (83 tests under `script/`)
+The 2026-11-14 checkpoint ran **95 tests, all passing without skips**, with smali 3.0.8 and jcommander 1.64. Counts describe that run, not a coverage percentage or a permanent suite size.
 
-| Test Suite | Test Count | Key Invariants Asserted |
-|---|---|---|
-| `test_framework_artifact_plan.py` | 20 | Path aliasing protection (symlinks, hard links, `..`), safe append vs. replace, OEM class preservation, duplicate class rejection, strict DEX parsing, untouched split hash verification. |
-| `test_patcher_register_encoding.py` | 33 | Register alias normalization, `.registers`/`.locals` math, wide/narrow operand handling, `/range` vs standard invoke selection, round-trip bytecode assembly (when smali classpath is provided). |
-| `test_name_value_cache_hooks.py` | 9 | Whole-tree patch idempotence, failure rollback preservation, duplicate caller rejection, unsupported layout detection. |
-| `test_package_patcher_v2062.py` | 5 | Deterministic archive byte-reproducibility, member sorting, traversal rejection, standalone patcher execution. |
-| `test_patcher_instrumentation_hooks.py` | 4 | `--update` repair workflows, comment-only hook detection. |
-| `test_payload_abi.py` | 5 | Callee modifier verification (`public static`), comment/string exclusion, abstract/native method rejection. |
-| `test_build_toolbox_packaging.py` | 7 | GitHub Actions CI packaging workflows, relative checksum paths, clean distribution directories, unsigned APK rejection. |
+### Regression coverage
+
+| Test Suite | Key Invariants Asserted |
+|---|---|
+| `test_framework_artifact_plan.py` | Path aliasing protection, safe append vs. replace, exact-descriptor/OEM retention, duplicate class rejection, strict DEX parsing, untouched split hashes. |
+| `test_patcher_register_encoding.py` | Numeric parameter aliases, `.registers`/`.locals`, wide/narrow operands, `/range`, real assembly boundaries when tools are supplied. |
+| `test_name_value_cache_hooks.py` | All six required caller owners, whole-tree preflight/idempotence, input preservation on unsupported layouts, unique descriptors. |
+| `test_guide_hook_contract.py` | Eighteen literal EN/VI snippet pairs, static/instance Context mapping, visibility overloads/high frame, both installer shapes, structural checks before/after real assembly, shell syntax and output-verification anchor. Executes the guide's rebuild/re-extract/verification commands on fixture JARs, including packaged-facade ABI, multi-DEX output and unrelated ZIP-entry retention. Fixtures are not an Android runtime or a real-ROM import test. |
+| `test_package_patcher_v2062.py` | Deterministic source-built archive, sorted members, path rejection and extracted standalone regressions. |
+| `test_patcher_instrumentation_hooks.py` | Both overloads, return coverage, update repair and comment-only hook rejection. |
+| `test_payload_abi.py` | Exact public/static implemented callees, overload/modifier failures, comments/strings and duplicate methods. |
+| `test_build_toolbox_packaging.py` | CI packaging workflows, relative checksums, clean distributions, artifact completeness and unsigned APK rejection. |
 
 *Note on external test suites:* An additional 21 unit tests for the PIF updater live outside `script/` in `Toolbox-Update/scripts/test_update_pif.py` and are executed separately by `.github/workflows/update_pif.yaml`.
 
@@ -203,5 +207,4 @@ KAORIOS_SMALI_CLASSPATH="/path/to/smali.jar:/path/to/baksmali.jar" python3 -m un
 ## 9. Evidence Boundary
 
 - **Host Static Validation:** A passing run across the test suite and verifiers shows that bytecode patterns conform to documented templates, tested register encodings follow tested rules, DEX class boundaries are respected, and facade ABI signatures match.
-- **Device & Attestation Boundary:** Host test passes do **not** prove that an operating system will boot, that the Linux kernel will accept injected properties, that runtime classloaders will resolve dependencies, or that Google Play Integrity verdicts (`MEETS_DEVICE_INTEGRITY`) will be granted on physical hardware. Physical device testing with logcat logging remains required.
-- **Device & Attestation Boundary:** Host test passes do **not** prove that an operating system will boot, that the Linux kernel will accept injected properties, that runtime classloaders will resolve dependencies, or that Google Play Integrity verdicts (`MEETS_DEVICE_INTEGRITY`) will be granted on physical hardware. Physical device testing with logcat logging remains required.
+- **Device & Attestation Boundary:** Host test passes do **not** prove that an operating system will boot, that runtime classloaders will resolve dependencies, that ART accepts a particular ROM's types/control flow, or that external integrity verdicts will be granted. Physical-device testing with redacted logs remains required.
