@@ -16,6 +16,8 @@ LOADER_METHOD = 'newApplication(Ljava/lang/ClassLoader;Ljava/lang/String;Landroi
 VISIBILITY = 'shouldFilterApplication(Lcom/android/server/pm/pkg/PackageStateInternal;'
 SEVEN = VISIBILITY + 'ILandroid/content/ComponentName;IIZZ)Z'
 THREE = VISIBILITY + 'II)Z'
+FILTER_APP_ACCESS = ('filterAppAccess(Ljava/lang/String;II)Z',
+                     'filterAppAccess(Ljava/lang/String;IIZ)Z')
 SNIPPETS = {
     'instrumentation-class-static', 'instrumentation-class-instance', 'instrumentation-loader',
     'activity-thread', 'name-value-cache', 'system-feature', 'key-pair',
@@ -120,8 +122,10 @@ def manual_services(root, snippets, visibility='seven', installer_width=3):
     stock = ('    move/16 v0, v11\n' if high else '    move v0, p2\n') + '    return v0\n'
     write_class(root, 'com/android/server/pm/ComputerEngine.smali',
                 method(signature, 20 if high else 1, snippets['visibility-' + visibility] + stock) +
-                method('filterAppAccess(Ljava/lang/String;II)Z', 1, snippets['filter-app-access'] +
-                       '    const/4 v0, 0x0\n    return v0\n') + installer_methods(snippets, installer_width))
+                ''.join(method(signature, 1, snippets['filter-app-access'] +
+                               ('    move v0, p4\n' if signature.endswith('IIZ)Z') else
+                                '    const/4 v0, 0x0\n') + '    return v0\n')
+                        for signature in FILTER_APP_ACCESS) + installer_methods(snippets, installer_width))
     write_class(root, 'com/android/server/SystemServer.smali',
                 method('run()V', 0, snippets['system-server'] + '    return-void\n'))
 
@@ -147,6 +151,24 @@ class GuideHookContractTest(unittest.TestCase):
             snippets.append(fragments(text))
             self.assertEqual(SNIPPETS, set(snippets[-1]))
         self.assertEqual(*snippets)
+
+    def test_filter_app_access_shapes_preserve_stock_boolean(self):
+        for guide in GUIDES:
+            text = guide.read_text()
+            snippet = fragments(text)['filter-app-access']
+            for signature in FILTER_APP_ACCESS:
+                self.assertIn(signature, text)
+            self.assertNotRegex(snippet, r'\bp4\b')
+            with self.subTest(guide=guide.name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                manual_services(root, fragments(text))
+                content = (root / 'com/android/server/pm/ComputerEngine.smali').read_text()
+                for signature in FILTER_APP_ACCESS:
+                    body = re.search(r'\.method public ' + re.escape(signature) +
+                                     r'\n(.*?)\.end method', content, re.S).group(1)
+                    fallback = ('    move v0, p4\n' if signature.endswith('IIZ)Z') else
+                                '    const/4 v0, 0x0\n') + '    return v0\n'
+                    self.assertEqual('    .locals 1\n' + snippet + fallback, body)
 
     def test_documented_fragments_pass_existing_structural_verifiers(self):
         framework = load('verify-framework-a17-hooks.py')

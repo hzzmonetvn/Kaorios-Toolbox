@@ -167,6 +167,8 @@ Owner: `Landroid/provider/Settings$NameValueCache;`, method không static `getSt
 
 **Kiểm tra:** callee trả `String`, không phải boolean `Z`. Không thêm `const-string "0"` vô điều kiện. Sau fallback, stock phải khởi tạo lại mọi local cần dùng.
 
+Nếu bản patch cũ gọi hook này với kiểu trả boolean `Z`, patcher/verifier báo `NameValueCache: legacy boolean hook ABI`. Ngay cả `--update` cũng giữ nguyên đầu vào, không đoán cách gỡ nhánh cũ. Tạo work tree mới từ `framework.jar` stock đúng ROM, import payload framework hiện tại và patch lại mọi caller bắt buộc trước mục 6. Không chỉ đổi descriptor trả về hoặc lệnh `move-result` trong block legacy.
+
 ### 4.4 ApplicationPackageManager.hasSystemFeature
 
 Owner: `Landroid/app/ApplicationPackageManager;`, method không static `hasSystemFeature(Ljava/lang/String;I)Z`. Ví dụ `.locals 2` cũ → `.locals 3`, scratch mới `v2`. Trước khi tăng, đổi alias tham số số cũ `v2/v3/v4` thành `p0/p1/p2`, rồi kiểm tra độ rộng lệnh. Chèn đầu method:
@@ -327,7 +329,14 @@ Chỉ với method bảy tham số có **`.locals 9` cũ**: đổi thành `.loca
 
 ### 5.3 filterAppAccess có sẵn — tùy chọn
 
-Chỉ áp dụng cho method không static có sẵn `filterAppAccess(Ljava/lang/String;II)Z`, không thay mục 5.2. Ví dụ entry register thấp cần local có sẵn `v0`, register vật lý `p1/p2/p3 <= 15`:
+Chỉ áp dụng cho overload String không static có sẵn, không thay mục 5.2. Đọc đúng header trước:
+
+| Chữ ký có sẵn | Tham số |
+|---|---|
+| `filterAppAccess(Ljava/lang/String;II)Z` | `p1` tên package, `p2` UID caller, `p3` user ID |
+| `filterAppAccess(Ljava/lang/String;IIZ)Z` | Ba tham số đầu như trên; `p4` là boolean stock `filterUninstalled` |
+
+Cùng đoạn entry dưới dùng được cho hai dạng đã liệt kê khi ý nghĩa tham số khớp. Không thêm/đổi descriptor method. Giữ nguyên `p4` và toàn bộ fallback stock, kể cả chỗ truyền tiếp boolean. Không dán đoạn nhận String này vào overload `(II)Z` hoặc `AndroidPackage`. Ví dụ register thấp cần local có sẵn `v0`, register vật lý `p1/p2/p3 <= 15`; giữ nguyên allocation:
 
 <!-- snippet: filter-app-access -->
 ```smali
@@ -448,6 +457,7 @@ Dùng cùng smali API hỗ trợ đã chọn ở bước chuẩn bị; thay đ�
 | `Invalid register` / register must be between 0 and 15 | Tính `pN` vật lý sau allocation; dùng layout range/copy được hỗ trợ, giữ alias stock. Không chỉ tăng local liên tục. |
 | Assemble được nhưng verifier báo sai Context | Đọc header `static` thật của Instrumentation: overload Class static dùng `p1`, instance dùng `p2`; ClassLoader instance dùng `p3`. |
 | Thiếu overload `CertificateChainIfNeeded` | Lệch ABI payload/caller. Giữ contract ba tham số bắt buộc; dùng payload framework khớp. |
+| `NameValueCache: legacy boolean hook ABI` | `--update` giữ nguyên đầu vào. Tạo work tree mới từ `framework.jar` stock đúng ROM, import payload hiện tại rồi patch lại mọi caller bắt buộc; xem mục 4.3. |
 | Trùng target / descriptor class | Kiểm tra mọi owner DEX và basename không liên quan. Không xóa file ngẫu nhiên chỉ để discovery tìm thấy một file. |
 | Installer `UNSUPPORTED_LAYOUT` | Kiểm tra đúng cặp API, caller UID gốc, nguồn installer stock và chữ ký constructor. Không có một block một-register áp dụng cho mọi ROM. |
 | Help lỗi `NoSuchMethodError: ...getMainParameter()` | smali 3.0.8 đang nạp jcommander lệch phiên bản; dùng dependency 1.64 đã pin rồi chạy lại hai lệnh help. |
@@ -455,6 +465,6 @@ Dùng cùng smali API hỗ trợ đã chọn ở bước chuẩn bị; thay đ�
 | Hết bộ nhớ | Đặt Java heap chủ động như `java -Xmx8g -cp ...` theo RAM host, hoặc xử lý từng split. Việc này không sửa bytecode sai. |
 | Lỗi boot/runtime dù host PASS | Khôi phục JAR stock khớp ROM, lấy lỗi verifier/class-resolution đã che dữ liệu riêng, đối chiếu phiên bản ROM/payload/tool. Không đưa key/config riêng hoặc attestation thô vào báo cáo. |
 
-Regression tài liệu trích trực tiếp các đoạn smali được đánh dấu từ **cả hai** guide, tạo fixture caller đại diện, assemble/disassemble bằng smali thật và chạy verifier cấu trúc hiện có. Test kiểm tra tham số static/instance, hai overload visibility, một frame register cao và hai dạng API installer. Test còn chạy nguyên lệnh rebuild/trích xuất lại/verification trên JAR fixture, kiểm tra ABI facade đã đóng gói, đầu ra multi-DEX và entry ZIP không liên quan. Fixture chưa thử import ROM thật hoặc chạy framework Android.
+Regression tài liệu trích trực tiếp các đoạn smali được đánh dấu từ **cả hai** guide, tạo fixture caller đại diện, assemble/disassemble bằng smali thật và chạy verifier cấu trúc hiện có. Test kiểm tra tham số static/instance, hai overload visibility, hai chữ ký String của `filterAppAccess` tùy chọn với boolean stock được giữ nguyên, một frame register cao và hai dạng API installer. Test còn chạy nguyên lệnh rebuild/trích xuất lại/verification trên JAR fixture, kiểm tra ABI facade đã đóng gói, đầu ra multi-DEX và entry ZIP không liên quan. Fixture chưa thử import ROM thật hoặc chạy framework Android.
 
 Cú pháp host, cấu trúc hook và ABI facade là các mức bằng chứng riêng. Chúng không chứng minh ART type verification trên ROM cụ thể, boot thành công, hiệu ứng phần cứng hoặc verdict integrity bên ngoài. Kết quả thiết bị vẫn chưa kiểm chứng cho tới khi thực sự ghi nhận. CorePatch và Secure Flag giữ guide riêng; thay đổi này không thêm backend runtime mới.

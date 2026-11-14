@@ -167,6 +167,8 @@ Owner: `Landroid/provider/Settings$NameValueCache;`, non-static method `getStrin
 
 **Check:** the callee returns `String`, not boolean `Z`. Do not append an unconditional `const-string "0"`. Stock must initialize any local it needs after the fallback.
 
+If an earlier patch calls this hook with boolean return `Z`, the patcher/verifier reports `NameValueCache: legacy boolean hook ABI`. Even `--update` preserves that input; it does not guess how to remove the old branch. Start a fresh work tree from `framework.jar` in the matching stock ROM, import the current framework payload, and reapply all required callers before section 6. Do not change only the return descriptor or `move-result` instruction in a legacy block.
+
 ### 4.4 ApplicationPackageManager.hasSystemFeature
 
 Owner: `Landroid/app/ApplicationPackageManager;`, non-static method `hasSystemFeature(Ljava/lang/String;I)Z`. Example: old `.locals 2` → `.locals 3`, new scratch `v2`. Before increasing, convert old numeric parameter aliases `v2/v3/v4` to `p0/p1/p2`; then audit instruction widths. At entry:
@@ -327,7 +329,14 @@ For the seven-argument method with **old `.locals 9` only**: change to `.locals 
 
 ### 5.3 Optional existing filterAppAccess
 
-Only for an existing non-static `filterAppAccess(Ljava/lang/String;II)Z`, not a replacement for section 5.2. This low-register entry example needs existing local `v0` and physical `p1/p2/p3 <= 15`:
+Apply only to an existing non-static String overload, not as a replacement for section 5.2. Read the exact header first:
+
+| Existing signature | Parameters |
+|---|---|
+| `filterAppAccess(Ljava/lang/String;II)Z` | `p1` package name, `p2` calling UID, `p3` user ID |
+| `filterAppAccess(Ljava/lang/String;IIZ)Z` | Same first three parameters; `p4` is the stock `filterUninstalled` boolean |
+
+The same entry fragment below applies to either listed shape when those parameter meanings match. Do not add/change the method descriptor. Leave `p4` and the entire stock fallback unchanged, including its forwarding of the boolean. Do not paste this String fragment into `(II)Z` or an `AndroidPackage` overload. This low-register example needs existing local `v0` and physical `p1/p2/p3 <= 15`; keep the allocation unchanged:
 
 <!-- snippet: filter-app-access -->
 ```smali
@@ -448,6 +457,7 @@ Use the same supported smali API selected during preparation, replacing the exam
 | `Invalid register` / register must be between 0 and 15 | Compute physical `pN` after allocation; use a supported range/copy layout and preserve stock aliases. Do not keep raising locals blindly. |
 | Assembles, but verifier reports wrong Context | Read the exact Instrumentation `static` header: Class overload uses static `p1` or instance `p2`; ClassLoader instance uses `p3`. |
 | Missing `CertificateChainIfNeeded` overload | Mismatched payload/caller ABI. Keep the required three-argument contract; obtain the matching framework payload. |
+| `NameValueCache: legacy boolean hook ABI` | `--update` leaves the input unchanged. Rebuild a fresh work tree from matching stock `framework.jar`, import the current payload and reapply all required callers; see section 4.3. |
 | Duplicate target / class descriptor | Inspect all DEX owners and unrelated basenames. Do not delete arbitrary files just to make discovery unique. |
 | Installer `UNSUPPORTED_LAYOUT` | Check the exact API pair, original UID capture, stock source provenance and constructor signature. No generic one-register insertion covers every ROM. |
 | Help throws `NoSuchMethodError: ...getMainParameter()` | smali 3.0.8 was loaded with incompatible jcommander; use its pinned 1.64 dependency and rerun both help commands. |
@@ -455,6 +465,6 @@ Use the same supported smali API selected during preparation, replacing the exam
 | Out of memory | Use a deliberate Java heap such as `java -Xmx8g -cp ...`, with available host RAM, or process splits individually. This does not fix invalid bytecode. |
 | Boot/runtime failure despite host PASS | Restore matching stock JARs, capture redacted class-resolution/verifier errors, compare ROM/payload/tool versions. Do not publish private key/configuration or raw attestation data. |
 
-The documentation regressions extract the marked smali fragments directly from **both** guides, build representative caller fixtures, assemble/disassemble with real smali, and run the existing structural verifiers. They check static/instance parameters, both visibility overloads, one high-register frame and both installer API shapes. They also execute the literal rebuild/re-extract/verification commands on fixture JARs, checking packaged-facade ABI, multi-DEX output and unrelated ZIP-entry retention. These fixtures do not test real-ROM import or execute the Android framework.
+The documentation regressions extract the marked smali fragments directly from **both** guides, build representative caller fixtures, assemble/disassemble with real smali, and run the existing structural verifiers. They check static/instance parameters, both visibility overloads, both optional String `filterAppAccess` signatures with the stock boolean preserved, one high-register frame and both installer API shapes. They also execute the literal rebuild/re-extract/verification commands on fixture JARs, checking packaged-facade ABI, multi-DEX output and unrelated ZIP-entry retention. These fixtures do not test real-ROM import or execute the Android framework.
 
 Host syntax, structural checks and facade ABI checks are separate evidence. They do not prove ART type verification on a particular ROM, successful boot, hardware behavior or external integrity verdicts. Physical-device results remain unverified until actually recorded. CorePatch and Secure Flag remain separate guides; this change adds no new runtime backend.

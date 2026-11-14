@@ -148,6 +148,29 @@ class NameValueCacheTest(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         patcher.patch_name_value_cache(broken, update=update)
 
+    def test_legacy_boolean_hook_reports_stock_recovery_without_writes(self):
+        legacy = stock(instructions=(
+            'invoke-static/range {p1 .. p3}, ' +
+            patcher.NAME_VALUE_HOOK.removesuffix('Ljava/lang/String;') + 'Z\n'
+            '    move-result v0\n    if-eqz v0, :legacy_stock\n'
+            '    const-string v0, "0"\n    return-object v0\n'
+            '    :legacy_stock\n    move-object v0, p2\n    return-object v0'))
+        message = r'legacy boolean hook ABI; restore .*matching stock ROM'
+        with self.assertRaisesRegex(ValueError, message):
+            patcher.verify_target_content(NAME, legacy)
+        for update in (False, True):
+            with self.subTest(update=update), tempfile.TemporaryDirectory() as directory:
+                with self.assertRaisesRegex(ValueError, message):
+                    patcher.patch_name_value_cache(legacy, update=update)
+                root = Path(directory)
+                originals = caller_tree(root)
+                path = root / 'android/provider' / NAME
+                path.write_text(legacy)
+                originals[path] = path.read_bytes()
+                with self.assertRaisesRegex(ValueError, message):
+                    tree_patcher.patch_root(root, update=update)
+                self.assertEqual(originals, {path: path.read_bytes() for path in originals})
+
     def test_unsupported_layouts_do_not_mutate_file(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / NAME

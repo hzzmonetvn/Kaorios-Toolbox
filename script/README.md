@@ -12,7 +12,7 @@ All utilities documented here operate exclusively host-side. Passing runs confir
 
 The JAR assembly pipelines (`patch-framework-a17-artifact.sh`, `patch-services-a17-artifact.sh`) and multi-file patch orchestrators (`kaorios_patcher.py`, `publish-verified-artifact.py`) enforce the following operational invariants:
 
-1. **Fail Closed:** Single-class patchers and orchestrators reject unresolvable patterns and unrecognized layouts without speculative generation. `UNSUPPORTED_LAYOUT` and `FAILED` are distinct failure outcomes.
+1. **Fail Closed:** Single-class patchers and orchestrators reject unresolvable patterns and unrecognized layouts without speculative generation. `UNSUPPORTED_LAYOUT` and `FAILED` are distinct failure outcomes. A legacy boolean-return NameValueCache hook receives an explicit matching-stock recovery diagnostic; even `--update` preserves it rather than guessing a String-ABI migration.
 2. **Stage-Then-Write Architecture:** Multi-target runs in `kaorios_patcher.py` and the artifact shell scripts stage candidate modifications in temporary directories and validate them before writing to original files or destination paths.
 3. **Exact Descriptor Ingestion:** In `patch-framework-a17-plan.py`, payload importation into `framework.jar` operates class-by-class. Payload classes replace only identical class descriptors in existing splits or are appended to available splits. Unrelated OEM classes in `android/security/` are preserved.
 4. **Byte-Identical Preservation of Untouched Splits:** In `patch-framework-a17-artifact.sh` and `patch-services-a17-artifact.sh`, multi-DEX splits that do not contain modified classes are verified by hash before repacking and after candidate re-extraction to ensure byte-identical preservation.
@@ -185,7 +185,7 @@ python3 -m unittest discover -s script -v
 KAORIOS_SMALI_CLASSPATH='/path/to/smali-3.0.8/*' python3 -m unittest discover -s script -v
 ```
 
-The 2026-11-14 checkpoint ran **95 tests, all passing without skips**, with smali 3.0.8 and jcommander 1.64. Counts describe that run, not a coverage percentage or a permanent suite size.
+The 2026-11-14 follow-up checkpoint ran **97 tests in 17.624s, all passing without skips**, with smali 3.0.8 and jcommander 1.64. Two additions cover both optional String `filterAppAccess` signatures and the explicit legacy NameValueCache diagnostic/input preservation. Counts describe that run, not a coverage percentage or a permanent suite size.
 
 ### Regression coverage
 
@@ -193,8 +193,8 @@ The 2026-11-14 checkpoint ran **95 tests, all passing without skips**, with smal
 |---|---|
 | `test_framework_artifact_plan.py` | Path aliasing protection, safe append vs. replace, exact-descriptor/OEM retention, duplicate class rejection, strict DEX parsing, untouched split hashes. |
 | `test_patcher_register_encoding.py` | Numeric parameter aliases, `.registers`/`.locals`, wide/narrow operands, `/range`, real assembly boundaries when tools are supplied. |
-| `test_name_value_cache_hooks.py` | All six required caller owners, whole-tree preflight/idempotence, input preservation on unsupported layouts, unique descriptors. |
-| `test_guide_hook_contract.py` | Eighteen literal EN/VI snippet pairs, static/instance Context mapping, visibility overloads/high frame, both installer shapes, structural checks before/after real assembly, shell syntax and output-verification anchor. Executes the guide's rebuild/re-extract/verification commands on fixture JARs, including packaged-facade ABI, multi-DEX output and unrelated ZIP-entry retention. Fixtures are not an Android runtime or a real-ROM import test. |
+| `test_name_value_cache_hooks.py` | All six required caller owners, whole-tree preflight/idempotence, input preservation on unsupported layouts, unique descriptors, and the legacy boolean-ABI diagnostic with unchanged whole-tree inputs in both normal/update modes. |
+| `test_guide_hook_contract.py` | Eighteen literal EN/VI snippet pairs, static/instance Context mapping, visibility overloads/high frame, both optional String `filterAppAccess` signatures with stock boolean preservation, both installer shapes, structural checks before/after real assembly, shell syntax and output-verification anchor. Executes the guide's rebuild/re-extract/verification commands on fixture JARs, including packaged-facade ABI, multi-DEX output and unrelated ZIP-entry retention. Fixtures are not an Android runtime or a real-ROM import test. |
 | `test_package_patcher_v2062.py` | Deterministic source-built archive, sorted members, path rejection and extracted standalone regressions. |
 | `test_patcher_instrumentation_hooks.py` | Both overloads, return coverage, update repair and comment-only hook rejection. |
 | `test_payload_abi.py` | Exact public/static implemented callees, overload/modifier failures, comments/strings and duplicate methods. |

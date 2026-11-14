@@ -846,6 +846,12 @@ def verify_target_content(filename: str, content: str) -> None:
             raise ValueError("ApplicationPackageManager: hook is after stock logic")
     elif filename == 'Settings$NameValueCache.smali':
         body, _, _, entry = _name_value_entry(content)
+        legacy_hook = NAME_VALUE_HOOK.removesuffix('Ljava/lang/String;') + 'Z'
+        if re.search(r'(?m)^\s*invoke-static(?:/range)?[ \t]+\{[^}\n]*\},[ \t]*' +
+                     re.escape(legacy_hook) + r'[ \t]*(?:#.*)?$', body):
+            raise ValueError('NameValueCache: legacy boolean hook ABI; restore Settings$NameValueCache '
+                             'from the matching stock ROM before applying the current String hook; '
+                             '--update preserves this input')
         sequence = re.match(
             r'\s*invoke-static/range \{p1 \.\. p3\}, ' + re.escape(NAME_VALUE_HOOK) +
             r'\s+move-result-object v0\s+if-eqz v0, (?P<label>:[\w$]+)'
