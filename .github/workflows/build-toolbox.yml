@@ -634,17 +634,15 @@ jobs:
           expected=0
           uploaded=0
           while IFS= read -r -d '' file; do
+            # Publish only the Toolbox APK, the framework DEX and the native
+            # libraries. R8 reports, provenance, the standalone binary, the
+            # bundles and the checksum files stay in the job log and the
+            # GitHub artifact archive.
+            case "$file" in
+              dist/KaoriosToolbox-release.apk|dist/classes.dex|dist/lib/*/*.so) ;;
+              *) continue ;;
+            esac
             fname=${file#dist/}
-            # Extensionless outputs have equivalent tar or .txt downloads.
-            if [[ "$fname" == "kaorios-toolbox" || "$fname" == "SHA256SUMS" ]]; then
-              continue
-            fi
-            # tmpfiles.org rejects the .sha256 extension ("Invalid file
-            # extension"), so the digest is published in the summary instead.
-            if [[ "$fname" == *.sha256 ]]; then
-              echo "SHA-256 for \`${fname%.sha256}\`: \`$(cut -d' ' -f1 "$file")\`" >> "$GITHUB_STEP_SUMMARY"
-              continue
-            fi
             expected=$((expected + 1))
             echo "Uploading $fname to tempfile..."
             if ! resp=$(curl --fail --silent --show-error -F "file=@$file" -F "expire=172800" https://tmpfiles.org/api/v1/upload); then
@@ -672,3 +670,7 @@ jobs:
             echo "::error::Expected $expected artifacts but uploaded $uploaded"
             exit 1
           fi
+          {
+            echo
+            echo "Only the Toolbox APK, the framework DEX and the native libraries are published here. The remaining outputs (R8 reports, provenance, standalone binary, bundles, checksums) are in the job log and the GitHub artifact archive; their SHA-256 values are listed above."
+          } >> "$GITHUB_STEP_SUMMARY"

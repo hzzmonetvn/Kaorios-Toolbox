@@ -263,7 +263,9 @@ jobs:
           echo "| File | Download URL |" >> "$GITHUB_STEP_SUMMARY"
           echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
           uploaded=0
-          for file in dist/*; do
+          # Publish only the framework APK and the extracted DEX. The checksum
+          # files stay in the job log and the GitHub artifact archive.
+          for file in dist/*.apk dist/classes.dex; do
             if [[ -f "$file" ]]; then
               fname=$(basename "$file")
               echo "Uploading $fname to tempfile..."
