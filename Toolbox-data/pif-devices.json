@@ -7,8 +7,8 @@
       "MODEL": "Pixel 6a",
       "DEVICE": "bluejay",
       "PRODUCT": "bluejay_beta",
-      "FINGERPRINT": "google/bluejay_beta/bluejay:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/bluejay_beta/bluejay:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "32"
     },
     {
@@ -18,8 +18,8 @@
       "MODEL": "Pixel 7",
       "DEVICE": "panther",
       "PRODUCT": "panther_beta",
-      "FINGERPRINT": "google/panther_beta/panther:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/panther_beta/panther:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "33"
     },
     {
@@ -29,8 +29,8 @@
       "MODEL": "Pixel 7 Pro",
       "DEVICE": "cheetah",
       "PRODUCT": "cheetah_beta",
-      "FINGERPRINT": "google/cheetah_beta/cheetah:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/cheetah_beta/cheetah:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "33"
     },
     {
@@ -40,8 +40,8 @@
       "MODEL": "Pixel 7a",
       "DEVICE": "lynx",
       "PRODUCT": "lynx_beta",
-      "FINGERPRINT": "google/lynx_beta/lynx:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/lynx_beta/lynx:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "33"
     },
     {
@@ -51,8 +51,8 @@
       "MODEL": "Pixel Fold",
       "DEVICE": "felix",
       "PRODUCT": "felix_beta",
-      "FINGERPRINT": "google/felix_beta/felix:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/felix_beta/felix:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "33"
     },
     {
@@ -62,8 +62,8 @@
       "MODEL": "Pixel Tablet",
       "DEVICE": "tangorpro",
       "PRODUCT": "tangorpro_beta",
-      "FINGERPRINT": "google/tangorpro_beta/tangorpro:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/tangorpro_beta/tangorpro:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "33"
     },
     {
@@ -73,8 +73,8 @@
       "MODEL": "Pixel 8",
       "DEVICE": "shiba",
       "PRODUCT": "shiba_beta",
-      "FINGERPRINT": "google/shiba_beta/shiba:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/shiba_beta/shiba:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "34"
     },
     {
@@ -84,8 +84,8 @@
       "MODEL": "Pixel 8 Pro",
       "DEVICE": "husky",
       "PRODUCT": "husky_beta",
-      "FINGERPRINT": "google/husky_beta/husky:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/husky_beta/husky:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "34"
     },
     {
@@ -95,8 +95,8 @@
       "MODEL": "Pixel 8a",
       "DEVICE": "akita",
       "PRODUCT": "akita_beta",
-      "FINGERPRINT": "google/akita_beta/akita:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/akita_beta/akita:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "34"
     },
     {
@@ -106,8 +106,8 @@
       "MODEL": "Pixel 9",
       "DEVICE": "tokay",
       "PRODUCT": "tokay_beta",
-      "FINGERPRINT": "google/tokay_beta/tokay:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/tokay_beta/tokay:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "34"
     },
     {
@@ -117,8 +117,8 @@
       "MODEL": "Pixel 9 Pro",
       "DEVICE": "caiman",
       "PRODUCT": "caiman_beta",
-      "FINGERPRINT": "google/caiman_beta/caiman:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/caiman_beta/caiman:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "34"
     },
     {
@@ -128,8 +128,8 @@
       "MODEL": "Pixel 9 Pro XL",
       "DEVICE": "komodo",
       "PRODUCT": "komodo_beta",
-      "FINGERPRINT": "google/komodo_beta/komodo:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/komodo_beta/komodo:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "34"
     },
     {
@@ -139,8 +139,8 @@
       "MODEL": "Pixel 9 Pro Fold",
       "DEVICE": "comet",
       "PRODUCT": "comet_beta",
-      "FINGERPRINT": "google/comet_beta/comet:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/comet_beta/comet:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "34"
     },
     {
@@ -150,8 +150,8 @@
       "MODEL": "Pixel 9a",
       "DEVICE": "tegu",
       "PRODUCT": "tegu_beta",
-      "FINGERPRINT": "google/tegu_beta/tegu:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/tegu_beta/tegu:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "35"
     },
     {
@@ -161,8 +161,8 @@
       "MODEL": "Pixel 10",
       "DEVICE": "frankel",
       "PRODUCT": "frankel_beta",
-      "FINGERPRINT": "google/frankel_beta/frankel:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/frankel_beta/frankel:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "36"
     },
     {
@@ -172,8 +172,8 @@
       "MODEL": "Pixel 10 Pro",
       "DEVICE": "blazer",
       "PRODUCT": "blazer_beta",
-      "FINGERPRINT": "google/blazer_beta/blazer:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/blazer_beta/blazer:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "36"
     },
     {
@@ -183,8 +183,8 @@
       "MODEL": "Pixel 10 Pro XL",
       "DEVICE": "mustang",
       "PRODUCT": "mustang_beta",
-      "FINGERPRINT": "google/mustang_beta/mustang:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/mustang_beta/mustang:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "36"
     },
     {
@@ -194,8 +194,8 @@
       "MODEL": "Pixel 10 Pro Fold",
       "DEVICE": "rango",
       "PRODUCT": "rango_beta",
-      "FINGERPRINT": "google/rango_beta/rango:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/rango_beta/rango:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "36"
     },
     {
@@ -205,8 +205,8 @@
       "MODEL": "Pixel 10a",
       "DEVICE": "stallion",
       "PRODUCT": "stallion_beta",
-      "FINGERPRINT": "google/stallion_beta/stallion:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/stallion_beta/stallion:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "35"
     },
     {
@@ -216,8 +216,8 @@
       "MODEL": "Pixel 11",
       "DEVICE": "cubs",
       "PRODUCT": "cubs_beta",
-      "FINGERPRINT": "google/cubs_beta/cubs:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/cubs_beta/cubs:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "37"
     },
     {
@@ -227,8 +227,8 @@
       "MODEL": "Pixel 11 Pro",
       "DEVICE": "grizzly",
       "PRODUCT": "grizzly_beta",
-      "FINGERPRINT": "google/grizzly_beta/grizzly:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/grizzly_beta/grizzly:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "37"
     },
     {
@@ -238,8 +238,8 @@
       "MODEL": "Pixel 11 Pro XL",
       "DEVICE": "kodiak",
       "PRODUCT": "kodiak_beta",
-      "FINGERPRINT": "google/kodiak_beta/kodiak:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/kodiak_beta/kodiak:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "37"
     },
     {
@@ -249,8 +249,8 @@
       "MODEL": "Pixel 11 Pro Fold",
       "DEVICE": "yogi",
       "PRODUCT": "yogi_beta",
-      "FINGERPRINT": "google/yogi_beta/yogi:CANARY/ZP11.260918.007/16484274:user/release-keys",
-      "SECURITY_PATCH": "2026-10-05",
+      "FINGERPRINT": "google/yogi_beta/yogi:CANARY/ZP11.261016.008/16754936:user/release-keys",
+      "SECURITY_PATCH": "2026-11-05",
       "DEVICE_INITIAL_SDK_INT": "37"
     }
   ]
