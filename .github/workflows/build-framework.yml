@@ -131,9 +131,28 @@ jobs:
             merged_dir="$RUNNER_TEMP/android-api-37-merged"
             merged_android="$RUNNER_TEMP/android-api-37-merged.jar"
 
-            curl --fail --location --retry 3 \
-              --output "$android_all" \
-              "https://repo.maven.apache.org/maven2/org/robolectric/android-all/${ANDROID_ALL_VERSION}/android-all-${ANDROID_ALL_VERSION}.jar"
+            # Maven Central soft-rate-limits CI IPs (HTTP 429), and curl's own
+            # --retry cannot help when the limit outlasts it. Try the canonical
+            # host first, then community mirrors; the SHA256 check below decides
+            # whether what arrived is the file we asked for.
+            android_all_url="org/robolectric/android-all/${ANDROID_ALL_VERSION}/android-all-${ANDROID_ALL_VERSION}.jar"
+            downloaded=0
+            for base in \
+              https://repo.maven.apache.org/maven2 \
+              https://maven-central.storage-download.googleapis.com/maven2 \
+              https://repo1.maven.org/maven2; do
+              echo "Downloading android-all from $base"
+              if curl --fail --location --retry 3 --retry-delay 5 --progress-bar \
+                --output "$android_all" "$base/$android_all_url"; then
+                downloaded=1
+                break
+              fi
+              echo "::warning::Download failed from $base; trying the next mirror."
+            done
+            if [ "$downloaded" -ne 1 ]; then
+              echo "::error::Không tải được android-all-${ANDROID_ALL_VERSION}.jar từ mọi mirror."
+              exit 1
+            fi
             echo "${ANDROID_ALL_SHA256}  ${android_all}" | sha256sum --check --strict
             unzip -tq "$android_all"
 
