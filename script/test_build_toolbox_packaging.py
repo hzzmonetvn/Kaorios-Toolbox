@@ -94,14 +94,32 @@ class BuildToolboxPackagingTest(unittest.TestCase):
         self.assertNotIn('v2.0.6.1 release notes', self.workflow)
         self.assertIn('no published release checksum exists', self.workflow)
 
-    def test_sha256_sidecar_is_summarized_instead_of_uploaded(self):
-        self.assertIn('"$fname" == *.sha256', self.upload)
-        self.assertIn('SHA-256 for', self.upload)
+    def test_upload_publishes_only_the_apk_dex_and_native_libraries(self):
+        self.assertIn(
+            'dist/KaoriosToolbox-release.apk|dist/classes.dex|dist/lib/*/*.so) ;;',
+            self.upload)
+        self.assertNotIn('*.sha256', self.upload)
+        script = (
+            'for f in dist/KaoriosToolbox-release.apk dist/classes.dex '
+            'dist/lib/arm64-v8a/libkaorios_toolbox.so '
+            'dist/lib/armeabi-v7a/libkaoripif.so '
+            'dist/KaoriosFramework-release.apk dist/SHA256SUMS '
+            'dist/SHA256SUMS.txt dist/BUILD-PROVENANCE.txt '
+            'dist/kaorios-toolbox dist/kaorios-toolbox-aarch64.tar.gz '
+            'dist/framework-r8/mapping.txt dist/UNSIGNED-TEST.txt '
+            'dist/Kaorios-complete.tar.gz.sha256; do '
+            'case "$f" in '
+            'dist/KaoriosToolbox-release.apk|dist/classes.dex|dist/lib/*/*.so) echo "$f" ;; '
+            '*) continue ;; esac; done')
         result = subprocess.run(
-            ['bash', '-c', 'f="Kaorios-complete.tar.gz.sha256"; '
-             'if [[ "$f" == *.sha256 ]]; then echo "${f%.sha256}"; fi'],
-            capture_output=True, text=True, check=False)
-        self.assertEqual('Kaorios-complete.tar.gz\n', result.stdout)
+            ['bash', '-c', script], capture_output=True, text=True, check=False)
+        self.assertEqual(
+            'dist/KaoriosToolbox-release.apk\n'
+            'dist/classes.dex\n'
+            'dist/lib/arm64-v8a/libkaorios_toolbox.so\n'
+            'dist/lib/armeabi-v7a/libkaoripif.so\n',
+            result.stdout)
+        self.assertIn('cat dist/SHA256SUMS', self.package)
 
     def test_upload_rejects_markdown_link_injection_characters(self):
         result = subprocess.run(
