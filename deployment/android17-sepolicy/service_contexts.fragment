@@ -1,0 +1,2 @@
+# Kaorios Advanced Policy Service contexts fragment for Android 17
+kaorios_advanced_policy u:object_r:kaorios_advanced_policy_service:s0

@@ -1,0 +1,20 @@
+# Kaorios Advanced Policy Binder Service Sepolicy (Android 17)
+
+type kaorios_advanced_policy_service, service_manager_type, system_server_service;
+
+# Authoritative publisher: system_server adds and manages kaorios_advanced_policy
+allow system_server kaorios_advanced_policy_service:service_manager { add find };
+
+# SettingsProvider domain requires service_manager find and Binder communication:
+# Default AOSP seapp_contexts maps package com.android.providers.settings to system_app domain
+allow system_app kaorios_advanced_policy_service:service_manager find;
+binder_call(system_app, system_server)
+
+# For ROM variants isolating SettingsProvider under dedicated or alternate domains:
+# allow settings_provider kaorios_advanced_policy_service:service_manager find;
+# binder_call(settings_provider, system_server)
+# allow platform_app kaorios_advanced_policy_service:service_manager find;
+# binder_call(platform_app, system_server)
+
+# Security Boundary: Untrusted apps must NEVER find or call kaorios_advanced_policy
+neverallow untrusted_app_all kaorios_advanced_policy_service:service_manager { add find };
